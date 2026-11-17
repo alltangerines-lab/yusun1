@@ -4764,9 +4764,25 @@ function renderLessons(){
   $$('#ls-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === LS.view));
   const pick = l => (LS.prog === 'all' || l.prog === LS.prog) && (LS.cls === 'all' || l.cls === LS.cls);
   const s = fromYmd(mon), e = addDays(s, 4);
-  $('#ls-label').textContent = `${s.getMonth() + 1}.${s.getDate()} ~ ${e.getMonth() + 1}.${e.getDate()}`;
-  $('#ls-weeknav').hidden = LS.view !== 'week';
-  $('#ls-week').hidden = LS.view !== 'week'; $('#ls-list').hidden = LS.view !== 'list';
+  if (!LS.month){ const t = today(); LS.month = new Date(t.getFullYear(), t.getMonth(), 1); }
+  $('#ls-label').textContent = LS.view === 'month' ? `${LS.month.getFullYear()}. ${LS.month.getMonth() + 1}월` : `${s.getMonth() + 1}.${s.getDate()} ~ ${e.getMonth() + 1}.${e.getDate()}`;
+  $('#ls-today').textContent = LS.view === 'month' ? '이번 달' : '이번 주';
+  $('#ls-weeknav').hidden = LS.view === 'list';
+  $('#ls-week').hidden = LS.view !== 'week'; $('#ls-month').hidden = LS.view !== 'month'; $('#ls-list').hidden = LS.view !== 'list';
+  if (LS.view === 'month'){
+    const m = LS.month, first = fromYmd(mondayOf(ymd(m)));
+    let h = '<table class="ls-mt"><thead><tr>' + ['월', '화', '수', '목', '금'].map(w => `<th>${w}</th>`).join('') + '</tr></thead><tbody>';
+    for (let w = 0; w < 6; w++){
+      const mon = addDays(first, w * 7);
+      if (w > 0 && mon.getMonth() !== m.getMonth() && mon > m) break;
+      h += '<tr>' + [0, 1, 2, 3, 4].map(i => {
+        const d = addDays(mon, i), k = ymd(d), out = d.getMonth() !== m.getMonth();
+        const ls = all.filter(l => l.date === k && pick(l));
+        return `<td class="${out ? 'out' : ''} ${k === ymd(today()) ? 'today' : ''}"><div class="ls-md"><b>${d.getDate()}</b>${HOLIDAYS[k] ? ` <small class="hol">${esc(HOLIDAYS[k])}</small>` : ''}</div>${ls.map(l => { const bad = lsConflicts(l.date, l.pers, l.cls, l.id).length; return `<button type="button" class="ls-chip sm ${bad ? 'bad' : ''}" data-ls="${l.id}" title="${esc(l.prog + (l.teacher ? ' · ' + l.teacher : '') + (l.place ? ' · ' + l.place : ''))}"><span class="p">${lsPerLabel(l.pers)}</span> ${esc(clsLabel(l.cls))}<small>(${esc(l.prog)})</small></button>`; }).join('')}</td>`;
+      }).join('') + '</tr>';
+    }
+    $('#ls-month').innerHTML = `<div class="tablewrap">${h}</tbody></table></div>`;
+  }
   if (LS.view === 'week'){
     const evRow = days.map(k => { const t = (S.events || []).filter(x => x.date === k && (!x.who || x.who === '전체')).map(x => x.title).concat(schoolEvents(k)); return `<td class="ls-ev">${HOLIDAYS[k] ? `<b>${esc(HOLIDAYS[k])}</b> ` : ''}${t.slice(0, 3).map(esc).join('<br>')}</td>`; }).join('');
     let h = `<table class="ls-tt"><thead><tr><th></th>${days.map(k => { const d = fromYmd(k); return `<th class="${k === ymd(today()) ? 'today' : ''}">${d.getMonth() + 1}월 ${d.getDate()}일 <small>${WD[d.getDay()]}</small></th>`; }).join('')}</tr></thead><tbody><tr><th class="ls-evh">학사일정</th>${evRow}</tr>`;
@@ -4851,7 +4867,7 @@ $('#lsf-save').onclick = async () => {
   b.disabled = true;
   try {
     for (const r of rows) await S.db.collection('lessons').add({prog, date:r.date, pers:r.pers, cls:r.cls, teacher:$('#lsf-teacher').value.trim(), place:$('#lsf-place').value.trim(), createdBy:S.uid, createdAt:Date.now()});
-    LS.prog = prog; LS.mon = mondayOf(rows[0].date); closeDlgs(); toast(`${prog} ${rows.length}개를 넣었어요.`); renderLessons(); renderCal();
+    LS.prog = prog; LS.mon = mondayOf(rows[0].date); { const d0 = fromYmd(rows[0].date); LS.month = new Date(d0.getFullYear(), d0.getMonth(), 1); } closeDlgs(); toast(`${prog} ${rows.length}개를 넣었어요.`); renderLessons(); renderCal();
   } catch (er){ wErr(er, true); }
   b.disabled = false;
 };
@@ -4880,9 +4896,9 @@ $('#lse-save').onclick = async () => {
 };
 $('#lse-del').onclick = async () => { const b = $('#lse-del'); if (!twoStep(b, '지울까요?')) return; try { await S.db.doc('lessons/' + LS.editId).delete(); closeDlgs(); toast('지웠어요.'); } catch (er){ wErr(er, true); } };
 $('#pg-lessons-body').addEventListener('click', e => { const b = e.target.closest('[data-ls]'); if (b) lsOpenEdit(b.dataset.ls); });
-$('#ls-prev').onclick = () => { LS.mon = ymd(addDays(fromYmd(lsWeekStart()), -7)); renderLessons(); };
-$('#ls-next').onclick = () => { LS.mon = ymd(addDays(fromYmd(lsWeekStart()), 7)); renderLessons(); };
-$('#ls-today').onclick = () => { LS.mon = mondayOf(ymd(today())); renderLessons(); };
+$('#ls-prev').onclick = () => { if (LS.view === 'month') LS.month = new Date(LS.month.getFullYear(), LS.month.getMonth() - 1, 1); else LS.mon = ymd(addDays(fromYmd(lsWeekStart()), -7)); renderLessons(); };
+$('#ls-next').onclick = () => { if (LS.view === 'month') LS.month = new Date(LS.month.getFullYear(), LS.month.getMonth() + 1, 1); else LS.mon = ymd(addDays(fromYmd(lsWeekStart()), 7)); renderLessons(); };
+$('#ls-today').onclick = () => { const t = today(); LS.mon = mondayOf(ymd(t)); LS.month = new Date(t.getFullYear(), t.getMonth(), 1); renderLessons(); };
 $('#ls-view').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; LS.view = b.dataset.v; renderLessons(); });
 $('#ls-prog').addEventListener('change', e => { LS.prog = e.target.value; renderLessons(); });
 $('#ls-cls').addEventListener('change', e => { LS.cls = e.target.value; renderLessons(); });
