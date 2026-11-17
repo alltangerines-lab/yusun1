@@ -1491,6 +1491,7 @@ function renderMe(){
   if (S.privateOffMsg) $('#me-off-text').textContent = S.privateOffMsg;
   $$('#me-tabs button').forEach(b => { b.setAttribute('aria-selected', b.dataset.tab === S.meTab); const m = MPAGES.find(x => x[2] === b.dataset.tab); if (m){ if (!b.dataset.def) b.dataset.def = b.textContent; b.textContent = (S.profile.pageNames || {})[m[0]] || b.dataset.def; } });
   ['day', 'plan', 'todo', 'stu', 'cns', 'att', 'sheet', 'tt', 'budget', 'roster', 'mops'].forEach(t => { $('#p-' + t).hidden = S.meTab !== t; });
+  placeStuCol();
   $('#me-top').hidden = S.meTab !== 'day';
   renderToday(); renderNotes(); renderCats(); renderJPreview(); renderStage('j'); renderStage('cns'); renderStage('stu');
   ({day:renderDayBoard, plan:renderPlanPage, todo:renderTodo, stu:renderStu, cns:renderCns, att:renderAtt, sheet:renderSheet, tt:renderTT, budget:() => BUD.m && BUD.m.render(), roster:renderRoster, mops:() => renderOps(OPM)})[S.meTab]();
@@ -3290,7 +3291,7 @@ document.addEventListener('keydown', e => {
 
 /* ================= 주간 수업일지 ================= */
 const WK = {mode:'day', cache:{}};
-function setJView(m){ WK.mode = m; $$('#j-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === m)); $('#j-dayview').hidden = m !== 'day'; $('#j-week').hidden = m !== 'week'; if (m === 'week') renderWeek(); }
+function setJView(m){ WK.mode = m; setTimeout(placeStuCol, 0); $$('#j-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === m)); $('#j-dayview').hidden = m !== 'day'; $('#j-week').hidden = m !== 'week'; if (m === 'week') renderWeek(); }
 $('#j-view').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setJView(b.dataset.v); });
 async function renderWeek(){
   const mon = mondayOf(S.jDate), days = [0, 1, 2, 3, 4].map(i => ymd(addDays(fromYmd(mon), i))), tk = ymd(today());
@@ -4397,6 +4398,19 @@ function startRename(a){
 }
 $('#sheetbar').addEventListener('contextmenu', e => { const a = e.target.closest('a.stab[data-ren]'); if (!a || S.renaming) return; e.preventDefault(); startRename(a); });
 $('#sheetbar').addEventListener('dblclick', e => { const a = e.target.closest('a.stab[data-ren]'); if (!a || S.renaming) return; e.preventDefault(); startRename(a); });
+
+/* 학생 칸: 학급일지 탭에서는 메모·입력칸 오른쪽 위로 올려요 */
+function placeStuCol(){
+  const col = $('#stu-col'), dock = $('#stu-dock'), row = $('#me-row2'), board = $('#j-dayview');
+  if (!col || !dock) return;
+  const want = S.space === 'me' && S.meTab === 'day' && WK.mode !== 'week' && window.innerWidth > 740;
+  const main = $('#me-main');
+  if (!placeStuCol.home) placeStuCol.home = {p:main.parentElement, n:main.nextSibling};
+  if (want && col.parentElement !== dock){ dock.appendChild(col); row.appendChild(main); }
+  else if (!want && col.parentElement !== board){ board.appendChild(col); placeStuCol.home.p.insertBefore(main, placeStuCol.home.n); }
+  dock.hidden = !want; row.classList.toggle('docked', want); board.classList.toggle('solo', want);
+}
+window.addEventListener('resize', () => { clearTimeout(placeStuCol.t); placeStuCol.t = setTimeout(placeStuCol, 150); });
 
 /* ---------- 새 학년도 · 지난 학년도 보관함 ---------- */
 const ARC_KEYS = {
