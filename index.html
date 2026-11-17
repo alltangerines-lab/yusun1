@@ -1020,6 +1020,14 @@ body[data-page="main"] .pg-links #links{max-height:230px;overflow:auto}
 .motto:focus{border-color:var(--accent);border-style:solid;color:var(--fg)}
 .motto.empty:not(:focus):before{content:"✎";color:var(--muted);font-weight:400}
 .me-row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
+.me-row2.docked{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto 1fr;grid-template-areas:"memo stu" "input stu" "main stu"}
+.me-row2.docked #me-main{grid-area:main;align-self:start;min-width:0}
+.me-row2.docked .stu-dock{position:sticky;top:12px}
+.me-row2.docked .mr-input{align-self:start}
+.me-row2.docked .mr-memo{grid-area:memo}
+.me-row2.docked .mr-input{grid-area:input}
+.me-row2.docked .stu-dock{grid-area:stu;align-self:start;margin:0;padding:14px 16px;display:grid;gap:10px;align-content:start}
+.dayboard.solo{grid-template-columns:minmax(0,1fr)}
 .me-row2 > .card{margin-bottom:0!important}
 .me-row2 .notes{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .me-row2 .note-card textarea{min-height:60px}
@@ -1402,13 +1410,13 @@ body.ro .w-only{display:none!important}
         </div>
       </div>
 
-      <div class="me-row2">
-      <div class="card" style="margin-bottom:16px">
+      <div class="me-row2" id="me-row2">
+      <div class="card mr-memo" style="margin-bottom:16px">
         <div class="card-h"><h2>메모</h2><span class="grow"></span><button type="button" class="btn small" id="note-done-btn" aria-expanded="false" hidden></button><button type="button" class="btn small" id="note-add">+ 메모</button></div>
         <div class="card-b"><div class="notes" id="notes"></div><div class="notes-done" id="notes-done" hidden></div></div>
       </div>
 
-      <div class="card" style="margin-bottom:16px">
+      <div class="card mr-input" style="margin-bottom:16px">
         <div class="card-b quick" style="padding-top:14px">
           <form class="line" id="j-form">
             <input type="text" id="j-input" autocomplete="off" placeholder="예: 3번 지각 병원 다녀옴  ·  내일 15시 5번 학부모 상담  ·  금요일까지 계획서 올리기 #할일 !높음">
@@ -1421,11 +1429,12 @@ body.ro .w-only{display:none!important}
           <div class="thumbs" id="j-thumbs"></div>
         </div>
       </div>
+      <div class="card stu-dock" id="stu-dock" hidden></div>
       </div>
 
       </div>
 
-      <div class="card">
+      <div class="card" id="me-main">
         <div class="tabs" role="tablist" id="me-tabs">
           <button type="button" role="tab" data-tab="day" aria-selected="true">학급일지</button>
           <button type="button" role="tab" data-tab="plan" aria-selected="false">수업 계획</button>
@@ -1483,7 +1492,7 @@ body.ro .w-only{display:none!important}
               <div class="attline" id="j-att"></div>
               <div class="list" id="j-list"></div>
             </div>
-            <div class="db-col">
+            <div class="db-col" id="stu-col">
               <div class="row"><h3 class="sub" style="margin:0">학생</h3><span class="grow"></span><label class="hint" for="chk-name">체크 칸 이름</label><input type="text" id="chk-name" style="width:110px" placeholder="과제" autocomplete="off"></div>
               <div id="stu-table"></div>
               <p class="hint" style="margin:0">출결 칸을 누르면 위 입력 칸에 번호가 들어가요. "3번 지각 병원"처럼 이어 적으면 돼요.</p>
@@ -2074,7 +2083,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@897a32a2afd22e02ec52ca7293040e2e809460f8/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@471046056e59a348b006965ecc5108f7c68ec764/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
