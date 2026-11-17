@@ -1907,7 +1907,7 @@ $('#d-big').onclick = async () => {
   $('#big-body').textContent = $('#d-notice').value || (S.dailyImgs.length ? '' : '아직 알림장이 비어 있어요.');
   $('#big-imgs').innerHTML = S.dailyImgs.map(r => `<img data-img="${esc(imgKey(r))}" ${imgUrl(r) ? `src="${esc(imgUrl(r))}"` : ''} alt="알림장 사진">`).join('');
   $('#big').hidden = false;
-  try { const el = $('#big'); if (el.requestFullscreen) await el.requestFullscreen(); } catch (e) {}
+  S.bigMode = ''; $('#big-hint').textContent = '글을 눌러 고쳐 쓸 수 있어요 · 여기서 고친 내용은 저장되지 않아요';
 };
 $('#big-close').onclick = async () => { $('#big').hidden = true; try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) {} };
 
@@ -2186,7 +2186,7 @@ $('#th-big').onclick = async () => {
   $('#big-body').textContent = (S.dailyToday && S.dailyToday.notice) || (dti.length ? '' : '아직 오늘 알림장이 비어 있어요.');
   $('#big-imgs').innerHTML = dti.map(r => `<img data-img="${esc(imgKey(r))}" ${imgUrl(r) ? `src="${esc(imgUrl(r))}"` : ''} alt="알림장 사진">`).join('');
   $('#big').hidden = false;
-  try { const el = $('#big'); if (el.requestFullscreen) await el.requestFullscreen(); } catch (e) {}
+  S.bigMode = ''; $('#big-hint').textContent = '글을 눌러 고쳐 쓸 수 있어요 · 여기서 고친 내용은 저장되지 않아요';
 };
 $('#th-write').onclick = () => {
   const d = today(); S.selDate = ymd(d); S.month = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -4339,7 +4339,7 @@ $('#score-n').addEventListener('change', renderTeams);
 $('#score-reset').onclick = () => { const st = teamsState().map(t => Object.assign(t, {pts:0})); lsSet('score-teams', st); renderTeams(); };
 $('#open-tools').onclick = () => { $('#tools').hidden = false; showTool(T.tool); timerDraw(); };
 $('#tools-close').onclick = async () => { $('#tools').hidden = true; try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) {} };
-$('#tools-full').onclick = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await $('#tools').requestFullscreen(); } catch (e){ toast('이 화면에서는 전체 화면을 쓸 수 없어요.'); } };
+$('#tools-full').onclick = () => { const on = $('#tools').classList.toggle('focus'); $('#tools-full').textContent = on ? '도구 줄 보이기' : '전체 화면'; };
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if (!$('#big').hidden) $('#big-close').click(); else if (!$('#tools').hidden && $$('.overlay').every(o => o.hidden)) $('#tools-close').click(); else closeDlgs(); } });
 $$('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeDlgs(); }));
@@ -4518,10 +4518,13 @@ function ntLoad(){
   if (NT.sub || !S.uid || !S.db) return;
   NT.sub = S.db.doc(NOTEP()).onSnapshot(snap => {
     if (busy(NOTEP())) return;
+    const localDrafts = (NT.bank && NT.bank.drafts) || {};
     NT.bank = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {items:[], used:{}};
+    NT.bank.drafts = Object.assign({}, NT.bank.drafts || {});
+    Object.keys(NT.draftTs || {}).forEach(x => { if (Date.now() - NT.draftTs[x] < 15000 && localDrafts[x] != null) NT.bank.drafts[x] = localDrafts[x]; });
     if (!Array.isArray(NT.bank.items)) NT.bank.items = []; if (!NT.bank.used) NT.bank.used = {}; if (!NT.bank.drafts) NT.bank.drafts = {};
     const k = ntTarget(), saved = NT.bank.drafts[k];
-    if (saved != null && document.activeElement !== $('#nt-text')) NT.draft[k] = saved;
+    if (saved != null && document.activeElement !== $('#nt-text') && !(NT.draftTs && Date.now() - (NT.draftTs[k] || 0) < 15000)) NT.draft[k] = saved;
     NT.loaded = true; if (T.tool === 'note' && !$('#tools').hidden) renderNoteTool();
   }, () => {});
 }
@@ -4530,6 +4533,7 @@ const ntSave = () => queueSet(NOTEP(), () => ({items:NT.bank.items, used:NT.bank
 let ntDraftTimer;
 function ntKeepDraft(k, v){
   if (!S.uid) return;
+  NT.draftTs = NT.draftTs || {}; NT.draftTs[k] = Date.now();
   const d = Object.assign({}, NT.bank.drafts || {}); d[k] = v;
   const lim = ymd(addDays(today(), -21)); Object.keys(d).forEach(x => { if (x < lim) delete d[x]; });
   NT.bank.drafts = d;
@@ -4609,12 +4613,17 @@ async function ntCopy(){
   if (NT.pick && S.uid){ NT.bank.used = Object.assign({}, NT.bank.used, {[NT.pick.t]:ymd(today())}); const ks = Object.keys(NT.bank.used); if (ks.length > 400) ks.sort((a, b) => NT.bank.used[a] < NT.bank.used[b] ? -1 : 1).slice(0, ks.length - 400).forEach(x => delete NT.bank.used[x]); ntSave(); }
 }
 $('#nt-copy').onclick = ntCopy;
+$('#big-body').addEventListener('input', () => {
+  if (S.bigMode !== 'note') return;
+  const v = $('#big-body').innerText.replace(/\n{3,}/g, '\n\n').replace(/\s+$/, '');
+  const k = ntTarget(); NT.draft[k] = v; $('#nt-text').value = v; ntKeepDraft(k, v);
+});
 $('#nt-big').onclick = async () => {
   $('#big-title').textContent = $('#nt-for').textContent;
   $('#big-body').textContent = $('#nt-text').value || '아직 알림장이 비어 있어요.';
   $('#big-imgs').innerHTML = '';
   $('#big').hidden = false;
-  try { const el = $('#big'); if (el.requestFullscreen && !document.fullscreenElement) await el.requestFullscreen(); } catch (e){}
+  S.bigMode = 'note'; $('#big-hint').textContent = '글을 눌러 고쳐 쓰면 알림장에 바로 저장돼요';
 };
 $('#nt-redo').onclick = async () => { $('#nt-text').value = await ntCompose(true); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; toast('내일 시간표로 다시 만들었어요.'); };
 $('#nt-dice').onclick = () => { ntRandom(); ntApplyPick(); renderNoteTool(); };
