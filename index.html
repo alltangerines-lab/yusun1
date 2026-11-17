@@ -52,7 +52,13 @@
     try { g.script.url.getLocation(l => res(((l && l.parameter) || {}).g || '')); } catch (e){ res(''); }
     setTimeout(() => res(''), 4000);
   }).then(code => code ? run('joinGrade', code).then(() => { window.__gasJoined = true; }).catch(e => { window.__gasJoinErr = msg(e).replace(/^.*missing:\s*/, ''); }) : null);
-  const who = () => whoP || (whoP = joinP.then(() => run('whoami')).then(w => { window.__gasWho = w; window.__gasNoGrade = !!(w && w.deployOk !== false && !w.sharedOk); try { window.dispatchEvent(new Event('gas-who')); } catch (e){} if (w && w.deployOk === false){ blocked = true; banner(w.note); return null; } return w; }).catch(e => { whoP = null; window.__gasWhoErr = msg(e).slice(0, 160); try { window.dispatchEvent(new Event('gas-who')); } catch (x){} banner('교무수첩 서버에 연결하지 못했어요. ' + msg(e)); return null; }));
+  const who = () => whoP || (whoP = joinP.then(() => run('whoami')).then(w => { window.__gasWho = w; window.__gasNoGrade = !!(w && w.deployOk !== false && !w.sharedOk); try { window.dispatchEvent(new Event('gas-who')); } catch (e){} if (w && w.deployOk === false){ blocked = true; banner(w.note); return null; } return w; }).catch(e => {
+    whoP = null; const m = msg(e); window.__gasWhoErr = m.slice(0, 160);
+    /* 학년 시트를 열 권한이 없는 계정: 학년 공간을 고르게 해요 */
+    if (/권한|permission|access/i.test(m)){ window.__gasNoGrade = true; window.__gasWhoErr = ''; window.__gasWho = window.__gasWho || {sharedOk:false, noGrade:true, deployOk:true, email:'', note:m}; }
+    try { window.dispatchEvent(new Event('gas-who')); } catch (x){}
+    if (!window.__gasNoGrade) banner('교무수첩 서버에 연결하지 못했어요. ' + m);
+    return null; }));
 
   const exists = e => !!(e && !e.d && e.data !== undefined);
   const snapDoc = path => { const e = cache.get(path); const ok = exists(e); return {id:path.split('/').pop(), exists:ok, data:() => ok ? clone(e.data) : undefined, metadata:{fromCache:!ready, hasPendingWrites:!!(e && e.local)}}; };
@@ -170,7 +176,7 @@
     id: async () => { const w = await who(); return w ? w.uid : null; },
     isOwner: async () => { const w = await who(); return !!(w && w.isOwner); },
     canEdit: async () => true,
-    can: async n => { if (n !== 'data.write') return null; const w = await who(); if (w && !w.sharedOk) return false; return true; },
+    can: async n => { if (n !== 'data.write') return null; const w = await who(); if ((w && !w.sharedOk) || (!w && window.__gasNoGrade)) return false; return true; },
     me: async () => { const w = await who(); return {id:w ? w.uid : null, name:w ? w.name : '', avatarUrl:'', color:'#6b6878', email:w ? w.email : null, isOwner:!!(w && w.isOwner), canEdit:true}; },
     profiles: async ids => {
       const w = await who(); const out = {};
@@ -2068,7 +2074,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@943408a60262b4cb8739d40d35dae02348abf485/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@0d1286cd2418e686cd558c10ea3bf4515a97cd32/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
