@@ -4528,7 +4528,7 @@ function ntLoad(){
     NT.loaded = true; if (T.tool === 'note' && !$('#tools').hidden) renderNoteTool();
   }, () => {});
 }
-const ntSave = () => queueSet(NOTEP(), () => ({items:NT.bank.items, used:NT.bank.used, drafts:NT.bank.drafts || {}, updatedAt:Date.now()}), false);
+const ntSave = () => queueSet(NOTEP(), () => ({items:NT.bank.items, used:NT.bank.used, drafts:NT.bank.drafts || {}, sbUrl:NT.bank.sbUrl || '', updatedAt:Date.now()}), false);
 /* 쓰던 알림장은 날짜별로 저장해 두어요 (최근 3주) */
 let ntDraftTimer;
 function ntKeepDraft(k, v){
@@ -4602,6 +4602,7 @@ async function renderNoteTool(){
   if (document.activeElement !== $('#nt-text')){ $('#nt-text').value = await ntCompose(false); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; }
   $('#nt-cats').innerHTML = NT_CATS.map(([c, n]) => `<button type="button" class="stab" data-ntc="${c}" ${NT.cat === c ? 'aria-current="page"' : ''}>${n}${c === 'mine' ? ` <small>${(NT.bank.items || []).length}</small>` : ''}</button>`).join('');
   $('#nt-tag').value = NT.tag;
+  if (document.activeElement !== $('#nt-sb-url')) $('#nt-sb-url').value = NT.bank.sbUrl || '';
   const list = ntList(NT.cat), used = NT.bank.used || {};
   $('#nt-list').innerHTML = list.length ? list.map(x => `<li class="${NT.pick && NT.pick.t === x.t ? 'on' : ''}"><button type="button" class="nt-p" data-ntp="${esc(x.t)}"><span class="t">${esc(x.t)}</span>${used[x.t] ? `<span class="u">${fmtMD(used[x.t])} 씀</span>` : ''}</button>${x.c === 'mine' ? `<button type="button" class="x" data-ntdel="${esc(x.t)}" aria-label="내 문구에서 빼기">×</button>` : ''}</li>`).join('')
     : `<li class="hint">${NT.cat === 'mine' ? '아래 "내 문구 넣기"에 지난 알림장 안전 문구를 붙여 넣어 두면 여기서 골라 쓸 수 있어요.' : '이 분류에는 문구가 없어요.'}</li>`;
@@ -4613,6 +4614,19 @@ async function ntCopy(){
   if (NT.pick && S.uid){ NT.bank.used = Object.assign({}, NT.bank.used, {[NT.pick.t]:ymd(today())}); const ks = Object.keys(NT.bank.used); if (ks.length > 400) ks.sort((a, b) => NT.bank.used[a] < NT.bank.used[b] ? -1 : 1).slice(0, ks.length - 400).forEach(x => delete NT.bank.used[x]); ntSave(); }
 }
 $('#nt-copy').onclick = ntCopy;
+$('#nt-send').onclick = async () => {
+  const u = NT.bank.sbUrl || '';
+  if (!/^https:[/][/]([a-z0-9-]+\.)*schoolbell-e\.com[/]/i.test(u)){ $('#nt-sb').open = true; $('#nt-sb-url').focus(); toast('먼저 아래 "학교종이 알림장 주소"를 한 번만 넣어 주세요.'); return; }
+  let w = null; try { w = window.open(u, '_blank'); if (w) w.opener = null; } catch (e){}
+  await ntCopy();
+  if (!w) toast('복사했어요. 학교종이를 열어 알림장 "작성하기"에 붙여 넣어 주세요.');
+  else toast('복사했어요. 열린 학교종이에서 "작성하기"를 누르고 Ctrl+V 하세요.');
+};
+$('#nt-sb-form').addEventListener('submit', e => {
+  e.preventDefault(); const u = $('#nt-sb-url').value.trim();
+  if (!/^https:[/][/]([a-z0-9-]+\.)*schoolbell-e\.com[/]/i.test(u)){ toast('학교종이(schoolbell-e.com) 주소를 넣어 주세요.'); return; }
+  NT.bank.sbUrl = u; ntSave(); $('#nt-sb').open = false; toast('학교종이 알림장 주소를 저장했어요.');
+});
 $('#big-body').addEventListener('input', () => {
   if (S.bigMode !== 'note') return;
   const v = $('#big-body').innerText.replace(/\n{3,}/g, '\n\n').replace(/\s+$/, '');
