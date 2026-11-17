@@ -4594,6 +4594,13 @@ async function ntCopy(){
   if (NT.pick && S.uid){ NT.bank.used = Object.assign({}, NT.bank.used, {[NT.pick.t]:ymd(today())}); const ks = Object.keys(NT.bank.used); if (ks.length > 400) ks.sort((a, b) => NT.bank.used[a] < NT.bank.used[b] ? -1 : 1).slice(0, ks.length - 400).forEach(x => delete NT.bank.used[x]); ntSave(); }
 }
 $('#nt-copy').onclick = ntCopy;
+$('#nt-big').onclick = async () => {
+  $('#big-title').textContent = $('#nt-for').textContent;
+  $('#big-body').textContent = $('#nt-text').value || '아직 알림장이 비어 있어요.';
+  $('#big-imgs').innerHTML = '';
+  $('#big').hidden = false;
+  try { const el = $('#big'); if (el.requestFullscreen && !document.fullscreenElement) await el.requestFullscreen(); } catch (e){}
+};
 $('#nt-redo').onclick = async () => { $('#nt-text').value = await ntCompose(true); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; toast('내일 시간표로 다시 만들었어요.'); };
 $('#nt-dice').onclick = () => { ntRandom(); ntApplyPick(); renderNoteTool(); };
 $('#nt-tag').addEventListener('change', e => { NT.tag = e.target.value; ntApplyPick(); });
