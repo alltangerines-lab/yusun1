@@ -580,9 +580,10 @@ async function removeImg(key, i){
 function openLightbox(src){ if (!src) return; $('#lb-img').src = src; $('#lightbox').hidden = false; }
 
 /* ---------- pages (tabs) ---------- */
-const GPAGES = [['grade','오늘','main'],['calendar','달력','calendar'],['tasks','할 일','tasks'],['notices','협의·공지','notices'],['links','수업자료','links'],['ops','운영자료','ops'],['budget','예산','budget'],['roster','명부','roster']];
+const GPAGES = [['grade','오늘','main'],['calendar','달력','calendar'],['lessons','특별수업','lessons'],['tasks','할 일','tasks'],['notices','협의·공지','notices'],['links','수업자료','links'],['ops','운영자료','ops'],['budget','예산','budget'],['roster','명부','roster']];
 const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출결','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-roster','명부','roster'],['me-ops','자료','mops']];
 const PAGE_DESC = {
+  lessons:'강사 수업·장학·검사처럼 반마다 시간을 정하는 일정을 모아요. 전담 시간, 다른 특별 수업과 겹치면 빨갛게 알려 줘요.',
   main:'학년 선생님들이 함께 보고 고치는 곳이에요. 학생 개인 정보는 여기 적지 말아 주세요.',
   calendar:'날짜를 누르면 그날 학년 일정과 할 일이 아래에 열려요.',
   tasks:'누가, 무엇을, 언제까지 하는지 학년이 함께 봐요.',
@@ -624,7 +625,7 @@ function applyRoute(r){
   $$('#v-grade .pg').forEach(el => { el.hidden = !el.classList.contains('pg-' + page); });
   renderStrip(); renderPageHead();
   if (space === 'me') renderMe();
-  else { renderCal(); renderDay(); if (page === 'tab') renderTabPage(); if (page === 'ops') renderOps(); if (page === 'links' || page === 'main') renderLinks(); if (page === 'notices' || page === 'main'){ renderNotices(); resolveNames(); } if (page === 'budget' && BUD.g) BUD.g.render(); if (page === 'roster' && ROS.g) ROS.g.render(); }
+  else { renderCal(); renderDay(); if (page === 'tab') renderTabPage(); if (page === 'ops') renderOps(); if (page === 'lessons') renderLessons(); if (page === 'links' || page === 'main') renderLinks(); if (page === 'notices' || page === 'main'){ renderNotices(); resolveNames(); } if (page === 'budget' && BUD.g) BUD.g.render(); if (page === 'roster' && ROS.g) ROS.g.render(); }
   if (changed) window.scrollTo(0, 0);
 }
 function renderStrip(){
@@ -813,7 +814,8 @@ function renderCal(){
     const tks = S.tasks.filter(t => t.due === k);
     const items = [
       ...evs.map(e => wk ? `<span class="it ev k-${evKind(e)} ${e.done ? 'done' : ''}">${e.time ? `<small>${e.time}</small> ` : ''}${esc(e.title)}</span>` : `<span class="it ev k-${evKind(e)} ${e.done ? 'done' : ''}" title="${esc((e.time ? e.time + ' ' : '') + e.title)}">${esc(e.title)}${e.time ? `<small> ${e.time}</small>` : ''}</span>`),
-      ...tks.map(t => `<span class="it tk k-${tkKind(t)} ${t.done ? 'done' : ''}" title="${esc(kindName(tkKind(t)) + ' · ' + t.title)}">${t.done ? '☑' : '☐'} ${esc(t.title)}</span>`)
+      ...tks.map(t => `<span class="it tk k-${tkKind(t)} ${t.done ? 'done' : ''}" title="${esc(kindName(tkKind(t)) + ' · ' + t.title)}">${t.done ? '☑' : '☐'} ${esc(t.title)}</span>`),
+      ...Object.entries(lsOn(k).reduce((m, l) => { (m[l.prog] = m[l.prog] || []).push(l); return m; }, {})).map(([p, ls]) => `<span class="it ls" title="${esc(p + ' · ' + ls.map(l => clsLabel(l.cls) + ' ' + lsPerLabel(l.pers)).join(', '))}">${esc(p)} ${wk ? ls.map(l => esc(clsLabel(l.cls)) + ' ' + l.pers.join(',')).join(' · ') : ls.length + '반'}</span>`)
     ];
     const cls = ['cell', !wk && d.getMonth() !== m.getMonth() ? 'out' : '', k === tdy ? 'today' : '', k === S.selDate ? 'sel' : '',
       (d.getDay() === 0 || hol) ? 'red' : d.getDay() === 6 ? 'blue' : ''].join(' ');
@@ -1069,7 +1071,8 @@ function renderToday(){
     : (sf.s || []).some(Boolean) ? `<li><span class="d">시간표</span><span class="t mono">${esc((sf.s || []).filter(Boolean).join(' · '))}</span></li>` : '';
   const pls = planOn(k), gev = gEventsOn(k);
   $('#s-ev-n').textContent = evs.length + sev.length + pls.length + gev.length;
-  $('#s-ev').innerHTML = ttLine + '<li class="meal-today gas-only" hidden></li>' + pls.map(it => `<li><span class="d">평가</span><span class="t">${esc(it.name)}</span></li>`).join('') + gev.map(g => `<li><span class="d">${g.time || '구글'}</span><span class="t">${esc(g.title)} <span class="chip">구글</span></span></li>`).join('') + sev.map(t => `<li><span class="d">학교</span><span class="t">${esc(t)}</span></li>`).join('') +
+  const mls = S.profile.myClass ? lsOn(k, clsCanon(S.profile.myClass)) : [];
+  $('#s-ev').innerHTML = ttLine + mls.map(l => `<li><span class="d">${lsPerLabel(l.pers)}</span><span class="t">${esc(l.prog)}${l.place ? ' · ' + esc(l.place) : ''}</span></li>`).join('') + '<li class="meal-today gas-only" hidden></li>' + pls.map(it => `<li><span class="d">평가</span><span class="t">${esc(it.name)}</span></li>`).join('') + gev.map(g => `<li><span class="d">${g.time || '구글'}</span><span class="t">${esc(g.title)} <span class="chip">구글</span></span></li>`).join('') + sev.map(t => `<li><span class="d">학교</span><span class="t">${esc(t)}</span></li>`).join('') +
     (evs.length ? evs.map(e => `<li><span class="d">${e.time || '종일'}</span><span class="t">${esc(e.title)}</span></li>`).join('') : (ttLine || sev.length ? '' : '<li class="hint">오늘은 일정이 없어요.</li>'));
   const src = S.tdSrc; S.tdSrc = 'all';
   const todo = myTodos().filter(t => t.src === 'me' && t.due && t.due <= ymd(addDays(today(), 2))).sort((a, b) => a.due < b.due ? -1 : a.due > b.due ? 1 : (a.prio === '높음' ? -1 : 1));
@@ -1548,6 +1551,8 @@ function startListening(){
   db.doc('daily/' + ymd(today())).onSnapshot(snap => { S.dailyToday = snap.exists ? snap.data() : null; renderGradeToday(); resolveNames(); }, () => {});
   listen(db.collection('notices'), 'notices', snap => { S.notices = docs(snap); renderNotices(); resolveNames(); });
   listen(db.collection('links'), 'links', snap => { S.links = docs(snap); renderLinks(); });
+  listen(db.collection('lessons'), 'lessons', snap => { S.lessons = docs(snap); renderLessons(); renderCal(); if (S.space === 'me') renderToday(); });
+  listen(db.doc('grade/jdtt'), 'jdtt', snap => { LS.jd = snap.exists ? ((snap.data() || {}).map || {}) : {}; renderLessons(); });
   listen(db.collection('ops'), 'ops', snap => { S.ops = docs(snap); if (S.page === 'ops') renderOps(); });
   listen(db.collection('phrases'), 'phrases', snap => { S.phG = docs(snap); if (S.page === 'ops') renderPhrases(); });
   listen(db.doc('grade/memo'), 'gmemo', snap => { S.gmemo = snap.exists ? snap.data() : {}; renderGMemo(); });
@@ -4664,9 +4669,249 @@ $('#nt-import').addEventListener('submit', e => {
   toast(n ? `내 문구 ${n}개를 넣었어요.` : '새로 넣을 문구가 없어요. 이미 있거나 너무 짧아요.');
 });
 
+/* ---------- 특별 수업 일정 (반별 교시 배정 · 겹침 확인 · 빈 시간 찾기) ---------- */
+const LS = {mon:null, view:'week', prog:'all', cls:'all', jd:{}, rows:[], editId:null, jdCls:'1반'};
+const LS_PER = 6;
+const lsClasses = () => Array.from({length:Math.max(1, Math.min(20, +S.settings.classCount || 4))}, (_, i) => (i + 1) + '반');
+const lsOverlap = (a, b) => (a || []).some(x => (b || []).includes(x));
+function lsJd(cls, k){ const wd = fromYmd(k).getDay(); const row = ((LS.jd[cls] || {})[wd]) || []; return row; }
+function lsConflicts(k, pers, cls, ignoreId, prog, extra){
+  const out = [];
+  if (!k || !pers || !pers.length || !cls) return out;
+  const d = fromYmd(k), wd = d.getDay();
+  if (wd === 0 || wd === 6 || HOLIDAYS[k]) out.push(HOLIDAYS[k] || '주말');
+  const jd = lsJd(cls, k);
+  pers.forEach(p => { if (jd[p - 1]) out.push(`${p}교시 ${jd[p - 1]}`); });
+  (S.lessons || []).concat(extra || []).forEach(l => {
+    if (l.id && l.id === ignoreId) return;
+    if (l.date !== k || !lsOverlap(l.pers, pers)) return;
+    if (l.cls === cls) out.push(l.prog || '다른 수업');
+  });
+  return [...new Set(out)];
+}
+const lsPerLabel = p => (p || []).length > 1 ? `${p[0]}~${p[p.length - 1]}교시` : `${(p || [])[0] || '?'}교시`;
+function lsYear(m, d){
+  const t = today(), y = t.getFullYear();
+  const cands = [y - 1, y, y + 1].map(yy => new Date(yy, m - 1, d));
+  cands.sort((a, b) => Math.abs(a - t - 60 * 864e5) - Math.abs(b - t - 60 * 864e5));
+  return ymd(cands[0]);
+}
+/* 붙여 넣은 표·글에서 날짜·교시·반을 찾아요 */
+function lsParse(text){
+  const names = lsClasses().map(c => ({c, keys:[clsLabel(c), clsLabel(c).replace(/반$/, '')].filter((x, i, a) => x && x.length > 1 && a.indexOf(x) === i)}));
+  const out = [];
+  text.split(/\n/).forEach(line => {
+    if (!line.trim()) return;
+    const toks = [];
+    line.replace(/(\d{1,2})\s*[.\/월]\s*(\d{1,2})\s*[.일]?/g, (m, a, b, i) => { if (+a >= 1 && +a <= 12 && +b >= 1 && +b <= 31) toks.push({t:'d', i, v:lsYear(+a, +b)}); return m; });
+    line.replace(/(\d)\s*(?:[~∼～-]\s*(\d)\s*)?교시/g, (m, a, b, i) => { const s = +a, e = b ? +b : s; const v = []; for (let p = s; p <= e && p <= 8; p++) v.push(p); toks.push({t:'p', i, v}); return m; });
+    names.forEach(({c, keys}) => keys.forEach(kw => { let i = line.indexOf(kw); while (i >= 0){ toks.push({t:'c', i, v:c}); i = line.indexOf(kw, i + kw.length); } }));
+    line.replace(/(?:^|[^\d])(\d{1,2})\s*반/g, (m, a, i) => { if (+a >= 1 && +a <= 20) toks.push({t:'c', i, v:(+a) + '반'}); return m; });
+    line.replace(/\b\d\s*-\s*(\d{1,2})\b(?!\s*교시)/g, (m, a, i) => { if (+a <= 20) toks.push({t:'c', i, v:(+a) + '반'}); return m; });
+    const cs = toks.filter(x => x.t === 'c'), ds = toks.filter(x => x.t === 'd'), ps = toks.filter(x => x.t === 'p');
+    if (!ds.length && !cs.length) return;
+    const near = (arr, i) => arr.reduce((b, x) => !b || Math.abs(x.i - i) < Math.abs(b.i - i) ? x : b, null);
+    const seen = new Set();
+    (cs.length ? cs : [{v:'', i:(ds[0] || {}).i || 0}]).forEach(c => {
+      const d = near(ds, c.i), p = near(ps, c.i);
+      const row = {date:d ? d.v : '', pers:p ? p.v : [], cls:c.v};
+      const key = row.date + row.pers.join() + row.cls;
+      if (seen.has(key)) return; seen.add(key); out.push(row);
+    });
+  });
+  return out;
+}
+/* 빈 시간 찾기: 반 순서대로, 기간 안에서 겹치지 않는 가장 이른 자리를 골라요 */
+function lsAuto(o){
+  const res = [], taken = [];
+  let cur = o.from;
+  const days = []; for (let d = fromYmd(o.from); ymd(d) <= o.to; d = addDays(d, 1)) days.push(ymd(d));
+  const ok = (k, pers, cls) => {
+    const wd = fromYmd(k).getDay();
+    if (!o.wds.includes(wd)) return false;
+    if (!pers.every(p => o.pers.includes(p))) return false;
+    if (lsConflicts(k, pers, cls, null, o.prog, taken).length) return false;
+    if (o.oneAtATime && (S.lessons || []).concat(taken).some(l => l.prog === o.prog && l.date === k && lsOverlap(l.pers, pers))) return false;
+    if (o.onePerDay && taken.some(l => l.date === k && l.cls !== cls)) return false;
+    return true;
+  };
+  for (let r = 0; r < o.times; r++){
+    for (const cls of o.order){
+      let found = null;
+      for (const k of days){
+        if (o.keepOrder && k < cur) continue;
+        for (let p = 1; p + o.len - 1 <= LS_PER; p++){
+          const pers = Array.from({length:o.len}, (_, i) => p + i);
+          if (ok(k, pers, cls)){ found = {date:k, pers, cls}; break; }
+        }
+        if (found) break;
+      }
+      if (found){ taken.push(Object.assign({prog:o.prog}, found)); res.push(Object.assign({ok:true}, found)); if (o.keepOrder) cur = found.date; }
+      else res.push({date:'', pers:[], cls, ok:false});
+    }
+  }
+  return res;
+}
+function lsWeekStart(){ if (!LS.mon) LS.mon = mondayOf(ymd(today())); return LS.mon; }
+function renderLessons(){
+  if (S.page !== 'lessons' || S.space !== 'grade') return;
+  const mon = lsWeekStart(), days = [0, 1, 2, 3, 4].map(i => ymd(addDays(fromYmd(mon), i)));
+  const all = (S.lessons || []).slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.pers[0] || 0) - (b.pers[0] || 0));
+  const progs = [...new Set(all.map(l => l.prog).filter(Boolean))];
+  if (LS.prog !== 'all' && !progs.includes(LS.prog)) LS.prog = 'all';
+  $('#ls-prog').innerHTML = `<option value="all">모든 수업</option>` + progs.map(p => `<option ${LS.prog === p ? 'selected' : ''}>${esc(p)}</option>`).join('');
+  $('#ls-cls').innerHTML = `<option value="all">모든 반</option>` + lsClasses().map(c => `<option value="${c}" ${LS.cls === c ? 'selected' : ''}>${esc(clsLabel(c))}</option>`).join('');
+  $$('#ls-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === LS.view));
+  const pick = l => (LS.prog === 'all' || l.prog === LS.prog) && (LS.cls === 'all' || l.cls === LS.cls);
+  const s = fromYmd(mon), e = addDays(s, 4);
+  $('#ls-label').textContent = `${s.getMonth() + 1}.${s.getDate()} ~ ${e.getMonth() + 1}.${e.getDate()}`;
+  $('#ls-weeknav').hidden = LS.view !== 'week';
+  $('#ls-week').hidden = LS.view !== 'week'; $('#ls-list').hidden = LS.view !== 'list';
+  if (LS.view === 'week'){
+    const evRow = days.map(k => { const t = (S.events || []).filter(x => x.date === k && (!x.who || x.who === '전체')).map(x => x.title).concat(schoolEvents(k)); return `<td class="ls-ev">${HOLIDAYS[k] ? `<b>${esc(HOLIDAYS[k])}</b> ` : ''}${t.slice(0, 3).map(esc).join('<br>')}</td>`; }).join('');
+    let h = `<table class="ls-tt"><thead><tr><th></th>${days.map(k => { const d = fromYmd(k); return `<th class="${k === ymd(today()) ? 'today' : ''}">${d.getMonth() + 1}월 ${d.getDate()}일 <small>${WD[d.getDay()]}</small></th>`; }).join('')}</tr></thead><tbody><tr><th class="ls-evh">학사일정</th>${evRow}</tr>`;
+    for (let p = 1; p <= LS_PER; p++){
+      h += `<tr><th>${p}</th>` + days.map(k => {
+        const ls = all.filter(l => l.date === k && (l.pers || []).includes(p) && pick(l));
+        const jd = LS.cls !== 'all' ? (lsJd(LS.cls, k)[p - 1] || '') : '';
+        return `<td>${jd ? `<span class="ls-jd">${esc(jd)}</span>` : ''}${ls.map(l => { const bad = lsConflicts(l.date, l.pers, l.cls, l.id).length; return `<button type="button" class="ls-chip ${bad ? 'bad' : ''}" data-ls="${l.id}" title="${esc(l.prog + ' · ' + clsLabel(l.cls) + ' ' + lsPerLabel(l.pers) + (l.teacher ? ' · ' + l.teacher : '') + (l.place ? ' · ' + l.place : ''))}">${esc(clsLabel(l.cls))}<small>(${esc(l.prog)})</small></button>`; }).join('')}</td>`;
+      }).join('') + '</tr>';
+    }
+    $('#ls-week').innerHTML = `<div class="tablewrap">${h}</tbody></table></div>`;
+  } else {
+    const list = all.filter(pick);
+    const groups = {}; list.forEach(l => { (groups[l.prog || '이름 없음'] = groups[l.prog || '이름 없음'] || []).push(l); });
+    $('#ls-list').innerHTML = Object.keys(groups).length ? Object.entries(groups).map(([g, ls]) => `<section class="ls-g"><h3>${esc(g)} <small>${ls.length}번</small></h3><div class="tablewrap"><table class="ls-lt"><thead><tr><th>날짜</th><th>교시</th><th>반</th><th>담당·장소</th><th></th></tr></thead><tbody>${ls.map(l => { const bad = lsConflicts(l.date, l.pers, l.cls, l.id); return `<tr class="${bad.length ? 'bad' : ''}"><td>${fmtMD(l.date)}</td><td>${lsPerLabel(l.pers)}</td><td>${esc(clsLabel(l.cls))}</td><td>${esc([l.teacher, l.place].filter(Boolean).join(' · '))}${bad.length ? ` <span class="ls-warn">겹침: ${esc(bad.join(', '))}</span>` : ''}</td><td>${S.canWrite ? `<button type="button" class="btn small" data-ls="${l.id}">고치기</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div></section>`).join('')
+      : '<p class="empty">아직 넣은 특별 수업이 없어요. "+ 일정 넣기"에서 모집 표를 그대로 붙여 넣거나, "빈 시간 찾아 정하기"로 반별 시간을 정해 보세요.</p>';
+  }
+}
+/* 미리 보기 표 (붙여 넣기 · 빈 시간 찾기 공용) */
+function lsRowsHtml(){
+  const opts = c => lsClasses().map(x => `<option value="${x}" ${x === c ? 'selected' : ''}>${esc(clsLabel(x))}</option>`).join('');
+  const per = p => [1, 2, 3, 4, 5, 6].map(x => `<label class="ls-pc"><input type="checkbox" data-lsp="${x}" ${(p || []).includes(x) ? 'checked' : ''}>${x}</label>`).join('');
+  const prog = $('#lsf-prog').value.trim();
+  return LS.rows.length ? `<table class="ls-pv"><thead><tr><th></th><th>날짜</th><th>교시</th><th>반</th><th>확인</th></tr></thead><tbody>${LS.rows.map((r, i) => {
+    const bad = r.date && r.pers.length && r.cls ? lsConflicts(r.date, r.pers, r.cls, null, prog, LS.rows.filter((x, j) => j !== i && x.on)) : ['날짜·교시·반을 채워 주세요'];
+    return `<tr data-lsr="${i}" class="${bad.length ? 'bad' : ''}"><td><input type="checkbox" data-lsf="on" ${r.on ? 'checked' : ''} aria-label="넣기"></td><td><input type="date" data-lsf="date" value="${r.date}"></td><td class="ls-pcs">${per(r.pers)}</td><td><select data-lsf="cls"><option value="">반</option>${opts(r.cls)}</select></td><td>${bad.length ? `<span class="ls-warn">${esc(bad.join(', '))}</span>` : '<span class="ls-ok">비어 있어요</span>'}</td></tr>`;
+  }).join('')}</tbody></table>` : '<p class="hint" style="margin:0">아직 고른 시간이 없어요.</p>';
+}
+function lsRenderRows(){ $('#lsf-rows').innerHTML = lsRowsHtml(); $('#lsf-n').textContent = LS.rows.filter(r => r.on).length; }
+function lsOpenAdd(){
+  if (!S.canWrite){ toast('학년 공간을 고칠 권한이 없어요.'); return; }
+  LS.rows = []; $('#lsf-paste').value = ''; $('#lsf-prog').value = LS.prog !== 'all' ? LS.prog : ''; $('#lsf-teacher').value = ''; $('#lsf-place').value = '';
+  $('#lsf-progs').innerHTML = [...new Set((S.lessons || []).map(l => l.prog).filter(Boolean))].map(p => `<option value="${esc(p)}">`).join('');
+  const t = ymd(today()); $('#lsa-from').value = t; $('#lsa-to').value = ymd(addDays(today(), 28));
+  lsRenderRows(); lsTab('paste'); closeDlgs(); openDlg('#dlg-ls');
+}
+function lsTab(t){ $$('#lsf-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.t === t)); $('#lsf-pastebox').hidden = t !== 'paste'; $('#lsf-autobox').hidden = t !== 'auto'; }
+$('#ls-add').onclick = () => { lsOpenAdd(); };
+$('#ls-auto').onclick = () => { lsOpenAdd(); lsTab('auto'); };
+$('#lsf-tabs').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if (b) lsTab(b.dataset.t); });
+$('#lsf-parse').onclick = () => {
+  const rows = lsParse($('#lsf-paste').value);
+  if (!rows.length){ toast('날짜·교시·반을 찾지 못했어요. "11/18 2교시 1반"처럼 한 줄에 하나씩 적어도 돼요.'); return; }
+  LS.rows = LS.rows.concat(rows.map(r => Object.assign({on:true}, r))); lsRenderRows();
+};
+$('#lsf-one').onclick = () => { LS.rows.push({on:true, date:ymd(today()), pers:[], cls:''}); lsRenderRows(); };
+$('#lsf-find').onclick = () => {
+  const prog = $('#lsf-prog').value.trim() || '특별 수업';
+  const order = lsClasses().slice(); if ($('#lsa-rev').checked) order.reverse();
+  const o = {prog, from:$('#lsa-from').value, to:$('#lsa-to').value, times:Math.max(1, Math.min(10, +$('#lsa-times').value || 1)), len:Math.max(1, Math.min(3, +$('#lsa-len').value || 1)),
+    wds:$$('#lsa-wds input:checked').map(x => +x.value), pers:$$('#lsa-pers input:checked').map(x => +x.value), order, oneAtATime:$('#lsa-one').checked, onePerDay:$('#lsa-day').checked, keepOrder:$('#lsa-keep').checked};
+  if (!o.from || !o.to || o.to < o.from){ toast('기간을 확인해 주세요.'); return; }
+  if (!o.wds.length || !o.pers.length){ toast('요일과 교시를 하나 이상 골라 주세요.'); return; }
+  const res = lsAuto(o);
+  LS.rows = res.map(r => ({on:r.ok, date:r.date, pers:r.pers, cls:r.cls}));
+  lsRenderRows();
+  const miss = res.filter(r => !r.ok).length;
+  toast(miss ? `${res.length - miss}개는 정했고, ${miss}개는 기간 안에서 빈 시간을 못 찾았어요. 기간·요일·교시를 넓혀 보세요.` : `${res.length}개 모두 겹치지 않게 정했어요. 확인하고 저장해 주세요.`);
+};
+$('#lsf-rows').addEventListener('change', e => {
+  const tr = e.target.closest('[data-lsr]'); if (!tr) return; const r = LS.rows[+tr.dataset.lsr];
+  const f = e.target.dataset.lsf, p = e.target.dataset.lsp;
+  if (f === 'on') r.on = e.target.checked; else if (f === 'date') r.date = e.target.value; else if (f === 'cls') r.cls = e.target.value;
+  else if (p){ const n = +p; r.pers = e.target.checked ? [...new Set(r.pers.concat(n))].sort((a, b) => a - b) : r.pers.filter(x => x !== n); }
+  lsRenderRows();
+});
+$('#lsf-save').onclick = async () => {
+  const prog = $('#lsf-prog').value.trim(); if (!prog){ toast('수업 이름을 적어 주세요.'); $('#lsf-prog').focus(); return; }
+  const rows = LS.rows.filter(r => r.on && r.date && r.pers.length && r.cls);
+  if (!rows.length){ toast('넣을 시간이 없어요.'); return; }
+  const bad = rows.filter((r, i) => lsConflicts(r.date, r.pers, r.cls, null, prog, rows.filter((x, j) => j !== i)).length);
+  const b = $('#lsf-save');
+  if (bad.length && !twoStep(b, `${bad.length}개가 겹쳐요. 그래도 저장`)) return;
+  b.disabled = true;
+  try {
+    for (const r of rows) await S.db.collection('lessons').add({prog, date:r.date, pers:r.pers, cls:r.cls, teacher:$('#lsf-teacher').value.trim(), place:$('#lsf-place').value.trim(), createdBy:S.uid, createdAt:Date.now()});
+    LS.prog = prog; LS.mon = mondayOf(rows[0].date); closeDlgs(); toast(`${prog} ${rows.length}개를 넣었어요.`); renderLessons(); renderCal();
+  } catch (er){ wErr(er, true); }
+  b.disabled = false;
+};
+/* 한 칸 고치기 */
+function lsOpenEdit(id){
+  const l = (S.lessons || []).find(x => x.id === id); if (!l) return;
+  LS.editId = id;
+  $('#lse-title').textContent = `${l.prog} · ${clsLabel(l.cls)}`;
+  $('#lse-date').value = l.date; $('#lse-prog').value = l.prog || ''; $('#lse-teacher').value = l.teacher || ''; $('#lse-place').value = l.place || '';
+  $('#lse-cls').innerHTML = lsClasses().map(x => `<option value="${x}" ${x === l.cls ? 'selected' : ''}>${esc(clsLabel(x))}</option>`).join('');
+  $$('#lse-pers input').forEach(x => { x.checked = (l.pers || []).includes(+x.value); });
+  $$('#dlg-lse input, #dlg-lse select').forEach(x => { x.disabled = !S.canWrite; }); $('#lse-save').hidden = $('#lse-del').hidden = !S.canWrite;
+  lseCheck(); closeDlgs(); openDlg('#dlg-lse');
+}
+function lseCheck(){
+  const pers = $$('#lse-pers input:checked').map(x => +x.value);
+  const bad = lsConflicts($('#lse-date').value, pers, $('#lse-cls').value, LS.editId);
+  $('#lse-warn').innerHTML = bad.length ? `<span class="ls-warn">겹침: ${esc(bad.join(', '))}</span>` : '<span class="ls-ok">겹치는 수업이 없어요.</span>';
+}
+$('#dlg-lse').addEventListener('change', lseCheck);
+$('#lse-save').onclick = async () => {
+  const pers = $$('#lse-pers input:checked').map(x => +x.value);
+  if (!$('#lse-date').value || !pers.length){ toast('날짜와 교시를 골라 주세요.'); return; }
+  try { await S.db.doc('lessons/' + LS.editId).update({date:$('#lse-date').value, pers, cls:$('#lse-cls').value, prog:$('#lse-prog').value.trim(), teacher:$('#lse-teacher').value.trim(), place:$('#lse-place').value.trim(), updatedAt:Date.now()}); closeDlgs(); toast('고쳤어요.'); }
+  catch (er){ wErr(er, true); }
+};
+$('#lse-del').onclick = async () => { const b = $('#lse-del'); if (!twoStep(b, '지울까요?')) return; try { await S.db.doc('lessons/' + LS.editId).delete(); closeDlgs(); toast('지웠어요.'); } catch (er){ wErr(er, true); } };
+$('#pg-lessons-body').addEventListener('click', e => { const b = e.target.closest('[data-ls]'); if (b) lsOpenEdit(b.dataset.ls); });
+$('#ls-prev').onclick = () => { LS.mon = ymd(addDays(fromYmd(lsWeekStart()), -7)); renderLessons(); };
+$('#ls-next').onclick = () => { LS.mon = ymd(addDays(fromYmd(lsWeekStart()), 7)); renderLessons(); };
+$('#ls-today').onclick = () => { LS.mon = mondayOf(ymd(today())); renderLessons(); };
+$('#ls-view').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; LS.view = b.dataset.v; renderLessons(); });
+$('#ls-prog').addEventListener('change', e => { LS.prog = e.target.value; renderLessons(); });
+$('#ls-cls').addEventListener('change', e => { LS.cls = e.target.value; renderLessons(); });
+/* 전담 시간표 */
+function lsJdRender(){
+  const c = LS.jdCls, m = LS.jd[c] || {};
+  $('#jd-cls').innerHTML = lsClasses().map(x => `<button type="button" class="stab" data-jdc="${x}" ${x === c ? 'aria-current="page"' : ''}>${esc(clsLabel(x))}</button>`).join('');
+  let h = '<table class="ls-jdt"><thead><tr><th></th>' + ['월', '화', '수', '목', '금'].map(w => `<th>${w}</th>`).join('') + '</tr></thead><tbody>';
+  for (let p = 1; p <= LS_PER; p++) h += `<tr><th>${p}</th>` + [1, 2, 3, 4, 5].map(wd => `<td><input type="text" data-jd="${wd}-${p}" value="${esc(((m[wd] || [])[p - 1]) || '')}" placeholder="" aria-label="${'월화수목금'[wd - 1]} ${p}교시 전담"></td>`).join('') + '</tr>';
+  $('#jd-grid').innerHTML = h + '</tbody></table>';
+}
+$('#ls-jd').onclick = () => { LS.jdCls = LS.cls !== 'all' ? LS.cls : lsClasses()[0]; lsJdRender(); $$('#jd-grid input').forEach(x => { x.disabled = !S.canWrite; }); closeDlgs(); openDlg('#dlg-jd'); };
+$('#jd-cls').addEventListener('click', e => { const b = e.target.closest('[data-jdc]'); if (!b) return; lsJdCollect(); LS.jdCls = b.dataset.jdc; lsJdRender(); });
+function lsJdCollect(){
+  const c = LS.jdCls, m = {};
+  $$('#jd-grid input').forEach(x => { const [wd, p] = x.dataset.jd.split('-').map(Number); (m[wd] = m[wd] || ['', '', '', '', '', ''])[p - 1] = x.value.trim(); });
+  LS.jd = Object.assign({}, LS.jd, {[c]:m});
+}
+$('#jd-save').onclick = async () => {
+  lsJdCollect();
+  try { await S.db.doc('grade/jdtt').set({map:LS.jd, updatedBy:S.uid, updatedAt:Date.now()}); closeDlgs(); toast('전담 시간표를 저장했어요. 이제 이 시간과 겹치면 알려 드려요.'); renderLessons(); }
+  catch (er){ wErr(er, true); }
+};
+$('#jd-paste').addEventListener('paste', e => {
+  const t = (e.clipboardData || window.clipboardData).getData('text'); if (!t || !/\t/.test(t)) return;
+  e.preventDefault();
+  const rows = t.replace(/\r/g, '').split('\n').filter(x => x.trim()).map(r => r.split('\t'));
+  const body = rows.filter(r => r.length >= 5).slice(-LS_PER);
+  const m = {}; body.forEach((r, i) => { const cells = r.length >= 6 ? r.slice(-5) : r.slice(0, 5); cells.forEach((v, j) => { (m[j + 1] = m[j + 1] || ['', '', '', '', '', ''])[i] = v.trim(); }); });
+  LS.jd = Object.assign({}, LS.jd, {[LS.jdCls]:m}); lsJdRender(); toast('붙여 넣었어요. 전담이 아닌 과목은 지우고 저장해 주세요.');
+});
+/* 달력·나의 공간에 보이기 */
+function lsOn(k, cls){ return (S.lessons || []).filter(l => l.date === k && (!cls || l.cls === cls)).sort((a, b) => (a.pers[0] || 0) - (b.pers[0] || 0)); }
+
 /* ---------- 새 학년도 · 지난 학년도 보관함 ---------- */
 const ARC_KEYS = {
-  settings:() => 'grade/settings', events:() => 'events', tasks:() => 'tasks', notices:() => 'notices', links:() => 'links', ops:() => 'ops', phrases:() => 'phrases',
+  settings:() => 'grade/settings', events:() => 'events', lessons:() => 'lessons', jdtt:() => 'grade/jdtt', tasks:() => 'tasks', notices:() => 'notices', links:() => 'links', ops:() => 'ops', phrases:() => 'phrases',
   gmemo:() => 'grade/memo', budget:() => 'budget', roster:() => 'roster', tabs:() => 'tabs',
   profile:() => PROFILE(), stunotes:() => STUNOTES(), mphrases:() => PROFILE() + '/phrases', mbudget:() => PROFILE() + '/budget', mops:() => PROFILE() + '/ops', journal:() => PROFILE() + '/journal',
   notes:() => NOTES(), ttplan:() => TTPLAN(), sheet:() => SHEET()
@@ -4675,6 +4920,7 @@ const NY_G = [
   ['events', '학년 일정', '새 학년도 첫날보다 앞선 날짜만', true],
   ['tasks', '학년 할 일', '끝낸 것과 기한이 지난 것', true],
   ['notices', '협의·공지', '댓글·투표까지', true],
+  ['lessons', '특별 수업 일정', '새 학년도 첫날보다 앞선 것만', true],
   ['budget', '학년 예산', '', true],
   ['roster', '학년 명부', '', true],
   ['tabs', '새로 만든 탭', '탭과 표 내용까지', false],
@@ -4833,9 +5079,9 @@ $('#ny-form').addEventListener('submit', async ev => {
     let gDocs = null;
     if (gOk){
       say('학년 공간 기록을 모으는 중…'); gDocs = {};
-      for (const c of ['events', 'tasks', 'notices', 'links', 'ops', 'phrases', 'budget', 'roster', 'tabs', 'daily']) (await colAll(c)).forEach(([p, d]) => { gDocs[p] = d; });
+      for (const c of ['events', 'tasks', 'notices', 'links', 'ops', 'phrases', 'budget', 'roster', 'tabs', 'daily', 'lessons']) (await colAll(c)).forEach(([p, d]) => { gDocs[p] = d; });
       for (const p of Object.keys(gDocs).filter(p => /^tabs\/[^/]+$/.test(p))) (await colAll(p + '/rows')).forEach(([q, d]) => { gDocs[q] = d; });
-      for (const p of ['grade/settings', 'grade/memo']){ const sn = await S.db.doc(p).get(); if (sn.exists) gDocs[p] = sn.data(); }
+      for (const p of ['grade/settings', 'grade/memo', 'grade/jdtt']){ const sn = await S.db.doc(p).get(); if (sn.exists) gDocs[p] = sn.data(); }
     }
     /* 2. 나의 공간 모으기 */
     say('나의 공간 기록을 모으는 중…');
@@ -4871,6 +5117,7 @@ $('#ny-form').addEventListener('submit', async ev => {
         else if (c === 'daily' && pick.has('events') && p.split('/')[1] < cut) del.push(p);
         else if (c === 'tasks' && pick.has('tasks') && !(d.due && d.due >= cut && !d.done)) del.push(p);
         else if (c === 'notices' && pick.has('notices') && (d.createdAt || 0) < cutTs) del.push(p);
+        else if (c === 'lessons' && pick.has('lessons') && (d.date || '') < cut) del.push(p);
         else if ((c === 'budget' || c === 'roster' || c === 'links' || c === 'ops' || c === 'phrases' || c === 'tabs') && pick.has(c)) del.push(p);
         else if (p === 'grade/memo' && pick.has('memo')) del.push(p);
       });
