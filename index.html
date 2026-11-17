@@ -886,6 +886,7 @@ table.ls-lt,table.ls-pv,table.ls-jdt{width:100%;border-collapse:collapse}
 .ls-warn{color:var(--danger, #c0392b);font-size:12.5px}
 .ls-ok{color:var(--ok, #2f9e5b);font-size:12.5px}
 .ls-pcs{white-space:nowrap}
+.ls-bulk{gap:6px 10px;flex-wrap:wrap;padding:8px 10px;border:1px dashed var(--line);border-radius:10px;background:var(--surface-2);font-size:13px}
 .ls-pc,.ls-opts label{display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:13px}
 .ls-pv input[type=date]{width:auto}
 .ls-jdt td input{width:100%;min-width:56px;text-align:center}
@@ -1904,6 +1905,10 @@ body.ro .w-only{display:none!important}
       <div class="row ls-opts"><label><input type="checkbox" id="lsa-one" checked> 같은 시간엔 한 반만 (강사 한 명)</label><label><input type="checkbox" id="lsa-day"> 하루에 한 반만</label><label><input type="checkbox" id="lsa-rev"> 반 순서 거꾸로 (4-3-2-1)</label><label><input type="checkbox" id="lsa-keep" checked> 반 순서대로 날짜 정하기</label></div>
       <div class="row"><button type="button" class="btn small primary" id="lsf-find">겹치지 않는 시간 찾기</button><span class="hint">전담 시간표·다른 특별 수업·휴일을 피해서 골라요.</span></div>
     </div>
+    <div class="row ls-bulk" id="lsf-bulk" hidden><b>체크한 줄 한꺼번에</b>
+      <label for="lsb-date" class="hint">날짜</label><input type="date" id="lsb-date" style="width:auto"><button type="button" class="btn small" id="lsb-date-go">날짜 맞추기</button>
+      <span class="hint">교시</span><span id="lsb-pers"><label class="ls-pc"><input type="checkbox" value="1">1</label><label class="ls-pc"><input type="checkbox" value="2">2</label><label class="ls-pc"><input type="checkbox" value="3">3</label><label class="ls-pc"><input type="checkbox" value="4">4</label><label class="ls-pc"><input type="checkbox" value="5">5</label><label class="ls-pc"><input type="checkbox" value="6">6</label></span><button type="button" class="btn small" id="lsb-per-go">교시 맞추기</button>
+      <button type="button" class="btn small" id="lsb-all">모든 반 줄 만들기</button></div>
     <div id="lsf-rows" class="tablewrap"></div>
     <div class="acts"><span class="hint left">넣을 것 <b id="lsf-n">0</b>개 · 빨간 줄은 겹쳐요</span><button type="button" class="btn" data-close>닫기</button><button type="button" class="btn primary" id="lsf-save">저장</button></div>
   </div>
@@ -2218,7 +2223,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@1fc3e412f0f9ef74fdb33432c81af3abdc420443/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@95edc8acdff1189f631ec36fb9ba3d094f5579e7/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
