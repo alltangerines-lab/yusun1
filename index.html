@@ -864,6 +864,33 @@ select.lsubj{width:auto;padding:1px 4px;font-size:11.5px;margin-right:6px;border
 .mo-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) minmax(0,.9fr);gap:14px;align-items:start}
 @media (max-width:900px){.mo-grid{grid-template-columns:minmax(0,1fr)}.mo-todo{order:-1}}
 #tools.focus #tool-tabs,#tools.focus #tools-close{display:none}
+.ls-bar{gap:8px;margin-bottom:10px;flex-wrap:wrap}
+table.ls-tt{width:100%;border-collapse:collapse;table-layout:fixed;min-width:640px}
+.ls-tt th,.ls-tt td{border:1px solid var(--line);padding:6px;vertical-align:top;font-size:13.5px}
+.ls-tt thead th{background:var(--surface-2);font-weight:600}
+.ls-tt thead th.today{color:var(--accent)}
+.ls-tt tbody th{width:64px;background:var(--surface-2);font-weight:600;text-align:center;vertical-align:middle}
+.ls-tt th.ls-evh{background:color-mix(in srgb,var(--ok, #2f9e5b) 18%,var(--surface))}
+.ls-tt td.ls-ev{font-size:12px;color:var(--muted);height:34px}
+.ls-tt td{height:46px}
+.ls-chip{display:block;width:100%;text-align:center;font:inherit;font-weight:700;font-size:13.5px;background:none;border:0;border-radius:6px;padding:3px 4px;cursor:pointer;color:var(--fg)}
+.ls-chip small{font-weight:600;color:var(--muted);margin-left:2px}
+.ls-chip:hover{background:var(--surface-2)}
+.ls-chip.bad{color:var(--danger, #c0392b);background:color-mix(in srgb,var(--danger, #c0392b) 10%,transparent)}
+.ls-jd{display:block;text-align:center;font-size:12px;color:var(--muted);background:var(--surface-2);border-radius:4px;padding:1px 4px;margin-bottom:2px}
+.ls-g{margin-bottom:14px}
+.ls-g h3{margin:0 0 6px;font-size:15px}.ls-g h3 small{color:var(--muted);font-weight:400}
+table.ls-lt,table.ls-pv,table.ls-jdt{width:100%;border-collapse:collapse}
+.ls-lt th,.ls-lt td,.ls-pv th,.ls-pv td,.ls-jdt th,.ls-jdt td{border-bottom:1px solid var(--line);padding:5px 6px;font-size:13px;text-align:left}
+.ls-lt tr.bad td,.ls-pv tr.bad td{background:color-mix(in srgb,var(--danger, #c0392b) 7%,transparent)}
+.ls-warn{color:var(--danger, #c0392b);font-size:12.5px}
+.ls-ok{color:var(--ok, #2f9e5b);font-size:12.5px}
+.ls-pcs{white-space:nowrap}
+.ls-pc,.ls-opts label{display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:13px}
+.ls-pv input[type=date]{width:auto}
+.ls-jdt td input{width:100%;min-width:56px;text-align:center}
+.dlg.wide{width:min(860px,100%)}
+.cell .it.ls{background:color-mix(in srgb,#2f80c9 14%,transparent);color:inherit;border-left:3px solid #2f80c9}
 .tool.nt{width:min(100%,1300px);margin:0 auto;align-items:stretch;justify-content:flex-start;flex:none}
 .nt-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:860px){.nt-grid{grid-template-columns:minmax(0,1fr)}}
@@ -1343,6 +1370,25 @@ body.ro .w-only{display:none!important}
             <button type="button" class="btn small w-only" data-act="newtab" style="margin-top:8px">+ 새 탭 만들기</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="card pg pg-lessons">
+      <div class="card-h"><h2>특별 수업 일정</h2><span class="grow"></span>
+        <button type="button" class="btn small w-only" id="ls-jd">전담 시간표</button>
+        <button type="button" class="btn small w-only" id="ls-auto">빈 시간 찾아 정하기</button>
+        <button type="button" class="btn small primary w-only" id="ls-add">+ 일정 넣기</button></div>
+      <div class="card-b" id="pg-lessons-body">
+        <div class="row ls-bar">
+          <div class="seg" role="group" aria-label="보기" id="ls-view"><button type="button" data-v="week" aria-pressed="true">주간표</button><button type="button" data-v="list" aria-pressed="false">수업별 목록</button></div>
+          <span id="ls-weeknav" class="row" style="gap:6px"><button type="button" class="btn small" id="ls-prev" aria-label="지난주">‹</button><strong id="ls-label"></strong><button type="button" class="btn small" id="ls-next" aria-label="다음 주">›</button><button type="button" class="btn small" id="ls-today">이번 주</button></span>
+          <span class="grow"></span>
+          <select id="ls-prog" aria-label="수업 고르기" style="width:auto"></select>
+          <select id="ls-cls" aria-label="반 고르기" style="width:auto"></select>
+        </div>
+        <div id="ls-week"></div>
+        <div id="ls-list" hidden></div>
+        <p class="hint" style="margin:8px 0 0">반을 하나 고르면 그 반 전담 시간이 회색으로 보여요. 칸을 누르면 고치거나 지울 수 있어요.</p>
       </div>
     </div>
 
@@ -1839,6 +1885,51 @@ body.ro .w-only{display:none!important}
   </form>
 </div>
 
+<div class="overlay" id="dlg-ls" hidden>
+  <div class="dlg wide" role="dialog" aria-labelledby="lsf-h">
+    <h2 id="lsf-h">특별 수업 일정 넣기</h2>
+    <div class="two"><label class="f" for="lsf-prog">수업 이름<input type="text" id="lsf-prog" list="lsf-progs" autocomplete="off" placeholder="예: 생태수업, 영양수업, 자율장학"></label>
+      <div class="two"><label class="f" for="lsf-teacher">담당<input type="text" id="lsf-teacher" autocomplete="off" placeholder="선택"></label><label class="f" for="lsf-place">장소<input type="text" id="lsf-place" autocomplete="off" placeholder="선택"></label></div></div>
+    <datalist id="lsf-progs"></datalist>
+    <div class="seg" role="group" id="lsf-tabs"><button type="button" data-t="paste" aria-pressed="true">모집 표 붙여 넣기</button><button type="button" data-t="auto" aria-pressed="false">빈 시간 찾아 정하기</button></div>
+    <div id="lsf-pastebox" class="stack" style="display:grid;gap:6px">
+      <textarea id="lsf-paste" rows="5" placeholder="모집 스프레드시트의 표를 그대로 복사해 붙여 넣어요. 날짜·교시·반을 찾아 줘요.&#10;직접 적어도 돼요: 11/18 2교시 1반"></textarea>
+      <div class="row"><button type="button" class="btn small primary" id="lsf-parse">표에서 찾기</button><button type="button" class="btn small" id="lsf-one">한 칸 직접 넣기</button></div>
+    </div>
+    <div id="lsf-autobox" class="stack" style="display:grid;gap:8px" hidden>
+      <div class="two"><label class="f" for="lsa-from">기간 시작<input type="date" id="lsa-from"></label><label class="f" for="lsa-to">기간 끝<input type="date" id="lsa-to"></label></div>
+      <div class="row ls-opts"><span class="hint">요일</span><span id="lsa-wds"><label><input type="checkbox" value="1" checked>월</label><label><input type="checkbox" value="2" checked>화</label><label><input type="checkbox" value="3" checked>수</label><label><input type="checkbox" value="4" checked>목</label><label><input type="checkbox" value="5" checked>금</label></span></div>
+      <div class="row ls-opts"><span class="hint">교시</span><span id="lsa-pers"><label><input type="checkbox" value="1" checked>1</label><label><input type="checkbox" value="2" checked>2</label><label><input type="checkbox" value="3" checked>3</label><label><input type="checkbox" value="4" checked>4</label><label><input type="checkbox" value="5" >5</label><label><input type="checkbox" value="6" >6</label></span></div>
+      <div class="row ls-opts"><label>반마다 <input type="number" id="lsa-times" min="1" max="10" value="1" style="width:60px">번</label><label>한 번에 <input type="number" id="lsa-len" min="1" max="3" value="1" style="width:60px">교시 연속</label></div>
+      <div class="row ls-opts"><label><input type="checkbox" id="lsa-one" checked> 같은 시간엔 한 반만 (강사 한 명)</label><label><input type="checkbox" id="lsa-day"> 하루에 한 반만</label><label><input type="checkbox" id="lsa-rev"> 반 순서 거꾸로 (4-3-2-1)</label><label><input type="checkbox" id="lsa-keep" checked> 반 순서대로 날짜 정하기</label></div>
+      <div class="row"><button type="button" class="btn small primary" id="lsf-find">겹치지 않는 시간 찾기</button><span class="hint">전담 시간표·다른 특별 수업·휴일을 피해서 골라요.</span></div>
+    </div>
+    <div id="lsf-rows" class="tablewrap"></div>
+    <div class="acts"><span class="hint left">넣을 것 <b id="lsf-n">0</b>개 · 빨간 줄은 겹쳐요</span><button type="button" class="btn" data-close>닫기</button><button type="button" class="btn primary" id="lsf-save">저장</button></div>
+  </div>
+</div>
+<div class="overlay" id="dlg-lse" hidden>
+  <div class="dlg" role="dialog" aria-labelledby="lse-title">
+    <h2 id="lse-title"></h2>
+    <div class="two"><label class="f" for="lse-date">날짜<input type="date" id="lse-date"></label><label class="f" for="lse-cls">반<select id="lse-cls"></select></label></div>
+    <div class="row ls-opts"><span class="hint">교시</span><span id="lse-pers"><label><input type="checkbox" value="1">1</label><label><input type="checkbox" value="2">2</label><label><input type="checkbox" value="3">3</label><label><input type="checkbox" value="4">4</label><label><input type="checkbox" value="5">5</label><label><input type="checkbox" value="6">6</label></span></div>
+    <label class="f" for="lse-prog">수업 이름<input type="text" id="lse-prog" autocomplete="off"></label>
+    <div class="two"><label class="f" for="lse-teacher">담당<input type="text" id="lse-teacher" autocomplete="off"></label><label class="f" for="lse-place">장소<input type="text" id="lse-place" autocomplete="off"></label></div>
+    <p id="lse-warn" style="margin:0"></p>
+    <div class="acts"><button type="button" class="btn danger left" id="lse-del">지우기</button><button type="button" class="btn" data-close>닫기</button><button type="button" class="btn primary" id="lse-save">저장</button></div>
+  </div>
+</div>
+<div class="overlay" id="dlg-jd" hidden>
+  <div class="dlg wide" role="dialog" aria-labelledby="jd-h">
+    <h2 id="jd-h">반별 전담 시간표</h2>
+    <p class="hint" style="margin:0">영어·과학·체육처럼 전담 선생님이 들어오는 시간만 적어요. 특별 수업을 정할 때 이 시간은 피해요. 엑셀·시트에서 월~금 시간표를 복사해 아래 칸에 붙여 넣어도 돼요.</p>
+    <nav class="subj-tabs" id="jd-cls" aria-label="반"></nav>
+    <input type="text" id="jd-paste" placeholder="여기를 누르고 시간표 표를 Ctrl+V (선택)" aria-label="시간표 붙여 넣기">
+    <div id="jd-grid" class="tablewrap"></div>
+    <div class="acts"><button type="button" class="btn" data-close>닫기</button><button type="button" class="btn primary w-only" id="jd-save">저장</button></div>
+  </div>
+</div>
+
 <div class="overlay" id="dlg-newtab" hidden>
   <form class="dlg" id="nt-form">
     <h2>새 학년 탭</h2>
@@ -2127,7 +2218,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b382cdd648b216b91b12590ca25b537c93b39cee/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@1fc3e412f0f9ef74fdb33432c81af3abdc420443/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
