@@ -4094,7 +4094,8 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 function showTool(name){
   T.tool = name;
   $$('#tool-tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === name));
-  ['morn', 'timer', 'pick', 'order', 'dice', 'seat', 'score'].forEach(t => { $('#tool-' + t).hidden = t !== name; });
+  ['morn', 'note', 'timer', 'pick', 'order', 'dice', 'seat', 'score'].forEach(t => { $('#tool-' + t).hidden = t !== name; });
+  if (name === 'note') renderNoteTool();
   if (name === 'dice') diceInfo();
   if (name === 'morn') renderMorning(true);
   if (name === 'pick') pickInfo();
@@ -4411,6 +4412,212 @@ function placeStuCol(){
   dock.hidden = !want; row.classList.toggle('docked', want); board.classList.toggle('solo', want);
 }
 window.addEventListener('resize', () => { clearTimeout(placeStuCol.t); placeStuCol.t = setTimeout(placeStuCol, 150); });
+
+/* ---------- 교실 도구 · 알림장 (내일 시간표 + 안전 문구) ---------- */
+const NOTEP = () => `data/users/${S.uid}/noticebank`;
+const NT_CATS = [
+  ['rec', '이달 추천'], ['school', '학교 안전'], ['friend', '친구·학폭예방'], ['traffic', '교통'], ['life', '생활·가정'],
+  ['health', '건강·감염병'], ['season', '계절·날씨'], ['media', '매체·사이버'], ['stranger', '낯선 사람'], ['vacation', '방학'], ['mine', '내 문구']
+];
+const NT_TAG = {school:'[안전교육]', friend:'[학폭예방]', traffic:'[교통안전]', life:'[생활안전]', health:'[건강]', season:'[안전교육]', media:'[매체안전]', stranger:'[안전교육]', vacation:'[방학안전]', mine:'[안전교육]'};
+/* 기본으로 들어 있는 문구 (s: 어울리는 달) */
+const NT_BANK = [
+  ['school', '복도와 계단에서는 걸어서 다녀요.'],
+  ['school', '계단은 오른쪽으로, 난간을 잡고 한 칸씩 다녀요.'],
+  ['school', '교실에서 의자를 뒤로 젖히거나 의자로 장난치지 않아요.'],
+  ['school', '문을 여닫을 때는 뒤에 친구가 있는지 먼저 살펴요.'],
+  ['school', '책상이나 사물함 위에 올라가지 않아요.'],
+  ['school', '가위·칼 같은 도구는 날을 내 쪽으로 해서 건네요.'],
+  ['school', '운동장에서 모래를 뿌리거나 돌을 던지지 않아요.'],
+  ['school', '체육 시간 전에는 준비 운동을 꼭 해요.'],
+  ['school', '흥분했을 때일수록 한 번 멈추고 천천히 움직여요.'],
+  ['school', '바닥에 떨어진 뾰족한 물건을 보면 선생님께 알려요.'],
+  ['school', '화재 경보가 울리면 선생님을 따라 차분히 대피해요.'],
+  ['school', '수업 시간에 방해되는 물건은 가방에 넣어 둬요.'],
+  ['friend', '친구가 "하지 마"라고 하면 바로 멈춰요.'],
+  ['friend', '나에게는 장난이어도 친구에게는 폭력일 수 있어요.'],
+  ['friend', '친구의 이름이나 생김새로 놀리지 않아요.'],
+  ['friend', '고운 말을 쓰고, 기분 나쁜 말은 한 번 더 생각해요.'],
+  ['friend', '친구 물건은 허락받고 빌려요.'],
+  ['friend', '"쟤랑 놀지 마" 같은 말로 친구를 따돌리지 않아요.'],
+  ['friend', '친구의 사진은 허락 없이 찍거나 올리지 않아요.'],
+  ['friend', '실수한 친구에게 비난 대신 격려를 건네요.'],
+  ['friend', '친구끼리 돈이나 물건을 사 달라고 하지 않아요.'],
+  ['friend', '친구를 껴안거나 잡아당기는 장난을 하지 않아요.'],
+  ['friend', '친구를 갑자기 놀래키거나 몸에 손대지 않아요.'],
+  ['friend', '힘든 일이 있으면 혼자 참지 말고 선생님·가족께 말해요.'],
+  ['traffic', '횡단보도는 초록불이 켜져도 좌우를 살피고 건너요.'],
+  ['traffic', '길을 건널 때는 휴대폰을 보지 않아요.'],
+  ['traffic', '골목길에서는 일단 멈추고 차와 자전거를 살펴요.'],
+  ['traffic', '자전거·킥보드를 탈 때는 헬멧을 꼭 써요.'],
+  ['traffic', '횡단보도에서는 자전거에서 내려 끌고 건너요.'],
+  ['traffic', '차에 타면 뒷자리에서도 안전띠를 매요.'],
+  ['traffic', '도로 근처에서는 공놀이를 하지 않아요.'],
+  ['traffic', '전기차는 소리가 작으니 뒤에서 오는 차도 살펴요.'],
+  ['traffic', '비 오는 날에는 앞이 보이게 우산을 들고 걸어요.'],
+  ['traffic', '학교가 끝나면 한곳에 머무르지 말고 바로 집에 가요.'],
+  ['life', '창문 밖으로 몸을 내밀거나 물건을 던지지 않아요.'],
+  ['life', '엘리베이터와 에스컬레이터에서는 장난치지 않아요.'],
+  ['life', '젖은 손으로 콘센트나 전기 제품을 만지지 않아요.'],
+  ['life', '가스레인지나 다리미는 어른과 함께 사용해요.'],
+  ['life', '뜨거운 음식과 음료는 식혀서 조심히 먹어요.'],
+  ['life', '꼬치 음식은 돌아다니지 말고 앉아서 먹어요.'],
+  ['life', '구슬·동전 같은 작은 물건을 입에 넣지 않아요.'],
+  ['life', '약은 어른이 주시는 만큼만 먹어요.'],
+  ['life', '어디서든 안전 표지판을 읽고 지켜요.'],
+  ['life', '집에 혼자 있을 때는 누가 와도 문을 열어 주지 않아요.'],
+  ['health', '밥 먹기 전, 화장실 다녀온 뒤에는 비누로 손을 씻어요.'],
+  ['health', '기침할 때는 옷소매로 입과 코를 가려요.'],
+  ['health', '열이 나거나 아프면 무리하지 말고 쉬어요.'],
+  ['health', '물을 자주 마시고 충분히 자요.'],
+  ['health', '아침에 이를 닦고 와요.'],
+  ['health', '감기 기운이 있으면 마스크를 써요.'],
+  ['health', '눈이 가려워도 손으로 비비지 않아요.'],
+  ['health', '음식은 냄새를 맡아 보고 이상하면 먹지 않아요.'],
+  ['season', '더운 날에는 그늘에서 쉬고 물을 많이 마셔요.', [6, 7, 8]],
+  ['season', '폭염 때는 한낮 바깥 활동을 줄여요.', [6, 7, 8]],
+  ['season', '비 오는 날에는 미끄러운 바닥을 조심해요.', [6, 7, 8, 9]],
+  ['season', '모기가 많은 곳에서는 긴 옷을 입고 기피제를 뿌려요.', [6, 7, 8, 9]],
+  ['season', '아침저녁으로 쌀쌀하니 겉옷을 챙겨요.', [3, 4, 9, 10, 11]],
+  ['season', '미세먼지가 나쁜 날에는 마스크를 쓰고 바깥 놀이를 줄여요.', [3, 4, 5, 11, 12, 1, 2]],
+  ['season', '날씨가 추우니 따뜻하게 입고 다녀요.', [11, 12, 1, 2]],
+  ['season', '공기가 건조하니 불조심해요.', [11, 12, 1, 2, 3]],
+  ['season', '목도리가 차 문이나 엘리베이터에 끼지 않게 조심해요.', [11, 12, 1, 2]],
+  ['season', '얼음이 언 길에서는 주머니에서 손을 빼고 천천히 걸어요.', [12, 1, 2]],
+  ['season', '핫팩은 맨살에 바로 붙이지 않아요.', [11, 12, 1, 2]],
+  ['season', '고드름 아래로는 지나가지 않아요.', [12, 1, 2]],
+  ['media', '나이에 맞는 영상과 게임만 봐요.', null],
+  ['media', '영상에서 본 위험한 장난을 따라 하지 않아요.'],
+  ['media', '모르는 사람이 보낸 메시지에는 답하지 말고 가족께 알려요.'],
+  ['media', '내 이름·학교·사는 곳을 인터넷에 올리지 않아요.'],
+  ['media', '친구끼리 단체 채팅방에서 나쁜 말을 하지 않아요.'],
+  ['media', '친구를 놀리는 글이나 사진을 퍼뜨리지 않아요.'],
+  ['media', 'AI 서비스는 나이 기준을 지키고 어른과 함께 써요.'],
+  ['media', '게임 아이템을 사려고 돈을 쓰거나 빌리지 않아요.'],
+  ['stranger', '낯선 사람이 같이 가자고 하면 "싫어요" 하고 그 자리를 떠나요.'],
+  ['stranger', '아는 사람이라도 가족 허락 없이 따라가지 않아요.'],
+  ['stranger', '모르는 어른이 도와 달라고 하면 다른 어른께 부탁하라고 말해요.'],
+  ['stranger', '모르는 차에는 가까이 가지 않고, 타지 않아요.'],
+  ['stranger', '길을 잃으면 그 자리에서 멈추고 경찰이나 직원에게 도움을 청해요.'],
+  ['stranger', '가족 전화번호를 외워 두어요.'],
+  ['stranger', '아동안전지킴이집이 어디 있는지 알아 둬요.'],
+  ['vacation', '물놀이할 때는 구명조끼를 입고 깊은 곳에 가지 않아요.', [7, 8]],
+  ['vacation', '친구가 물에 빠지면 직접 들어가지 말고 어른을 불러요.', [7, 8]],
+  ['vacation', '음식은 냉장고에 보관하고, 상한 것 같으면 먹지 않아요.', [7, 8]],
+  ['vacation', '외출할 때는 누구와 어디에 가는지 가족께 말해요.', [7, 8, 12, 1, 2]],
+  ['vacation', '가족 허락 없이 친구 집에 가거나 친구를 데려오지 않아요.', [7, 8, 12, 1, 2]],
+  ['vacation', '방학에도 일찍 자고 일찍 일어나요.', [7, 8, 12, 1, 2]],
+  ['vacation', '눈썰매·스케이트를 탈 때는 보호 장비를 해요.', [12, 1, 2]],
+  ['vacation', '전기장판·난로를 켜 둔 채 외출하지 않아요.', [12, 1, 2]]
+];
+const NT_REC = {1:['vacation', 'season'], 2:['vacation', 'season', 'school'], 3:['school', 'friend', 'traffic'], 4:['traffic', 'friend', 'media'], 5:['traffic', 'life', 'health'],
+  6:['season', 'health', 'life'], 7:['vacation', 'season', 'health'], 8:['vacation', 'season'], 9:['school', 'friend', 'health'], 10:['friend', 'life', 'traffic'],
+  11:['season', 'school', 'friend'], 12:['vacation', 'season', 'stranger']};
+const NT = {cat:'rec', tag:'auto', pick:null, draft:{}, bank:{items:[], used:{}}, loaded:false, sub:null};
+function ntLoad(){
+  if (NT.sub || !S.uid || !S.db) return;
+  NT.sub = S.db.doc(NOTEP()).onSnapshot(snap => {
+    if (busy(NOTEP())) return;
+    NT.bank = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {items:[], used:{}};
+    if (!Array.isArray(NT.bank.items)) NT.bank.items = []; if (!NT.bank.used) NT.bank.used = {};
+    NT.loaded = true; if (T.tool === 'note' && !$('#tools').hidden) renderNoteTool();
+  }, () => {});
+}
+const ntSave = () => queueSet(NOTEP(), () => ({items:NT.bank.items, used:NT.bank.used, updatedAt:Date.now()}), false);
+function ntAll(){
+  const mine = (NT.bank.items || []).map(x => ({c:'mine', t:x.t, sub:x.c || ''}));
+  return NT_BANK.map(([c, t, s]) => ({c, t, s})).concat(mine);
+}
+function ntList(cat){
+  const m = today().getMonth() + 1;
+  const fits = x => !x.s || x.s.includes(m);
+  const all = ntAll();
+  if (cat === 'rec'){ const cs = NT_REC[m] || []; return all.filter(x => (cs.includes(x.c) || x.c === 'mine') && fits(x)); }
+  if (cat === 'mine') return all.filter(x => x.c === 'mine');
+  return all.filter(x => x.c === cat).sort((a, b) => (fits(b) ? 1 : 0) - (fits(a) ? 1 : 0));
+}
+function ntFresh(list){
+  const used = NT.bank.used || {}, lim = ymd(addDays(today(), -45));
+  const fresh = list.filter(x => !(used[x.t] && used[x.t] >= lim));
+  return fresh.length ? fresh : list;
+}
+function ntTarget(){ return nextSchoolDay(ymd(today())); }
+function ntAbbr(s){ s = String(s || '').trim(); if (!s) return ''; const m = {'창체':'창', '자율':'자', '동아리':'동', '학교자율':'학', '진로':'진'}; return m[s] || s[0]; }
+async function ntCompose(force){
+  const k = ntTarget();
+  if (!force && NT.draft[k] != null) return NT.draft[k];
+  const sj = subjFor(k);
+  let plan = [];
+  try { const sn = await S.db.doc(DAYPATH(k)).get(); plan = (sn.exists && sn.data().plan) || []; } catch (e){}
+  const subs = (sj.s || []).map((x, i) => (plan[i] && plan[i].s) || x).filter(Boolean);
+  const lines = [];
+  if (subs.length) lines.push(subs.map(ntAbbr).join(''));
+  const prep = plan.map(p => (p && p.p || '').trim()).filter(Boolean);
+  if (prep.length) lines.push('준비물: ' + [...new Set(prep)].join(', '));
+  schoolEvents(k).filter(Boolean).slice(0, 2).forEach(t => lines.push(t));
+  if (NT.pick) lines.push(ntTagFor(NT.pick) + NT.pick.t);
+  NT.draft[k] = lines.map((l, i) => `${i + 1}.${l}`).join('\n');
+  return NT.draft[k];
+}
+function ntTagFor(x){ if (NT.tag === 'none') return ''; if (NT.tag !== 'auto') return NT.tag; return NT_TAG[x.c] || '[안전교육]'; }
+function ntRandom(){
+  const list = ntFresh(ntList(NT.cat === 'mine' && !ntList('mine').length ? 'rec' : NT.cat));
+  NT.pick = list[Math.floor(Math.random() * list.length)] || null;
+}
+function ntApplyPick(){
+  const k = ntTarget(); const cur = $('#nt-text').value;
+  const lines = cur.split('\n').filter(l => l.trim());
+  const isSafe = l => /^\d+\.\s*\[[^\]]*\]/.test(l) || (NT.lastPickLine && l === NT.lastPickLine);
+  const kept = lines.filter(l => !isSafe(l)).map(l => l.replace(/^\d+\.\s*/, ''));
+  if (NT.pick) kept.push(ntTagFor(NT.pick) + NT.pick.t);
+  NT.draft[k] = kept.map((l, i) => `${i + 1}.${l}`).join('\n');
+  NT.lastPickLine = NT.pick ? `${kept.length}.${ntTagFor(NT.pick) + NT.pick.t}` : null;
+  $('#nt-text').value = NT.draft[k];
+}
+async function renderNoteTool(){
+  ntLoad();
+  const k = ntTarget(), d = fromYmd(k);
+  $('#nt-for').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일 알림장`;
+  if (!S.uid){ $('#nt-text').value = ''; $('#nt-text').placeholder = '로그인한 상태로 열어야 쓸 수 있어요.'; return; }
+  if (!NT.pick) ntRandom();
+  if (document.activeElement !== $('#nt-text')){ $('#nt-text').value = await ntCompose(false); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; }
+  $('#nt-cats').innerHTML = NT_CATS.map(([c, n]) => `<button type="button" class="stab" data-ntc="${c}" ${NT.cat === c ? 'aria-current="page"' : ''}>${n}${c === 'mine' ? ` <small>${(NT.bank.items || []).length}</small>` : ''}</button>`).join('');
+  $('#nt-tag').value = NT.tag;
+  const list = ntList(NT.cat), used = NT.bank.used || {};
+  $('#nt-list').innerHTML = list.length ? list.map(x => `<li class="${NT.pick && NT.pick.t === x.t ? 'on' : ''}"><button type="button" class="nt-p" data-ntp="${esc(x.t)}"><span class="t">${esc(x.t)}</span>${used[x.t] ? `<span class="u">${fmtMD(used[x.t])} 씀</span>` : ''}</button>${x.c === 'mine' ? `<button type="button" class="x" data-ntdel="${esc(x.t)}" aria-label="내 문구에서 빼기">×</button>` : ''}</li>`).join('')
+    : `<li class="hint">${NT.cat === 'mine' ? '아래 "내 문구 넣기"에 지난 알림장 안전 문구를 붙여 넣어 두면 여기서 골라 쓸 수 있어요.' : '이 분류에는 문구가 없어요.'}</li>`;
+}
+async function ntCopy(){
+  const v = $('#nt-text').value;
+  try { await navigator.clipboard.writeText(v); toast('알림장을 복사했어요. 학교종이에 붙여 넣으면 돼요.'); }
+  catch (e){ $('#nt-text').select(); toast('글을 골라 두었어요. Ctrl+C로 복사해 주세요.'); }
+  if (NT.pick && S.uid){ NT.bank.used = Object.assign({}, NT.bank.used, {[NT.pick.t]:ymd(today())}); const ks = Object.keys(NT.bank.used); if (ks.length > 400) ks.sort((a, b) => NT.bank.used[a] < NT.bank.used[b] ? -1 : 1).slice(0, ks.length - 400).forEach(x => delete NT.bank.used[x]); ntSave(); }
+}
+$('#nt-copy').onclick = ntCopy;
+$('#nt-redo').onclick = async () => { $('#nt-text').value = await ntCompose(true); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; toast('내일 시간표로 다시 만들었어요.'); };
+$('#nt-dice').onclick = () => { ntRandom(); ntApplyPick(); renderNoteTool(); };
+$('#nt-tag').addEventListener('change', e => { NT.tag = e.target.value; ntApplyPick(); });
+$('#nt-text').addEventListener('input', e => { NT.draft[ntTarget()] = e.target.value; });
+$('#nt-cats').addEventListener('click', e => { const b = e.target.closest('[data-ntc]'); if (!b) return; NT.cat = b.dataset.ntc; renderNoteTool(); });
+$('#nt-list').addEventListener('click', e => {
+  const del = e.target.closest('[data-ntdel]');
+  if (del){ NT.bank.items = (NT.bank.items || []).filter(x => x.t !== del.dataset.ntdel); ntSave(); renderNoteTool(); return; }
+  const b = e.target.closest('[data-ntp]'); if (!b) return;
+  NT.pick = ntAll().find(x => x.t === b.dataset.ntp) || null; ntApplyPick(); renderNoteTool();
+});
+$('#nt-import').addEventListener('submit', e => {
+  e.preventDefault(); if (!S.uid){ toast('로그인한 상태에서만 넣을 수 있어요.'); return; }
+  const have = new Set((NT.bank.items || []).map(x => x.t).concat(NT_BANK.map(x => x[1])));
+  let n = 0;
+  $('#nt-paste').value.split('\n').forEach(l => {
+    let t = l.trim().replace(/^[A-Z]?\d+\s*[|.)\t]\s*/, '').replace(/^\d+월\s*\d+일\s*[|\t]\s*/, '').replace(/^\[[^\]]*\]\s*/, '').trim();
+    if (t.length < 4 || t.length > 120 || have.has(t)) return;
+    have.add(t); NT.bank.items.push({t, c:'', at:Date.now()}); n++;
+  });
+  if (NT.bank.items.length > 800) NT.bank.items = NT.bank.items.slice(-800);
+  $('#nt-paste').value = ''; ntSave(); NT.cat = 'mine'; renderNoteTool();
+  toast(n ? `내 문구 ${n}개를 넣었어요.` : '새로 넣을 문구가 없어요. 이미 있거나 너무 짧아요.');
+});
 
 /* ---------- 새 학년도 · 지난 학년도 보관함 ---------- */
 const ARC_KEYS = {
