@@ -878,6 +878,14 @@ table.ls-tt{width:100%;border-collapse:collapse;table-layout:fixed;min-width:640
 .ls-chip:hover{background:var(--surface-2)}
 .ls-chip.bad{color:var(--danger, #c0392b);background:color-mix(in srgb,var(--danger, #c0392b) 10%,transparent)}
 .ls-jd{display:block;text-align:center;font-size:12px;color:var(--muted);background:var(--surface-2);border-radius:4px;padding:1px 4px;margin-bottom:2px}
+table.ls-mt{width:100%;border-collapse:collapse;table-layout:fixed;min-width:640px}
+.ls-mt th{background:var(--surface-2);border:1px solid var(--line);padding:6px;font-size:13px}
+.ls-mt td{border:1px solid var(--line);vertical-align:top;padding:4px 5px;height:96px}
+.ls-mt td.out{background:var(--surface-2);opacity:.6}
+.ls-mt td.today .ls-md b{color:var(--accent)}
+.ls-md{font-size:12.5px;margin-bottom:2px}.ls-md .hol{color:var(--holiday)}
+.ls-chip.sm{text-align:left;font-size:12.5px;padding:2px 4px}
+.ls-chip.sm .p{display:inline-block;min-width:3.4em;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .ls-g{margin-bottom:14px}
 .ls-g h3{margin:0 0 6px;font-size:15px}.ls-g h3 small{color:var(--muted);font-weight:400}
 table.ls-lt,table.ls-pv,table.ls-jdt{width:100%;border-collapse:collapse}
@@ -1381,13 +1389,14 @@ body.ro .w-only{display:none!important}
         <button type="button" class="btn small primary w-only" id="ls-add">+ 일정 넣기</button></div>
       <div class="card-b" id="pg-lessons-body">
         <div class="row ls-bar">
-          <div class="seg" role="group" aria-label="보기" id="ls-view"><button type="button" data-v="week" aria-pressed="true">주간표</button><button type="button" data-v="list" aria-pressed="false">수업별 목록</button></div>
+          <div class="seg" role="group" aria-label="보기" id="ls-view"><button type="button" data-v="week" aria-pressed="true">주간표</button><button type="button" data-v="month" aria-pressed="false">월별</button><button type="button" data-v="list" aria-pressed="false">수업별 목록</button></div>
           <span id="ls-weeknav" class="row" style="gap:6px"><button type="button" class="btn small" id="ls-prev" aria-label="지난주">‹</button><strong id="ls-label"></strong><button type="button" class="btn small" id="ls-next" aria-label="다음 주">›</button><button type="button" class="btn small" id="ls-today">이번 주</button></span>
           <span class="grow"></span>
           <select id="ls-prog" aria-label="수업 고르기" style="width:auto"></select>
           <select id="ls-cls" aria-label="반 고르기" style="width:auto"></select>
         </div>
         <div id="ls-week"></div>
+        <div id="ls-month" hidden></div>
         <div id="ls-list" hidden></div>
         <p class="hint" style="margin:8px 0 0">반을 하나 고르면 그 반 전담 시간이 회색으로 보여요. 칸을 누르면 고치거나 지울 수 있어요.</p>
       </div>
@@ -2223,7 +2232,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@95edc8acdff1189f631ec36fb9ba3d094f5579e7/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@c7b57bd6caf0de20653728b5287813ba3a539292/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
