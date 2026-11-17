@@ -4910,7 +4910,36 @@ function lsJdRender(){
   for (let p = 1; p <= LS_PER; p++) h += `<tr><th>${p}</th>` + [1, 2, 3, 4, 5].map(wd => `<td><input type="text" data-jd="${wd}-${p}" value="${esc(((m[wd] || [])[p - 1]) || '')}" placeholder="" aria-label="${'월화수목금'[wd - 1]} ${p}교시 전담"></td>`).join('') + '</tr>';
   $('#jd-grid').innerHTML = h + '</tbody></table>';
 }
-$('#ls-jd').onclick = () => { LS.jdCls = LS.cls !== 'all' ? LS.cls : lsClasses()[0]; lsJdRender(); $$('#jd-grid input').forEach(x => { x.disabled = !S.canWrite; }); closeDlgs(); openDlg('#dlg-jd'); };
+/* 담임 연간 시간표(나의 공간)에서 요일·교시마다 가장 자주 나온 과목을 뽑아요 */
+function lsMyWeekly(){
+  const cnt = {};
+  const add = (wd, p, sub) => { sub = String(sub || '').trim(); if (!sub) return; const k = wd + '-' + p; (cnt[k] = cnt[k] || {}); cnt[k][sub] = (cnt[k][sub] || 0) + 1; };
+  ((S.ttplan && S.ttplan.terms) || []).forEach(t => (t.weeks || []).forEach(w => (w.days || []).forEach((d, i) => { if (d && !d.off) (d.s || []).forEach((x, p) => add(i + 1, p + 1, x)); })));
+  const base = S.profile.timetable || {};
+  [1, 2, 3, 4, 5].forEach(wd => (base[wd] || []).forEach((x, p) => add(wd, p + 1, x)));
+  const out = {};
+  Object.entries(cnt).forEach(([k, m]) => { const [wd, p] = k.split('-').map(Number); const top = Object.entries(m).sort((a, b) => b[1] - a[1])[0]; (out[wd] = out[wd] || ['', '', '', '', '', ''])[p - 1] = top ? top[0] : ''; });
+  return out;
+}
+const JD_GUESS = /^(영어?|과학?|체육?|음악?|미술?|도덕?|실과?|원어민|코딩|정보)$/;
+function lsJdMine(){
+  const mine = clsCanon(S.profile.myClass || ''), wk = lsMyWeekly();
+  const subs = [...new Set(Object.values(wk).flat().filter(Boolean))];
+  $('#jd-mine').hidden = !(S.uid && mine && subs.length);
+  if ($('#jd-mine').hidden) return;
+  const saved = S.settings.jdSubjects || [];
+  $('#jd-subs').innerHTML = subs.map(x => `<label class="ls-pc"><input type="checkbox" value="${esc(x)}" ${(saved.length ? saved.includes(x) : JD_GUESS.test(x)) ? 'checked' : ''}>${esc(x)}</label>`).join('');
+}
+$('#jd-take').onclick = () => {
+  const mine = clsCanon(S.profile.myClass || ''); const pick = $$('#jd-subs input:checked').map(x => x.value);
+  if (!pick.length){ toast('전담 과목을 하나 이상 골라 주세요.'); return; }
+  const wk = lsMyWeekly(), m = {};
+  [1, 2, 3, 4, 5].forEach(wd => { m[wd] = ((wk[wd]) || ['', '', '', '', '', '']).map(x => pick.includes(x) ? x : ''); });
+  LS.jd = Object.assign({}, LS.jd, {[mine]:m}); LS.jdCls = mine; lsJdRender();
+  if (S.canWrite) S.db.doc('grade/settings').update({jdSubjects:pick}).catch(() => {});
+  toast(`${clsLabel(mine)} 전담 시간을 채웠어요. 확인하고 저장해 주세요.`);
+};
+$('#ls-jd').onclick = () => { LS.jdCls = LS.cls !== 'all' ? LS.cls : (clsCanon(S.profile.myClass || '') || lsClasses()[0]); lsJdRender(); lsJdMine(); $$('#jd-grid input').forEach(x => { x.disabled = !S.canWrite; }); closeDlgs(); openDlg('#dlg-jd'); };
 $('#jd-cls').addEventListener('click', e => { const b = e.target.closest('[data-jdc]'); if (!b) return; lsJdCollect(); LS.jdCls = b.dataset.jdc; lsJdRender(); });
 function lsJdCollect(){
   const c = LS.jdCls, m = {};
