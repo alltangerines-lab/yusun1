@@ -1562,7 +1562,14 @@ function startListening(){
   listen(db.collection('tabs'), 'tabs', snap => { S.tabs = docs(snap); renderStrip(); renderTabList(); renderTabPage(); });
   if (S.page === 'tab') listenRows();
   listenDaily();
-  if (S.uid){
+  startPrivate();
+  setTimeout(() => { if (S.pending.size) banner('기록을 불러오는 데 시간이 걸리고 있어요. 인터넷 연결을 확인해 주세요.'); }, 10000);
+}
+/* 나의 공간 기록 받기 (계정을 늦게 알게 돼도 다시 부를 수 있어요) */
+function startPrivate(){
+  if (!S.uid || S.privStarted) return;
+  S.privStarted = true;
+  const db = S.db;
     listen(db.doc(PROFILE()), 'profile', snap => {
       if (busy(PROFILE())) return;
       S.profile = Object.assign({myClass:'', roster:[]}, snap.exists ? snap.data() : {});
@@ -1613,8 +1620,6 @@ function startListening(){
       if (!S.sheet.items) S.sheet.items = []; if (!S.sheet.values) S.sheet.values = {};
       if (S.space === 'me' && S.meTab === 'sheet' && !(document.activeElement && document.activeElement.closest('#sheet'))) renderSheet();
     });
-  }
-  setTimeout(() => { if (S.pending.size) banner('기록을 불러오는 데 시간이 걸리고 있어요. 인터넷 연결을 확인해 주세요.'); }, 10000);
 }
 async function boot(){
   if (window.__GAS_MODE) document.body.classList.add('gas');
@@ -3590,6 +3595,7 @@ async function gradeEntered(msg){
     const w = await window.__gasReset();
     window.__gasJoinErr = '';
     S.isOwner = !!(w && w.isOwner);
+    if (!S.uid && w && w.uid){ S.uid = w.uid; S.privateOk = true; S.privateOffMsg = ''; startPrivate(); }
     if (w && w.sharedOk){ S.canWrite = true; document.body.classList.remove('ro'); $('#bn-grade').hidden = true; banner(''); }
     renderAcctChip(); renderStrip(); renderAll(); closeDlgs(); toast(msg);
   } catch (e){ $('#gj-msg').textContent = '불러오지 못했어요. 페이지를 다시 열어 주세요.'; }
