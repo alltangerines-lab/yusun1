@@ -4795,7 +4795,15 @@ function lsRowsHtml(){
     return `<tr data-lsr="${i}" class="${bad.length ? 'bad' : ''}"><td><input type="checkbox" data-lsf="on" ${r.on ? 'checked' : ''} aria-label="넣기"></td><td><input type="date" data-lsf="date" value="${r.date}"></td><td class="ls-pcs">${per(r.pers)}</td><td><select data-lsf="cls"><option value="">반</option>${opts(r.cls)}</select></td><td>${bad.length ? `<span class="ls-warn">${esc(bad.join(', '))}</span>` : '<span class="ls-ok">비어 있어요</span>'}</td></tr>`;
   }).join('')}</tbody></table>` : '<p class="hint" style="margin:0">아직 고른 시간이 없어요.</p>';
 }
-function lsRenderRows(){ $('#lsf-rows').innerHTML = lsRowsHtml(); $('#lsf-n').textContent = LS.rows.filter(r => r.on).length; }
+function lsRenderRows(){ $('#lsf-rows').innerHTML = lsRowsHtml(); $('#lsf-n').textContent = LS.rows.filter(r => r.on).length; $('#lsf-bulk').hidden = false; }
+$('#lsb-date-go').onclick = () => { const v = $('#lsb-date').value; if (!v){ toast('맞출 날짜를 골라 주세요.'); return; } LS.rows.forEach(r => { if (r.on) r.date = v; }); lsRenderRows(); };
+$('#lsb-per-go').onclick = () => { const ps = $$('#lsb-pers input:checked').map(x => +x.value); if (!ps.length){ toast('맞출 교시를 골라 주세요.'); return; } LS.rows.forEach(r => { if (r.on) r.pers = ps.slice(); }); lsRenderRows(); };
+$('#lsb-all').onclick = () => {
+  const v = $('#lsb-date').value || ymd(today()), ps = $$('#lsb-pers input:checked').map(x => +x.value);
+  const have = new Set(LS.rows.map(r => r.cls));
+  lsClasses().forEach(c => { if (!have.has(c)) LS.rows.push({on:true, date:v, pers:ps.slice(), cls:c}); });
+  lsRenderRows();
+};
 function lsOpenAdd(){
   if (!S.canWrite){ toast('학년 공간을 고칠 권한이 없어요.'); return; }
   LS.rows = []; $('#lsf-paste').value = ''; $('#lsf-prog').value = LS.prog !== 'all' ? LS.prog : ''; $('#lsf-teacher').value = ''; $('#lsf-place').value = '';
