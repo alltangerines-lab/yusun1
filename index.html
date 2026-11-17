@@ -2032,7 +2032,7 @@ body.ro .w-only{display:none!important}
       <section class="mo-card nt-out">
         <div class="row"><h3 id="nt-for" style="margin:0"></h3><span class="grow"></span><button type="button" class="btn small" id="nt-redo" title="내일 시간표·준비물로 처음부터 다시 만들기">다시 만들기</button></div>
         <textarea id="nt-text" rows="8" aria-label="알림장 내용" spellcheck="false"></textarea>
-        <div class="row"><span class="hint grow">1번은 내일 시간표예요. 수업 계획에 적은 준비물과 내일 학사 일정도 저절로 들어가요. 고쳐 써도 돼요.</span><button type="button" class="btn" id="nt-big">크게 보기</button><button type="button" class="btn primary" id="nt-copy">복사하기</button></div>
+        <div class="row"><span class="hint grow">1번은 내일 시간표예요. 수업 계획에 적은 준비물과 내일 학사 일정도 저절로 들어가요. 고쳐 써도 돼요.</span><button type="button" class="btn" id="nt-big">크게 보기</button><button type="button" class="btn" id="nt-copy">복사하기</button><button type="button" class="btn primary" id="nt-send">복사하고 학교종이 열기</button></div>
       </section>
       <section class="mo-card nt-safe">
         <div class="row"><h3 style="margin:0">안전 문구</h3><span class="grow"></span>
@@ -2040,6 +2040,9 @@ body.ro .w-only{display:none!important}
           <button type="button" class="btn small" id="nt-dice" title="다른 문구로">🎲 다른 문구</button></div>
         <nav class="subj-tabs" id="nt-cats" aria-label="문구 분류"></nav>
         <ul class="nt-list" id="nt-list"></ul>
+        <details class="nt-imp" id="nt-sb"><summary>학교종이 알림장 주소</summary>
+          <form id="nt-sb-form" class="row" style="margin-top:6px"><input type="text" inputmode="url" id="nt-sb-url" placeholder="학교종이에서 우리 반 알림장을 열고 주소창 주소를 붙여 넣어요" style="flex:1" aria-label="학교종이 알림장 주소"><button type="submit" class="btn small">저장</button></form>
+        </details>
         <details class="nt-imp"><summary>내 문구 넣기 (지난 알림장·문구 모음 붙여 넣기)</summary>
           <form id="nt-import" class="stack" style="display:grid;gap:6px;margin-top:6px">
             <textarea id="nt-paste" rows="4" placeholder="한 줄에 한 문구씩 붙여 넣어요. 앞의 번호·[머리말]은 저절로 빠져요."></textarea>
@@ -2124,7 +2127,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@6fdb7af647c2dd0aa766d29f8595b98bb8264f71/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b382cdd648b216b91b12590ca25b537c93b39cee/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
