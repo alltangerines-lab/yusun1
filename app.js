@@ -4519,11 +4519,22 @@ function ntLoad(){
   NT.sub = S.db.doc(NOTEP()).onSnapshot(snap => {
     if (busy(NOTEP())) return;
     NT.bank = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {items:[], used:{}};
-    if (!Array.isArray(NT.bank.items)) NT.bank.items = []; if (!NT.bank.used) NT.bank.used = {};
+    if (!Array.isArray(NT.bank.items)) NT.bank.items = []; if (!NT.bank.used) NT.bank.used = {}; if (!NT.bank.drafts) NT.bank.drafts = {};
+    const k = ntTarget(), saved = NT.bank.drafts[k];
+    if (saved != null && document.activeElement !== $('#nt-text')) NT.draft[k] = saved;
     NT.loaded = true; if (T.tool === 'note' && !$('#tools').hidden) renderNoteTool();
   }, () => {});
 }
-const ntSave = () => queueSet(NOTEP(), () => ({items:NT.bank.items, used:NT.bank.used, updatedAt:Date.now()}), false);
+const ntSave = () => queueSet(NOTEP(), () => ({items:NT.bank.items, used:NT.bank.used, drafts:NT.bank.drafts || {}, updatedAt:Date.now()}), false);
+/* 쓰던 알림장은 날짜별로 저장해 두어요 (최근 3주) */
+let ntDraftTimer;
+function ntKeepDraft(k, v){
+  if (!S.uid) return;
+  const d = Object.assign({}, NT.bank.drafts || {}); d[k] = v;
+  const lim = ymd(addDays(today(), -21)); Object.keys(d).forEach(x => { if (x < lim) delete d[x]; });
+  NT.bank.drafts = d;
+  clearTimeout(ntDraftTimer); ntDraftTimer = setTimeout(ntSave, 800);
+}
 function ntAll(){
   const mine = (NT.bank.items || []).map(x => ({c:'mine', t:x.t, sub:x.c || ''}));
   return NT_BANK.map(([c, t, s]) => ({c, t, s})).concat(mine);
@@ -4545,6 +4556,8 @@ function ntTarget(){ return nextSchoolDay(ymd(today())); }
 function ntAbbr(s){ s = String(s || '').trim(); if (!s) return ''; const m = {'창체':'창', '자율':'자', '동아리':'동', '학교자율':'학', '진로':'진'}; return m[s] || s[0]; }
 async function ntCompose(force){
   const k = ntTarget();
+  if (!force && !NT.loaded) for (let i = 0; i < 30 && !NT.loaded; i++) await new Promise(r => setTimeout(r, 100));
+  if (!force && NT.draft[k] == null && NT.bank.drafts && NT.bank.drafts[k] != null) NT.draft[k] = NT.bank.drafts[k];
   if (!force && NT.draft[k] != null) return NT.draft[k];
   const sj = subjFor(k);
   let plan = [];
@@ -4557,6 +4570,7 @@ async function ntCompose(force){
   schoolEvents(k).filter(Boolean).slice(0, 2).forEach(t => lines.push(t));
   if (NT.pick) lines.push(ntTagFor(NT.pick) + NT.pick.t);
   NT.draft[k] = lines.map((l, i) => `${i + 1}.${l}`).join('\n');
+  ntKeepDraft(k, NT.draft[k]);
   return NT.draft[k];
 }
 function ntTagFor(x){ if (NT.tag === 'none') return ''; if (NT.tag !== 'auto') return NT.tag; return NT_TAG[x.c] || '[안전교육]'; }
@@ -4573,6 +4587,7 @@ function ntApplyPick(){
   NT.draft[k] = kept.map((l, i) => `${i + 1}.${l}`).join('\n');
   NT.lastPickLine = NT.pick ? `${kept.length}.${ntTagFor(NT.pick) + NT.pick.t}` : null;
   $('#nt-text').value = NT.draft[k];
+  ntKeepDraft(k, NT.draft[k]);
 }
 async function renderNoteTool(){
   ntLoad();
@@ -4604,7 +4619,7 @@ $('#nt-big').onclick = async () => {
 $('#nt-redo').onclick = async () => { $('#nt-text').value = await ntCompose(true); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; toast('내일 시간표로 다시 만들었어요.'); };
 $('#nt-dice').onclick = () => { ntRandom(); ntApplyPick(); renderNoteTool(); };
 $('#nt-tag').addEventListener('change', e => { NT.tag = e.target.value; ntApplyPick(); });
-$('#nt-text').addEventListener('input', e => { NT.draft[ntTarget()] = e.target.value; });
+$('#nt-text').addEventListener('input', e => { const k = ntTarget(); NT.draft[k] = e.target.value; ntKeepDraft(k, e.target.value); });
 $('#nt-cats').addEventListener('click', e => { const b = e.target.closest('[data-ntc]'); if (!b) return; NT.cat = b.dataset.ntc; renderNoteTool(); });
 $('#nt-list').addEventListener('click', e => {
   const del = e.target.closest('[data-ntdel]');
