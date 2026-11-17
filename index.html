@@ -863,6 +863,19 @@ select.lsubj{width:auto;padding:1px 4px;font-size:11.5px;margin-right:6px;border
 .mo-size{display:flex;gap:6px}
 .mo-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) minmax(0,.9fr);gap:14px;align-items:start}
 @media (max-width:900px){.mo-grid{grid-template-columns:minmax(0,1fr)}.mo-todo{order:-1}}
+.tool.nt{width:min(100%,1300px);margin:0 auto;align-items:stretch;justify-content:flex-start;flex:none}
+.nt-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.nt-grid{grid-template-columns:minmax(0,1fr)}}
+.nt-out,.nt-safe{display:grid;gap:10px}
+#nt-text{font-size:20px;line-height:1.7;min-height:240px;resize:vertical}
+.nt-list{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:52vh;overflow:auto}
+.nt-list li{display:flex;align-items:center;gap:4px}
+.nt-p{flex:1;display:flex;gap:8px;align-items:baseline;text-align:left;font:inherit;font-size:14.5px;background:none;border:1px solid transparent;border-radius:8px;padding:6px 8px;cursor:pointer;color:var(--fg)}
+.nt-p:hover{background:var(--surface-2)}
+.nt-list li.on .nt-p{border-color:var(--accent);background:var(--surface-2)}
+.nt-p .t{flex:1}
+.nt-p .u{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.nt-imp summary{cursor:pointer;font-size:13px;color:var(--muted)}
 .mo-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);min-width:0}
 .mo-card h3{margin:0 0 10px;font-size:calc(22px * var(--mo));color:var(--accent);display:flex;justify-content:space-between}
 .mo-card h3 span{font-family:var(--mono);color:var(--muted)}
@@ -1983,6 +1996,7 @@ body.ro .w-only{display:none!important}
   <div class="tools-h">
     <div class="seg" role="group" aria-label="도구 고르기" id="tool-tabs">
       <button type="button" data-tool="morn" aria-pressed="true">아침 안내</button>
+      <button type="button" data-tool="note" aria-pressed="false">알림장</button>
       <button type="button" data-tool="timer" aria-pressed="false">타이머</button>
       <button type="button" data-tool="pick" aria-pressed="false">뽑기</button>
       <button type="button" data-tool="order" aria-pressed="false">순서 정하기</button>
@@ -2011,6 +2025,28 @@ body.ro .w-only{display:none!important}
         <div><h4>지난 기록 <span class="hint">최근 2주</span></h4><div id="mo-log"></div></div>
       </div>
     </details>
+  </div>
+  <div class="tool nt" id="tool-note" hidden>
+    <div class="nt-grid">
+      <section class="mo-card nt-out">
+        <div class="row"><h3 id="nt-for" style="margin:0"></h3><span class="grow"></span><button type="button" class="btn small" id="nt-redo" title="내일 시간표·준비물로 처음부터 다시 만들기">다시 만들기</button></div>
+        <textarea id="nt-text" rows="8" aria-label="알림장 내용" spellcheck="false"></textarea>
+        <div class="row"><span class="hint grow">1번은 내일 시간표예요. 수업 계획에 적은 준비물과 내일 학사 일정도 저절로 들어가요. 고쳐 써도 돼요.</span><button type="button" class="btn primary" id="nt-copy">복사하기</button></div>
+      </section>
+      <section class="mo-card nt-safe">
+        <div class="row"><h3 style="margin:0">안전 문구</h3><span class="grow"></span>
+          <label class="hint" for="nt-tag">머리말</label><select id="nt-tag" style="width:auto"><option value="auto">분류에 맞게</option><option value="[안전교육]">[안전교육]</option><option value="[안전]">[안전]</option><option value="[학폭예방]">[학폭예방]</option><option value="[학폭예방교육]">[학폭예방교육]</option><option value="[생활안전]">[생활안전]</option><option value="[교통안전]">[교통안전]</option><option value="[건강]">[건강]</option><option value="[매체안전]">[매체안전]</option><option value="[방학안전]">[방학안전]</option><option value="none">없음</option></select>
+          <button type="button" class="btn small" id="nt-dice" title="다른 문구로">🎲 다른 문구</button></div>
+        <nav class="subj-tabs" id="nt-cats" aria-label="문구 분류"></nav>
+        <ul class="nt-list" id="nt-list"></ul>
+        <details class="nt-imp"><summary>내 문구 넣기 (지난 알림장·문구 모음 붙여 넣기)</summary>
+          <form id="nt-import" class="stack" style="display:grid;gap:6px;margin-top:6px">
+            <textarea id="nt-paste" rows="4" placeholder="한 줄에 한 문구씩 붙여 넣어요. 앞의 번호·[머리말]은 저절로 빠져요."></textarea>
+            <button type="submit" class="btn small" style="justify-self:start">내 문구로 넣기</button>
+          </form>
+        </details>
+      </section>
+    </div>
   </div>
   <div class="tool" id="tool-timer">
     <div class="timer-face" id="timer-face">05:00</div>
@@ -2087,7 +2123,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@40682e38e58cebd86186655cc03e2439beb388cc/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@ea94be45eac366960e900fa8cbc8acbd7ae6cc46/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
