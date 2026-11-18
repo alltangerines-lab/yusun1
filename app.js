@@ -4588,13 +4588,15 @@ function ntLoad(){
     NT.bank = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {items:[], used:{}};
     NT.bank.drafts = Object.assign({}, NT.bank.drafts || {});
     Object.keys(NT.draftTs || {}).forEach(x => { if (Date.now() - NT.draftTs[x] < 15000 && localDrafts[x] != null) NT.bank.drafts[x] = localDrafts[x]; });
+    if (NT.pickFor && Date.now() - (NT.pickTs || 0) < 15000) NT.bank.picks = Object.assign({}, NT.bank.picks, {[NT.pickFor]:NT.pick ? NT.pick.t : ''});
+    else if (NT.pickFor && NT.bank.picks && NT.bank.picks[NT.pickFor] != null && (!NT.pick || NT.bank.picks[NT.pickFor] !== NT.pick.t)) NT.pickFor = null;
     if (!Array.isArray(NT.bank.items)) NT.bank.items = []; if (!NT.bank.used) NT.bank.used = {}; if (!NT.bank.drafts) NT.bank.drafts = {};
     const k = ntTarget(), saved = NT.bank.drafts[k];
     if (saved != null && document.activeElement !== $('#nt-text') && !(NT.draftTs && Date.now() - (NT.draftTs[k] || 0) < 15000)) NT.draft[k] = saved;
     NT.loaded = true; if (T.tool === 'note' && !$('#tools').hidden) renderNoteTool();
   }, () => {});
 }
-const ntSave = () => queueSet(NOTEP(), () => ({items:NT.bank.items, used:NT.bank.used, drafts:NT.bank.drafts || {}, sbUrl:NT.bank.sbUrl || '', updatedAt:Date.now()}), false);
+const ntSave = () => queueSet(NOTEP(), () => ({items:NT.bank.items, used:NT.bank.used, drafts:NT.bank.drafts || {}, picks:NT.bank.picks || {}, sbUrl:NT.bank.sbUrl || '', updatedAt:Date.now()}), false);
 /* 쓰던 알림장은 날짜별로 저장해 두어요 (최근 3주) */
 let ntDraftTimer;
 function ntKeepDraft(k, v){
@@ -4647,6 +4649,22 @@ function ntTagFor(x){ if (NT.tag === 'none') return ''; if (NT.tag !== 'auto') r
 function ntRandom(){
   const list = ntFresh(ntList(NT.cat === 'mine' && !ntList('mine').length ? 'rec' : NT.cat));
   NT.pick = list[Math.floor(Math.random() * list.length)] || null;
+  ntRememberPick();
+}
+/* 그날 고른 안전 문구는 저장해 두고, 다시 열어도 바뀌지 않게 해요 */
+function ntRememberPick(){
+  if (!S.uid) return;
+  const k = ntTarget(); NT.pickFor = k; NT.pickTs = Date.now();
+  const p = Object.assign({}, NT.bank.picks || {}); p[k] = NT.pick ? NT.pick.t : '';
+  const lim = ymd(addDays(today(), -21)); Object.keys(p).forEach(x => { if (x < lim) delete p[x]; });
+  NT.bank.picks = p; clearTimeout(ntDraftTimer); ntDraftTimer = setTimeout(ntSave, 800);
+}
+function ntRestorePick(k){
+  const all = ntAll(), saved = (NT.bank.picks || {})[k];
+  if (saved != null) return saved ? (all.find(x => x.t === saved) || {c:'mine', t:saved}) : null;
+  const d = (NT.bank.drafts || {})[k];
+  if (d) return all.filter(x => d.includes(x.t)).sort((a, b) => b.t.length - a.t.length)[0] || null;
+  return undefined;
 }
 function ntApplyPick(){
   const k = ntTarget(); const cur = $('#nt-text').value;
@@ -4664,7 +4682,9 @@ async function renderNoteTool(){
   const k = ntTarget(), d = fromYmd(k);
   $('#nt-for').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일 알림장`;
   if (!S.uid){ $('#nt-text').value = ''; $('#nt-text').placeholder = '로그인한 상태로 열어야 쓸 수 있어요.'; return; }
-  if (!NT.pick) ntRandom();
+  if (!NT.loaded) for (let i = 0; i < 80 && !NT.loaded; i++) await new Promise(r => setTimeout(r, 100));
+  if (!NT.loaded){ $('#nt-text').placeholder = '쓰던 알림장을 불러오는 중이에요…'; return; }
+  if (NT.pickFor !== k){ const r = ntRestorePick(k); if (r === undefined){ NT.pick = null; ntRandom(); } else { NT.pick = r; NT.pickFor = k; } }
   if (document.activeElement !== $('#nt-text')){ $('#nt-text').value = await ntCompose(false); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; }
   $('#nt-cats').innerHTML = NT_CATS.map(([c, n]) => `<button type="button" class="stab" data-ntc="${c}" ${NT.cat === c ? 'aria-current="page"' : ''}>${n}${c === 'mine' ? ` <small>${(NT.bank.items || []).length}</small>` : ''}</button>`).join('');
   $('#nt-tag').value = NT.tag;
@@ -4732,7 +4752,7 @@ $('#nt-list').addEventListener('click', e => {
   const del = e.target.closest('[data-ntdel]');
   if (del){ NT.bank.items = (NT.bank.items || []).filter(x => x.t !== del.dataset.ntdel); ntSave(); renderNoteTool(); return; }
   const b = e.target.closest('[data-ntp]'); if (!b) return;
-  NT.pick = ntAll().find(x => x.t === b.dataset.ntp) || null; ntApplyPick(); renderNoteTool();
+  NT.pick = ntAll().find(x => x.t === b.dataset.ntp) || null; ntRememberPick(); ntApplyPick(); renderNoteTool();
 });
 $('#nt-import').addEventListener('submit', e => {
   e.preventDefault(); if (!S.uid){ toast('로그인한 상태에서만 넣을 수 있어요.'); return; }
