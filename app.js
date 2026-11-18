@@ -999,7 +999,7 @@ function renderGradeToday(){
 function weekEnd(){ const d = today(); return ymd(addDays(d, (7 - d.getDay()) % 7)); }
 function weekFri(){ const d = today(); const n = (5 - d.getDay() + 7) % 7; return ymd(addDays(d, d.getDay() === 6 ? 6 : n)); }
 const isMineWho = w => !w || w === '전체' || (S.profile.myClass && w === S.profile.myClass);
-function dueHtml(mineOnly){
+function dueHtml(mineOnly, lim){
   const k = ymd(today()), we0 = weekEnd(), we = ymd(addDays(fromYmd(we0), 7));
   const okWho = x => !mineOnly || isMineWho(x.who);
   const subs = S.events.filter(e => evKind(e) === 'submit' && e.date && e.date <= we && !e.done && e.date >= ymd(addDays(today(), -60)) && okWho(e)).map(e => ({id:e.id, title:e.title, due:e.date, time:e.time, who:e.who, ev:true}));
@@ -1020,18 +1020,27 @@ function dueHtml(mineOnly){
       ${S.canWrite ? `<button type="button" class="btn small" data-act="task-defer" data-id="${t.id}" title="다음 주 같은 요일로 미루기">미루기</button><button type="button" class="btn small" data-act="task-hold" data-id="${t.id}" title="지금은 못 하는 일로 빼 두기">보류</button>` : ''}</div>`;
   };
   const grp = [['밀린 일', open.filter(t => t.due < k)], ['이번 주', open.filter(t => t.due >= k && t.due <= we0)], ['다음 주', open.filter(t => t.due > we0)]].filter(g => g[1].length);
+  if (lim){
+    const flat = []; grp.forEach(([n, l]) => l.forEach(t => flat.push([n, t])));
+    const show = flat.slice(0, lim), more = flat.length - show.length;
+    const html = show.length ? show.map(([n, t]) => `<div class="wk-cell"><span class="wk-gl ${n === '밀린 일' ? 'late' : ''}">${n}</span>${row(t)}</div>`).join('') + (more || holdN ? `<a class="wk-more" href="#tasks">${more ? `+${more}개 더` : ''}${more && holdN ? '<br>' : ''}${holdN ? `<small>보류 ${holdN}</small>` : ''}</a>` : '')
+      : `<p class="th-empty" style="font-size:13.5px;margin:0">다음 주까지 끝낼 학년 일이 없어요.${laterN ? ` <a class="hint" href="#tasks">그 뒤 ${laterN}개 →</a>` : ''}</p>`;
+    return {html, n:open.length, cols:show.length + (more || holdN ? 1 : 0)};
+  }
   const html = (open.length ? grp.map(([n, l]) => `<h4 class="wk-g">${n} <span>${l.length}</span></h4>` + l.map(row).join('')).join('') : '<p class="th-empty" style="font-size:14px">다음 주까지 끝낼 학년 일이 없어요.</p>')
     + (laterN ? `<a class="hint wk-later" href="#tasks">그 뒤에 할 일 ${laterN}개 더 보기 →</a>` : '')
     + (holdN ? `<a class="hint wk-later" href="#tasks" data-hold-link="1">보류한 일 ${holdN}개 →</a>` : '')
     + (doneWk.length ? `<p class="hint wk-done">이번 주 끝낸 일 ${doneWk.length}개 · ${doneWk.slice(0, 4).map(t => esc(t.title)).join(', ')}${doneWk.length > 4 ? ' …' : ''}</p>` : '');
   return {html, n:open.length};
 }
+const WIDE_MQ = window.matchMedia ? matchMedia('(min-width:1500px)') : {matches:false};
 function renderWeekTasks(){
-  const r = dueHtml(false);
+  const wide = WIDE_MQ.matches, r = dueHtml(false, wide ? 3 : 0);
   $('#th-wk-n').textContent = r.n ? `${r.n}개 남음` : '';
-  $('#th-wk').innerHTML = r.html;
+  $('#th-wk').innerHTML = r.html; $('#th-wk').classList.toggle('row1', wide); $('#th-wk').style.setProperty('--n', r.cols || 1);
   if (S.space === 'me') renderMeGrade();
 }
+try { WIDE_MQ.addEventListener('change', () => renderWeekTasks()); } catch (e){}
 function renderMeGrade(){
   const el = $('#me-grade'); if (!el) return;
   const my = S.profile.myClass;
@@ -3765,8 +3774,11 @@ if (window.__gasNoGrade) gradePickSoon();
 
 
 /* ---------- 버전 · 바뀐 것 알림 ---------- */
-const APP_VERSION = '2.12';
+const APP_VERSION = '2.13';
 const CHANGELOG = [
+  ['2.13', '11월 19일', [
+    '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.'
+  ]],
   ['2.12', '11월 18일 오후', [
     '큰 모니터에서 나의 공간 다른 탭을 눌러도 내용이 안 보이던 것, 학년 공간 다른 탭에서 입력 칸이 오른쪽에 붙던 것을 고쳤어요. 세 줄 배치는 학년 "오늘"과 나의 공간 "학급일지"에서만 써요.'
   ]],
