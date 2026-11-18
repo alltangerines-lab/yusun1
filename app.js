@@ -1539,7 +1539,7 @@ function listenDay(){
     if (S.space === 'me' && S.meTab === 'day') renderDayBoard();
     if (S.space === 'me' && S.meTab === 'plan') renderPlanPage();
     if (S.space === 'me' && S.meTab === 'jday') renderJDay();
-    if (S.space === 'me' && S.meTab === 'jles') renderJLes();
+    if (S.space === 'me' && S.meTab === 'jles') renderJLes(true);
   }, () => {});
 }
 function listenDaily(){
@@ -1625,7 +1625,7 @@ function startPrivate(){
       S.jl = jlNorm(snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {});
       const ae = document.activeElement;
       if (S.space === 'me' && S.meTab === 'jles' && !(ae && ae.closest('#jl-add'))) renderJProg();
-      if (S.space === 'me' && S.meTab === 'jles' && !(ae && ae.closest('#jl-rows'))) renderJLes();
+      if (S.space === 'me' && S.meTab === 'jles' && !(ae && ae.closest('#jl-rows'))) renderJLes(true);
       if (S.space === 'me' && S.meTab === 'jprog') renderJProg();
       if (S.space === 'me' && S.meTab === 'jday') renderJDay();
     });
@@ -2002,7 +2002,7 @@ $('#j-form').addEventListener('submit', async ev => {
   if (cat === '할일') toast(entry.date ? `${fmtMD(entry.date)} 할 일로 적었어요.` : '언젠가 할 일로 적었어요.');
   else if (entry.date !== S.jDate) toast(`${fmtMD(entry.date)}에 적었어요.`); else toast('적었어요.');
 });
-const setJDate = k => { S.jDate = k; listenDay(); renderDayBoard(); renderJPreview(); };
+const setJDate = k => { blurIn('#p-day'); S.jDate = k; listenDay(); renderDayBoard(); renderJPreview(); };
 $('#j-prev').onclick = () => setJDate(ymd(addDays(fromYmd(S.jDate), -1)));
 $('#j-next').onclick = () => setJDate(ymd(addDays(fromYmd(S.jDate), 1)));
 $('#j-today').onclick = () => setJDate(ymd(today()));
@@ -3830,6 +3830,8 @@ function maybeShowNews(){
 
 
 /* ---------- 수업 계획 (크게 쓰는 페이지) ---------- */
+/* 날짜를 넘기기 전에 쓰던 칸을 마무리해요 (사파리는 버튼을 눌러도 칸에서 커서가 안 빠져요) */
+function blurIn(sel){ const a = document.activeElement; if (a && a.closest && a.closest(sel) && a.blur) a.blur(); }
 const PP_F = [['t', '단원 · 주제', '3단원 분수 (2/8차시)', 1], ['a', '수업 활동', '도입 - 전개 - 정리', 1], ['p', '준비물 · 메모', '활동지 25장', 1], ['r', '되돌아보기', '잘된 점, 다음에 챙길 것', 1]];
 function renderPlanPage(){
   const k = S.jDate, d = S.day || {};
@@ -3866,7 +3868,7 @@ $('#pp-rows').addEventListener('change', e => {
 });
 $('#pp-memo').addEventListener('change', e => { if (!S.uid) return; S.day.memo = e.target.value; saveDay(); $('#pp-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5); });
 $('#p-plan').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#p-plan'))) renderPlanPage(); }, 0));
-const ppGo = k => { setJDate(k); renderPlanPage(); };
+const ppGo = k => { blurIn('#p-plan'); setJDate(k); renderPlanPage(); };
 $('#pp-prev').onclick = () => ppGo(ymd(addDays(fromYmd(S.jDate), -1)));
 $('#pp-next').onclick = () => ppGo(ymd(addDays(fromYmd(S.jDate), 1)));
 $('#pp-today').onclick = () => ppGo(ymd(today()));
@@ -4077,25 +4079,32 @@ function renderJDay(){
   $$('#jd-cards textarea').forEach(growTa);
 }
 $('#jd-cards').addEventListener('input', e => { if (e.target.matches('textarea')) growTa(e.target); });
+const JLW = {days:{}, mon:null, t:0, view:'week'};
+function jdDayDoc(k){ if (k === S.jDate && S.day) return S.day; return JLW.days[k] || (JLW.days[k] = {}); }
+function jdDayPut(k){ const D = jdDayDoc(k); JLW.days[k] = D; if (k === S.jDate && S.day === D) saveDay(); else queueSet(DAYPATH(k), () => Object.assign({}, D, {date:k}), false); }
+/* 한 칸 기록을 고치고 저장 (진도·지난 시간까지 함께) */
+function jdLogPut(k, p, c, patch){
+  const D = jdDayDoc(k), jd = Object.assign({}, D.jd || {});
+  const L = Object.assign({c}, jd[p] || {}, patch); L.c = c;
+  if (patch.t && !L.done && k <= ymd(today())) L.done = true;
+  jlMarkFromDay(c, k, L);
+  jd[p] = L; D.jd = jd; jdDayPut(k);
+  const prev = S.jd.last[c];
+  if ((L.t || L.n) && k <= ymd(today()) && (!prev || prev.date <= k)){ S.jd.last[c] = {date:k, t:L.t || '', n:L.n || ''}; jdSave(); }
+  return L;
+}
 function jdLogChange(e){
   const el = e.target.closest('[data-jdf]'); if (!el || !S.uid) return;
-  const k = S.jDate, p = el.dataset.jdp, c = el.dataset.jdc, f = el.dataset.jdf;
-  const jd = Object.assign({}, (S.day && S.day.jd) || {});
-  const L = Object.assign({c}, jd[p] || {}); L.c = c;
-  L[f] = f === 'done' ? el.checked : el.value.trim();
-  if (f === 't' && L.t && !L.done) L.done = true;
-  jlMarkFromDay(c, k, L);
-  jd[p] = L; S.day.jd = jd; saveDay();
-  const prev = S.jd.last[c];
-  if (L.t || L.n){ if (!prev || prev.date <= k){ S.jd.last[c] = {date:k, t:L.t || '', n:L.n || ''}; jdSave(); } }
+  const k = el.dataset.k || S.jDate, p = el.dataset.jdp, c = el.dataset.jdc, f = el.dataset.jdf;
+  const L = jdLogPut(k, p, c, {[f]:f === 'done' ? el.checked : el.value.trim()});
   const tm = '저장했어요 ' + new Date().toTimeString().slice(0, 5); $('#jd-save').textContent = tm; $('#jl-save').textContent = tm;
-  if (f === 'done') { renderJDay(); renderJLes(); }
+  if (f === 'done') { renderJDay(); renderJLes(true); }
   else { const card = el.closest('.jd-card, tr'); if (card) card.classList.toggle('done', !!L.done); const cb = card && card.querySelector('[data-jdf="done"]'); if (cb) cb.checked = !!L.done; }
 }
 $('#jd-cards').addEventListener('change', jdLogChange);
 $('#jd-memo').addEventListener('change', e => { if (!S.uid) return; S.day.memo = e.target.value; saveDay(); $('#jd-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5); });
 $('#p-jday').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#jd-cards, #jd-memo'))) renderJDay(); }, 0));
-const jdGo = k => { setJDate(k); renderJDay(); };
+const jdGo = k => { blurIn('#p-jday'); setJDate(k); renderJDay(); };
 $('#jd-prev').onclick = () => jdGo(ymd(addDays(fromYmd(S.jDate), -1)));
 $('#jd-next').onclick = () => jdGo(ymd(addDays(fromYmd(S.jDate), 1)));
 $('#jd-today').onclick = () => jdGo(ymd(today()));
@@ -4141,39 +4150,89 @@ function jlMarkFromDay(c, k, L){
 }
 function jlCurG(sel){ const gs = jdGrades(); if (!gs.includes(sel)) sel = gs[0] || null; return sel; }
 function gradeTabs(el, cur, attr){ const gs = jdGrades(); el.innerHTML = gs.length ? gs.map(g => `<button type="button" class="stab" ${attr}="${esc(g)}" ${g === cur ? 'aria-current="page"' : ''}>${/^\d$/.test(g) ? g + '학년' : esc(g)}</button>`).join('') : ''; }
-function renderJLes(){
+function jlRow(k, p, c, L, opt){
+  const nx = jlNext(c), ph = (L.done || !nx) ? '' : jlTitle(nx);
+  const T = f => `<td><textarea rows="1" data-k="${k}" data-jdf="${f}" data-jdp="${p + 1}" data-jdc="${esc(c)}" placeholder="${f === 't' ? esc(ph) : ''}" aria-label="${fmtMD(k)} ${p + 1}교시 ${esc(jdLabel(c))}">${esc(L[f] || '')}</textarea></td>`;
+  return `<tr class="${L.done ? 'done' : ''}">${opt.day ? `<td class="n">${opt.day}</td>` : ''}<td class="n">${p + 1}</td><td class="s"><b>${esc(jdLabel(c))}</b></td>${T('t')}${T('a')}${T('pp')}${T('n')}<td class="n"><input type="checkbox" data-k="${k}" data-jdf="done" data-jdp="${p + 1}" data-jdc="${esc(c)}" ${L.done ? 'checked' : ''} aria-label="${p + 1}교시 수업함"></td><td class="n"><button type="button" class="btn small jl-cp" data-jlcp="${k}|${p + 1}|${esc(c)}" title="이 줄 내용을 같은 학년 다른 반 빈칸에 똑같이 넣어요">똑같이</button></td></tr>`;
+}
+const JL_HEAD = day => `<thead><tr>${day ? '<th class="n">요일</th>' : ''}<th class="n">교시</th><th class="s">반</th><th>단원 · 차시</th><th>수업 활동</th><th>준비물 · 과제</th><th>특이사항</th><th class="n">함</th><th class="n"></th></tr></thead>`;
+async function jlLoadWeek(force){
+  const mon = mondayOf(S.jDate);
+  if (!force && JLW.mon === mon && Date.now() - JLW.t < 60000) return;
+  JLW.mon = mon; JLW.t = Date.now();
+  const ks = [0, 1, 2, 3, 4].map(i => ymd(addDays(fromYmd(mon), i)));
+  await Promise.all(ks.map(async k => { if (k === S.jDate || busy(DAYPATH(k))) return; try { const sn = await S.db.doc(DAYPATH(k)).get(); JLW.days[k] = sn.exists ? JSON.parse(JSON.stringify(sn.data())) : {}; } catch (e){ JLW.days[k] = JLW.days[k] || {}; } }));
+}
+async function renderJLes(noFetch){
   if (S.meTab !== 'jles') return;
-  const k = S.jDate, d = S.day || {}, log = d.jd || {};
-  $('#jl-label').textContent = fmtLong(k); $('#jl-date').value = k;
-  const off = jdOff(k);
-  $('#jl-ev').innerHTML = (off && off !== '주말' ? `<span class="chip school">쉬는 날 · ${esc(off)}</span>` : '') + schoolEvents(k).map(t => `<span class="chip school">학교 행사 · ${esc(t)}</span>`).join('');
-  if (document.activeElement && document.activeElement.closest('#jl-rows, #jl-memo')) return;
-  if (document.activeElement !== $('#jl-memo')) $('#jl-memo').value = d.memo || '';
-  const cls = jdDayClasses(k);
-  if (!cls.some(Boolean)){
-    const noTT = !Object.values(S.jd.base).some(a => a.some(Boolean)) && !Object.keys(S.jd.weeks).length;
-    $('#jl-rows').innerHTML = `<div class="jd-empty">${noTT ? '먼저 <a href="#me-jtt">시간표·시수</a>에 전담 시간표를 넣어 주세요.' : off ? `${esc(off)}이라 수업이 없어요.` : '이 날은 들어가는 수업이 없어요.'}</div>`;
-    return;
+  const wk = JLW.view === 'week', k = S.jDate;
+  $$('#jl-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === JLW.view));
+  $('#jl-memo-wrap').hidden = wk;
+  if (wk){ const m = fromYmd(mondayOf(k)), f = addDays(m, 4); $('#jl-label').textContent = `${m.getMonth() + 1}월 ${m.getDate()}일 ~ ${f.getMonth() + 1}월 ${f.getDate()}일`; }
+  else $('#jl-label').textContent = fmtLong(k);
+  $('#jl-date').value = k;
+  if (document.activeElement && document.activeElement.closest('#jl-rows textarea, #jl-memo')) return;
+  if (wk && S.db && S.uid && !noFetch){ await jlLoadWeek(false); if (S.meTab !== 'jles' || (document.activeElement && document.activeElement.closest('#jl-rows textarea'))) return; }
+  const noTT = !Object.values(S.jd.base).some(a => a.some(Boolean)) && !Object.keys(S.jd.weeks).length;
+  if (noTT){ $('#jl-ev').innerHTML = ''; $('#jl-rows').innerHTML = '<div class="jd-empty">먼저 <a href="#me-jtt">시간표·시수</a>에 전담 시간표를 넣어 주세요.</div>'; return; }
+  if (wk){
+    const mon = mondayOf(k); let h = '', any = false;
+    $('#jl-ev').innerHTML = '';
+    for (let i = 0; i < 5; i++){
+      const dk = ymd(addDays(fromYmd(mon), i)), off = jdOff(dk), cls = jdDayClasses(dk), log = (jdDayDoc(dk).jd) || {}, ev = schoolEvents(dk);
+      const lab = `${WD[fromYmd(dk).getDay()]}<br><small>${fromYmd(dk).getMonth() + 1}/${fromYmd(dk).getDate()}</small>`;
+      h += `<tr class="jl-dayh ${dk === ymd(today()) ? 'today' : ''}"><td colspan="9"><b>${fmtMD(dk)}</b>${off && off !== '주말' ? ` <span class="chip school">쉬는 날 · ${esc(off)}</span>` : ''}${ev.map(t => ` <span class="chip school">${esc(t)}</span>`).join('')}${!cls.some(Boolean) && !off ? ' <span class="hint">수업 없음</span>' : ''}</td></tr>`;
+      if (off) continue;
+      cls.forEach((c, p) => { if (c){ any = true; h += jlRow(dk, p, c, log[p + 1] || {}, {day:lab}); } });
+    }
+    $('#jl-rows').innerHTML = `<div class="tablewrap"><table class="pp-t jl-t">${JL_HEAD(true)}<tbody>${h}</tbody></table></div>`;
+  } else {
+    const d = S.day || {}, log = d.jd || {}, off = jdOff(k);
+    $('#jl-ev').innerHTML = (off && off !== '주말' ? `<span class="chip school">쉬는 날 · ${esc(off)}</span>` : '') + schoolEvents(k).map(t => `<span class="chip school">학교 행사 · ${esc(t)}</span>`).join('');
+    if (document.activeElement !== $('#jl-memo')) $('#jl-memo').value = d.memo || '';
+    const cls = jdDayClasses(k);
+    if (!cls.some(Boolean)){ $('#jl-rows').innerHTML = `<div class="jd-empty">${off ? `${esc(off)}이라 수업이 없어요.` : '이 날은 들어가는 수업이 없어요.'}</div>`; return; }
+    const L0 = lunchAt(); let h = '';
+    cls.forEach((c, p) => {
+      if (p === L0) h += '<tr class="lunch"><td colspan="8">점심</td></tr>';
+      if (!c){ h += `<tr class="none"><td class="n">${p + 1}</td><td class="s" colspan="7" style="color:var(--muted)">—</td></tr>`; return; }
+      h += jlRow(k, p, c, log[p + 1] || {}, {});
+    });
+    $('#jl-rows').innerHTML = `<div class="tablewrap"><table class="pp-t jl-t">${JL_HEAD(false)}<tbody>${h}</tbody></table></div>`;
   }
-  const L0 = lunchAt();
-  let h = '<div class="tablewrap"><table class="pp-t jl-t"><thead><tr><th class="n">교시</th><th class="s">반</th><th>단원 · 차시</th><th>수업 활동</th><th>준비물 · 과제</th><th>특이사항</th><th class="n">함</th></tr></thead><tbody>';
-  cls.forEach((c, p) => {
-    if (p === L0) h += '<tr class="lunch"><td colspan="7">점심</td></tr>';
-    if (!c){ h += `<tr class="none"><td class="n">${p + 1}</td><td class="s" colspan="6" style="color:var(--muted)">—</td></tr>`; return; }
-    const L = log[p + 1] || {}, nx = jlNext(c), ph = nx ? jlTitle(nx) : '';
-    const T = (f, pl) => `<td><textarea rows="1" data-jdf="${f}" data-jdp="${p + 1}" data-jdc="${esc(c)}" placeholder="${esc(pl)}" aria-label="${p + 1}교시 ${esc(jdLabel(c))}">${esc(L[f] || '')}</textarea></td>`;
-    h += `<tr class="${L.done ? 'done' : ''}"><td class="n">${p + 1}</td><td class="s"><b>${esc(jdLabel(c))}</b></td>${T('t', ph || (p === 0 || !cls.slice(0, p).some(Boolean) ? '3단원 2/4차시' : ''))}${T('a', '')}${T('pp', '')}${T('n', '')}<td class="n"><input type="checkbox" data-jdf="done" data-jdp="${p + 1}" data-jdc="${esc(c)}" ${L.done ? 'checked' : ''} aria-label="${p + 1}교시 수업함"></td></tr>`;
-  });
-  $('#jl-rows').innerHTML = h + '</tbody></table></div>';
   $$('#jl-rows textarea').forEach(growTa);
 }
+/* 똑같이: 같은 학년 다른 반의 빈칸에 이 줄 내용을 넣어요 (하루 보기는 그날, 주간 보기는 그 주) */
+$('#jl-rows').addEventListener('click', e => {
+  const b = e.target.closest('[data-jlcp]'); if (!b || !S.uid) return;
+  const [k, p, c] = b.dataset.jlcp.split('|');
+  const src = (jdDayDoc(k).jd || {})[p] || {};
+  const pick = {t:src.t || '', a:src.a || '', pp:src.pp || ''};
+  if (!pick.t && !pick.a && !pick.pp){ toast('먼저 이 줄에 내용을 적어 주세요.'); return; }
+  const g = jdGrade(c), days = JLW.view === 'week' ? [0, 1, 2, 3, 4].map(i => ymd(addDays(fromYmd(mondayOf(S.jDate)), i))) : [S.jDate];
+  let n = 0; const got = new Set();
+  days.forEach(dk => {
+    if (jdOff(dk)) return;
+    jdDayClasses(dk).forEach((c2, p2) => {
+      if (!c2 || c2 === c || jdGrade(c2) !== g || got.has(c2)) return;
+      const L = (jdDayDoc(dk).jd || {})[p2 + 1] || {};
+      const patch = {}; ['t', 'a', 'pp'].forEach(f => { if (!L[f] && pick[f]) patch[f] = pick[f]; });
+      if (!Object.keys(patch).length) return;
+      jdLogPut(dk, String(p2 + 1), c2, patch); n++; got.add(c2);
+    });
+  });
+  toast(n ? `같은 학년 ${n}칸에 똑같이 넣었어요.` : '채울 빈칸이 없어요. (같은 학년 다른 반의 빈칸에만 넣어요)');
+  renderJLes(true);
+});
 $('#jl-rows').addEventListener('input', e => { if (e.target.matches('textarea')) growTa(e.target); });
 $('#jl-rows').addEventListener('change', jdLogChange);
 $('#jl-memo').addEventListener('change', e => { if (!S.uid) return; S.day.memo = e.target.value; saveDay(); $('#jl-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5); });
-$('#p-jles').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#jl-rows, #jl-memo'))) renderJLes(); }, 0));
-const jlGo = k => { setJDate(k); renderJLes(); };
-$('#jl-prev').onclick = () => jlGo(ymd(addDays(fromYmd(S.jDate), -1)));
-$('#jl-next').onclick = () => jlGo(ymd(addDays(fromYmd(S.jDate), 1)));
+$('#p-jles').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#jl-rows, #jl-memo'))) renderJLes(true); }, 0));
+const jlGo = k => { blurIn('#p-jles'); setJDate(k); renderJLes(); };
+$('#jl-prev').onclick = () => jlGo(ymd(addDays(fromYmd(S.jDate), JLW.view === 'week' ? -7 : -1)));
+$('#jl-next').onclick = () => jlGo(ymd(addDays(fromYmd(S.jDate), JLW.view === 'week' ? 7 : 1)));
+$('#jl-view').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; JLW.view = b.dataset.v; try { localStorage.setItem('jlView', JLW.view); } catch (er){} renderJLes(); });
+try { const v = localStorage.getItem('jlView'); if (v === 'day' || v === 'week') JLW.view = v; } catch (e){}
 $('#jl-today').onclick = () => jlGo(ymd(today()));
 $('#jl-date').addEventListener('change', e => { if (e.target.value) jlGo(e.target.value); });
 function jlParse(text, g){
