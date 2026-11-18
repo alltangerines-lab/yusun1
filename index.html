@@ -1065,6 +1065,53 @@ table.jt-sum{border-collapse:collapse;font-size:13px}
 .jt-sum td.bad{color:var(--danger);font-weight:700}
 .jt-sum td.good{color:var(--ok);font-weight:700}
 .jt-sum input{width:54px;text-align:center;padding:3px}
+.jg-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.jl-unit{margin:14px 0 6px;font-weight:700;font-size:14px;color:var(--me)}
+.jl-row{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:6px}
+.jl-head{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;cursor:pointer}
+.jl-head .k{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.jl-head .q{overflow-wrap:anywhere}
+.jl-head .q small{color:var(--muted);margin-left:6px}
+.jl-chips{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+.jl-chip{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:1px 7px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit}
+.jl-chip.on{background:var(--me);border-color:var(--me);color:var(--me-ink)}
+.jl-chip.next{border-color:var(--me);color:var(--me);font-weight:700}
+.jl-body{border-top:1px solid var(--line);padding:10px;display:grid;gap:8px}
+.jl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.jl-body label.f{margin:0}
+.jl-cls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px}
+.jl-cls .row{gap:6px}
+.jl-cls b{min-width:34px}
+table.jp-t{border-collapse:collapse;font-size:12.5px}
+.jp-t th,.jp-t td{border:1px solid var(--line);padding:3px 8px;text-align:center;white-space:nowrap}
+.jp-t th{background:var(--surface-2);color:var(--muted);font-weight:600;position:sticky;top:0}
+.jp-t td.u{text-align:left;color:var(--me);font-weight:600}
+.jp-t td.q{text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+.jp-t td.c{cursor:pointer;font-family:var(--mono);min-width:48px}
+.jp-t td.c.on{background:var(--me-soft);color:var(--fg)}
+.jp-t td.c.next{outline:2px solid var(--me);outline-offset:-2px}
+.jp-cal{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.jp-cal .h{font-size:12px;color:var(--muted);text-align:center;font-weight:600}
+.jp-cal .d{min-height:74px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:11.5px;min-width:0}
+.jp-cal .d.out{opacity:.35}
+.jp-cal .d.today{border-color:var(--me);box-shadow:inset 0 0 0 1px var(--me)}
+.jp-cal .d .n{font-family:var(--mono);color:var(--muted)}
+.jp-cal .d .e{overflow-wrap:anywhere;line-height:1.35}
+.jp-cal .d .e b{color:var(--me)}
+table.jc-t{border-collapse:collapse;font-size:13px}
+.jc-t th,.jc-t td{border:1px solid var(--line);padding:2px 6px;text-align:center;white-space:nowrap}
+.jc-t th{background:var(--surface-2);color:var(--muted);font-weight:600;position:sticky;top:0}
+.jc-t th small{display:block;font-weight:400;font-size:10.5px}
+.jc-t td.nm{text-align:left;font-weight:600}
+.jc-t button.ck{width:40px;height:28px;border:0;background:transparent;font:inherit;font-weight:700;cursor:pointer}
+.jc-t button.ck.O{color:var(--ok)} .jc-t button.ck.X{color:var(--danger)} .jc-t button.ck.T{color:var(--warn)}
+.jc-t input{width:90px;border:0;background:transparent;padding:4px;text-align:center}
+.jc-t td.jc-sum{font-family:var(--mono);color:var(--muted);font-size:11.5px}
+.jc-notes{display:grid;gap:4px;margin-top:8px}
+.jc-note{display:grid;grid-template-columns:70px 80px minmax(0,1fr) auto;gap:8px;align-items:start;padding:6px 8px;background:var(--surface);border:1px solid var(--line);border-radius:8px;font-size:13px}
+.jc-note .dt{font-family:var(--mono);color:var(--muted);font-size:12px}
+.jc-note .tx{overflow-wrap:anywhere}
+@media (max-width:640px){.jl-head{grid-template-columns:48px minmax(0,1fr)}.jl-chips{grid-column:1/-1;justify-content:flex-start}.jc-note{grid-template-columns:64px minmax(0,1fr) auto}.jc-note .who{grid-column:2}}
 .jt-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:6px 0}
 .jt-legend i{display:inline-block;width:14px;height:12px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
 .pp-t th,.pp-t td{border-bottom:1px solid var(--line);padding:3px 4px;text-align:left;vertical-align:top}
@@ -1667,6 +1714,34 @@ body.ro .w-only{display:none!important}
           <div class="jd-cards" id="jd-cards"></div>
           <label class="f" for="jd-memo" style="margin-top:12px">이 날 메모</label>
           <textarea id="jd-memo" rows="3"></textarea>
+        </div>
+
+        <div class="panel" id="p-jles" hidden>
+          <nav class="jg-tabs" id="jl-grades" aria-label="학년"></nav>
+          <details class="jt-sec" id="jl-add"><summary><b>단원·차시 넣기</b> <span class="hint">진도표나 지도서 차시 목록을 붙여 넣어요</span></summary>
+            <p class="hint" style="margin:8px 0 6px">한 줄에 하나씩 적어요. <b>단원 이름 뒤에 차시 수</b>(예: "1. My Name Is Eric 4")를 쓰면 1/4 ~ 4/4 차시가 생겨요. 표에서 복사한 <b>단원 · 차시 · 학습 문제 · 쪽수</b> 칸도 그대로 들어가요.</p>
+            <textarea id="jl-paste" rows="5" placeholder="1. My Name Is Eric 4&#10;2. Let's Play Soccer 4&#10;Special 1 2"></textarea>
+            <div class="row" style="margin-top:6px"><span class="hint grow" id="jl-paste-info"></span><button type="button" class="btn primary" id="jl-paste-go">이 학년에 넣기</button></div>
+          </details>
+          <div id="jl-list"></div>
+        </div>
+
+        <div class="panel" id="p-jprog" hidden>
+          <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">
+            <nav class="jg-tabs" id="jp-grades" aria-label="학년" style="margin:0"></nav>
+            <span class="grow"></span>
+            <div class="seg" role="group" aria-label="보기" id="jp-view"><button type="button" data-v="les" aria-pressed="true">차시별</button><button type="button" data-v="cal" aria-pressed="false">월별</button></div>
+          </div>
+          <div id="jp-les"><p class="hint" style="margin:0 0 6px">칸에는 그 반이 그 차시를 한 날짜가 보여요. 테두리 칸이 반마다 다음에 할 차시예요. 칸을 누르면 오늘 날짜로 했다/안 했다를 바꿔요.</p><div class="jt-wrap" id="jp-table" style="max-height:72vh"></div></div>
+          <div id="jp-cal" hidden>
+            <div class="row" style="margin-bottom:8px"><button type="button" class="btn small" id="jpc-prev">‹</button><strong id="jpc-label"></strong><button type="button" class="btn small" id="jpc-next">›</button><button type="button" class="btn small" id="jpc-now">이번 달</button></div>
+            <div class="jp-cal" id="jpc-grid"></div>
+          </div>
+        </div>
+
+        <div class="panel" id="p-jcls" hidden>
+          <nav class="jg-tabs" id="jc-tabs" aria-label="반"></nav>
+          <div id="jc-main"></div>
         </div>
 
         <div class="panel" id="p-jtt" hidden>
@@ -2344,7 +2419,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@04c9c31ef1442c8a8e1bf92c337c66ff749f4a1d/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@922999b825c671dcbf0e7e8e567ba7603c0e5b36/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
