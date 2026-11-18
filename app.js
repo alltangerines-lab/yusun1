@@ -3765,8 +3765,23 @@ if (window.__gasNoGrade) gradePickSoon();
 
 
 /* ---------- 버전 · 바뀐 것 알림 ---------- */
-const APP_VERSION = '2.08';
+const APP_VERSION = '2.10';
 const CHANGELOG = [
+  ['2.10', '11월 18일', [
+    '교과 전담 선생님용 나의 공간이 생겼어요. 설정 맨 위 "나의 공간 쓰는 방식"에서 "교과 전담"을 고르면 오늘 수업 · 수업일지 · 진도표 · 반별 명렬 · 시간표·시수 탭으로 바뀌어요.',
+    '전담 시간표·시수: 기본 시간표를 넣으면 학기 주별 시간표에 쭉 깔리고, 바뀐 주만 고쳐요. 휴일은 빼고 반별 시수를 세어 목표 시수와 비교해요. 한글·엑셀 표를 복사해 붙여 넣으면 칸마다 나눠 들어가요.',
+    '전담 수업일지는 한 주 보기로 열리고, "똑같이"를 누르면 같은 학년 다른 반 빈칸에 같은 내용이 들어가요.',
+    '나의 공간 첫 페이지 학생 표의 출결 칸에서 질병결석·출석인정결석 등을 바로 골라요.',
+    '알림장: 줄 사이에서 Enter를 치면 아래 번호(안전 문구 포함)가 하나씩 밀려요. 그날 고른 안전 문구는 다시 열어도 그대로예요. 시간표의 "융"은 "학"으로 써요.',
+    '아침 안내: 과목 옆에 짧은 메모를 쓸 수 있어요. 급식은 시간표 아래로 옮기고 오늘 할 일 칸을 넓혔어요.',
+    '수업 계획에서 날짜를 넘기면 시간표도 같이 바뀌어요.'
+  ]],
+  ['2.09', '11월 17일', [
+    '교실 도구에 "알림장"이 생겼어요. 내일 시간표·준비물·학사 일정과 안전 문구를 넣어 알림장을 만들고, 복사해서 학교종이에 붙여 넣어요. 크게 보기도 돼요.',
+    '학년 공간에 "특별수업" 탭이 생겼어요. 강사 수업·검사처럼 반마다 시간을 정하는 일정을 모으고, 전담 시간·다른 수업과 겹치면 알려 줘요. 주간·월간으로 보고 달력에도 나와요.',
+    '아침 안내: 점심 줄은 연한 회색, 화면을 넓게, 오늘 할 일은 한 줄에 하나씩, 고치기·사진 붙이기가 돼요.',
+    '명부에서 끌어서 고를 때 화면이 따라 내려가요. 위쪽 교무수첩 아이콘이 바뀌었어요.'
+  ]],
   ['2.08', '11월 17일', [
     '위쪽 탭 이름을 바꿀 수 있어요. 탭을 오른쪽 클릭하거나 두 번 누르면 돼요 (학년 탭은 학년 모두에게, 나의 공간 탭은 나에게만).',
     '이제 화면은 GitHub에서 자동으로 최신판을 받아 와요. 화면을 고칠 때마다 붙여 넣고 배포하지 않아도 돼요.',
@@ -4022,6 +4037,53 @@ $('#p-jtt').addEventListener('keydown', e => {
   else { const r = rows[ri + (key === 'ArrowUp' ? -1 : 1)]; if (r) t = r.querySelectorAll('input[data-jw],input[data-jb]')[ci]; }
   if (t){ e.preventDefault(); t.focus(); t.select(); }
 });
+/* 한글·엑셀 표를 기본 시간표에 붙여 넣기: 칸마다 나눠 넣어요 */
+function jdGridFromClip(cd){
+  const html = cd.getData('text/html') || '', text = cd.getData('text/plain') || '';
+  let rows = [];
+  if (/<table/i.test(html)){
+    const doc = new DOMParser().parseFromString(html, 'text/html'), t = doc.querySelector('table');
+    rows = [...t.querySelectorAll('tr')].map(tr => [...tr.children].filter(c => /^T[DH]$/.test(c.tagName)).map(c => { const v = (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim(); const span = +c.getAttribute('colspan') || 1; return Array(span).fill(v); }).flat());
+  } else if (text.includes('\t') || text.trim().includes('\n')){
+    rows = text.replace(/\r/g, '').replace(/\n+$/, '').split('\n').map(l => l.split('\t').map(x => x.replace(/\s+/g, ' ').trim()));
+  }
+  rows = rows.filter(r => r.some(Boolean));
+  return rows.length > 1 || (rows[0] && rows[0].length > 1) ? rows : null;
+}
+$('#jt-base').addEventListener('paste', e => {
+  const el = e.target.closest('[data-jb]'); if (!el || !S.uid) return;
+  const g = jdGridFromClip(e.clipboardData); if (!g) return;
+  e.preventDefault();
+  const DAYS = {'월':1, '화':2, '수':3, '목':4, '금':5};
+  const dayOf = v => { const m = String(v).match(/^([월화수목금])(요일)?$/); return m ? DAYS[m[1]] : 0; };
+  let colDay = null, r0 = 0;
+  const hi = g.findIndex(r => r.filter(v => dayOf(v)).length >= 3);
+  if (hi >= 0){ colDay = g[hi].map(dayOf); r0 = hi + 1; }
+  const body = g.slice(r0);
+  const perOf = v => { const m = String(v).match(/^(\d)\s*(교시)?$/); return m ? +m[1] : 0; };
+  const hasPerCol = body.filter(r => perOf(r[0])).length >= Math.min(3, body.length);
+  const [w0, p0] = el.dataset.jb.split(',').map(Number);
+  let n = 0;
+  body.forEach((r, ri) => {
+    const p = hasPerCol ? perOf(r[0]) - 1 : (colDay ? ri : p0 - 0 + ri);
+    if (p < 0 || p > 5) return;
+    r.forEach((v, ci) => {
+      if (hasPerCol && ci === 0) return;
+      const w = colDay ? colDay[ci] : w0 + ci - (hasPerCol ? 1 : 0);
+      if (!w || w < 1 || w > 5) return;
+      S.jd.base[w][p] = jdCls(v).slice(0, 20); n++;
+    });
+  });
+  if (!n){ toast('표에서 반을 찾지 못했어요. 요일 줄과 교시 칸까지 함께 복사해 보세요.'); return; }
+  jdSave(); renderJTT(); toast(`기본 시간표 ${n}칸을 채웠어요. 주별 시간표에도 그대로 깔렸어요.`);
+});
+$('#jt-refill').onclick = e => {
+  if (!S.uid) return;
+  const ch = Object.values(S.jd.weeks).filter(o => o.c).length;
+  if (ch && !twoStep(e.currentTarget, `고친 ${ch}주를 기본으로 되돌릴까요?`)) return;
+  Object.keys(S.jd.weeks).forEach(m => { const o = Object.assign({}, S.jd.weeks[m]); delete o.c; S.jd.weeks[m] = o; });
+  jdSave(); renderJTT(); toast('학기 전체를 기본 시간표로 채웠어요. 바뀐 주만 칸을 고치면 돼요.');
+};
 /* 스프레드시트 붙여 넣기 */
 $('#jt-paste-open').onclick = () => { $('#jt-paste').hidden = false; $('#jt-paste-txt').focus(); };
 $('#jt-paste-cancel').onclick = () => { $('#jt-paste').hidden = true; };
