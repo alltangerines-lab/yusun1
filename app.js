@@ -4625,7 +4625,7 @@ function ntFresh(list){
   return fresh.length ? fresh : list;
 }
 function ntTarget(){ return nextSchoolDay(ymd(today())); }
-function ntAbbr(s){ s = String(s || '').trim(); if (!s) return ''; const m = {'창체':'창', '자율':'자', '동아리':'동', '학교자율':'학', '진로':'진'}; return m[s] || s[0]; }
+function ntAbbr(s){ s = String(s || '').trim(); if (!s) return ''; const m = {'창체':'창', '자율':'자', '동아리':'동', '학교자율':'학', '융':'학', '진로':'진'}; return m[s] || s[0]; }
 async function ntCompose(force){
   const k = ntTarget();
   if (!force && !NT.loaded) for (let i = 0; i < 30 && !NT.loaded; i++) await new Promise(r => setTimeout(r, 100));
