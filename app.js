@@ -3092,7 +3092,24 @@ function makeRoster(key){
     if (!st.drag) return; const p = cellOf(e.target); if (!p) return;
     if (p.r !== st.anchor.r || p.c !== st.anchor.c){ setSel(st.anchor.r, st.anchor.c, p.r, p.c); if (document.activeElement && document.activeElement.blur && tbl().contains(document.activeElement)) { st.hold = document.activeElement; } window.getSelection && window.getSelection().removeAllRanges(); }
   });
-  document.addEventListener('mouseup', () => { if (st.drag){ st.drag = false; if (multi() && st.hold){ st.hold.focus({preventScroll:true}); try { st.hold.setSelectionRange(0, 0); } catch (x){} } st.hold = null; } });
+  /* 끌어서 고를 때 화면 위·아래 끝에 가까이 가면 저절로 스크롤해요 */
+  let asPos = null, asRaf = 0;
+  const asStep = () => {
+    asRaf = 0; if (!st.drag || !asPos) return;
+    const box = tbl(), inner = box && box.scrollHeight > box.clientHeight + 4 ? box : null;
+    const top = inner ? inner.getBoundingClientRect().top : 0, bot = inner ? inner.getBoundingClientRect().bottom : window.innerHeight;
+    const zone = 60; let dy = 0;
+    if (asPos.y < top + zone) dy = -Math.ceil((top + zone - asPos.y) / 3);
+    else if (asPos.y > bot - zone) dy = Math.ceil((asPos.y - (bot - zone)) / 3);
+    if (!dy) return;
+    dy = Math.max(-40, Math.min(40, dy));
+    if (inner) inner.scrollTop += dy; else window.scrollBy(0, dy);
+    const p = cellOf(document.elementFromPoint(asPos.x, Math.max(top + 2, Math.min(bot - 2, asPos.y))));
+    if (p && (p.r !== (st.sel || {}).r1 || p.c !== (st.sel || {}).c1)) setSel(st.anchor.r, st.anchor.c, p.r, p.c);
+    asRaf = requestAnimationFrame(asStep);
+  };
+  document.addEventListener('mousemove', e => { if (!st.drag) return; asPos = {x:e.clientX, y:e.clientY}; if (!asRaf) asRaf = requestAnimationFrame(asStep); });
+  document.addEventListener('mouseup', () => { asPos = null; if (asRaf){ cancelAnimationFrame(asRaf); asRaf = 0; } if (st.drag){ st.drag = false; if (multi() && st.hold){ st.hold.focus({preventScroll:true}); try { st.hold.setSelectionRange(0, 0); } catch (x){} } st.hold = null; } });
   root.addEventListener('keydown', e => {
     const p = cellOf(e.target); if (!p) return;
     const inp = e.target, len = (inp.value || '').length;
