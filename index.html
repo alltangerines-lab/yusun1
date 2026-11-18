@@ -855,13 +855,14 @@ ul.hbl li .mono{color:var(--muted);font-size:12px}
 .subj-tabs small{opacity:.7;font-family:var(--mono)}
 select.lsubj{width:auto;padding:1px 4px;font-size:11.5px;margin-right:6px;border-radius:6px}
 .tk-add{display:flex;gap:8px;margin-bottom:4px}.tk-add input{flex:1;min-width:0}
-.tool.morn{--mo:1;display:grid;gap:16px;width:min(100%,1300px);margin:0 auto;align-content:start;justify-content:stretch;align-items:start;flex:none}
+.tool.morn{--mo:1;display:grid;gap:16px;width:min(100%,2400px);margin:0 auto;align-content:start;justify-content:stretch;align-items:start;flex:none}
 .mo-head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .mo-date{flex:1;display:grid}
 .mo-date b{font-size:calc(40px * var(--mo));letter-spacing:-.01em}
 .mo-date span{font-size:calc(18px * var(--mo));color:var(--muted)}
 .mo-size{display:flex;gap:6px}
-.mo-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) minmax(0,.9fr);gap:14px;align-items:start}
+.mo-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:1700px){#mo-list{grid-template-columns:repeat(auto-fill,minmax(420px,1fr))}}
 @media (max-width:900px){.mo-grid{grid-template-columns:minmax(0,1fr)}.mo-todo{order:-1}}
 #tools.focus #tool-tabs,#tools.focus #tools-close{display:none}
 .ls-bar{gap:8px;margin-bottom:10px;flex-wrap:wrap}
@@ -922,22 +923,26 @@ table.ls-lt,table.ls-pv,table.ls-jdt{width:100%;border-collapse:collapse}
 #mo-tt li b{font-weight:700;white-space:nowrap}
 #mo-tt li small{font-size:.5em;color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
 #mo-tt li small.prep{color:var(--fg);background:var(--surface-2);border-radius:6px;padding:2px 8px;justify-self:start}
-#mo-tt li.lunch,#mo-tt li.off{display:block}
-#mo-tt li.lunch{font-size:calc(14px * var(--mo));color:var(--muted);padding-left:2em}
+#mo-tt li.off{display:block}
+#mo-tt li.lunch b{color:color-mix(in srgb,var(--muted) 60%,var(--surface))}
 #mo-tt li.off{color:var(--holiday)}
 #mo-list{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
 #mo-list li{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
 #mo-list li.on{background:var(--accent-soft);border-color:var(--accent)}
+.mo-ed{border:0;background:none;color:var(--muted);font-size:calc(20px * var(--mo));padding:6px 8px;cursor:pointer;border-radius:8px}
+.mo-ed:hover{background:var(--surface);color:var(--fg)}
+.mo-edf{flex:1;display:flex;gap:6px;align-items:center;padding:8px 10px}
+.mo-edf input{flex:1;min-width:0;font-size:calc(24px * var(--mo));font-weight:700}
 .mo-chk{flex:1;display:flex;align-items:center;gap:14px;border:0;background:none;padding:12px 14px;cursor:pointer;color:inherit;text-align:left;font-size:calc(30px * var(--mo));font-weight:700;line-height:1.3}
 .mo-chk .box{width:1.1em;height:1.1em;border:3px solid var(--muted);border-radius:8px;display:grid;place-items:center;font-size:.8em;flex-shrink:0;color:var(--accent-ink);font-weight:800}
 #mo-list li.on .box{background:var(--accent);border-color:var(--accent)}
 #mo-list li.on .t{text-decoration:line-through;color:var(--muted)}
-.mo-chk .tag{font-size:.42em;font-weight:500;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted)}
+.mo-chk .tag{white-space:nowrap;font-size:.42em;font-weight:500;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted)}
 .mo-add{display:flex;gap:6px;opacity:.75}
 .mo-add:focus-within{opacity:1}
 .mo-add input{flex:1;min-width:0}
 #mo-meal{display:flex;flex-wrap:wrap;gap:6px}
-#mo-meal span{font-size:calc(22px * var(--mo));background:var(--surface-2);border-radius:8px;padding:4px 10px}
+#mo-meal span{font-size:calc(24px * var(--mo));font-weight:700;background:var(--surface-2);border-radius:8px;padding:4px 10px}
 .mo-manage{border:1px dashed var(--line);border-radius:12px;padding:8px 14px}
 .mo-manage summary{cursor:pointer;font-weight:600;color:var(--muted)}
 .mo-man{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px;margin-top:10px}
@@ -2233,7 +2238,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@852f23a7d3c6533bf99350fe2c35f0b70015725d/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@afda32e6ceec04c5e4369df59dbe9db1a939bff3/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
