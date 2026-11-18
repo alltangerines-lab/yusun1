@@ -823,6 +823,9 @@ body.arc [contenteditable]{pointer-events:none}
 .cls-btn:hover{border-bottom-color:currentColor}
 .cls-ask{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 12px;padding:10px 12px;border-radius:10px;background:var(--me-soft);border:1px solid var(--line)}
 .cls-ask select{width:auto;min-width:90px}
+.att-sel{width:auto;min-width:0;max-width:112px;font-size:12.5px;padding:3px 4px;border-color:transparent;background:transparent;color:var(--muted)}
+.att-sel:hover,.att-sel:focus{border-color:var(--line)}
+.att-sel.on{color:var(--c-att);font-weight:700;background:var(--surface-2)}
 .ren-in{font:inherit;padding:1px 4px;border:1px solid var(--accent);border-radius:6px;min-width:3em;max-width:14em}
 .notes-done{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;display:grid;gap:6px}
 .notes-done h3{margin:0;font-size:13px;font-weight:600}
@@ -1685,7 +1688,7 @@ body.ro .w-only{display:none!important}
             <div class="db-col" id="stu-col">
               <div class="row"><h3 class="sub" style="margin:0">학생</h3><span class="grow"></span><label class="hint" for="chk-name">체크 칸 이름</label><input type="text" id="chk-name" style="width:110px" placeholder="과제" autocomplete="off"></div>
               <div id="stu-table"></div>
-              <p class="hint" style="margin:0">출결 칸을 누르면 위 입력 칸에 번호가 들어가요. "3번 지각 병원"처럼 이어 적으면 돼요.</p>
+              <p class="hint" style="margin:0">출결 칸에서 바로 질병결석·출석인정결석 등을 고를 수 있어요. 사유나 여러 날 결석은 출결 탭에서 적어요.</p>
             </div>
           </div>
         </div>
@@ -2438,7 +2441,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@c033d9e0dfa38c4060d71c077f41f48c84c6be62/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@5d88a3ab695c3566bfb0f663d02c0e4ac5758ae9/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
