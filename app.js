@@ -1180,11 +1180,12 @@ function renderDayBoard(){
   const attBy = {};
   att.forEach(e => (e.students || []).forEach(n => { attBy[n] = (attBy[n] ? attBy[n] + ', ' : '') + attLabel(e.att); }));
   const checks = d.checks || {};
+  const attIx = attIndex();
   const cn = d.checkName || '과제';
   const done = roster.filter(r => checks[r.no]).length;
   $('#stu-table').innerHTML = `<div class="tablewrap"><table class="sheet"><thead><tr><th>번호</th><th>이름</th><th>출결</th><th>${esc(cn)}<span class="stat">${done}/${roster.length}</span></th></tr></thead><tbody>${roster.map(r => `<tr>
     <td class="mono">${r.no}</td><td class="name">${esc(r.name || '')}</td>
-    <td><button type="button" class="att" data-act="att-fill" data-no="${r.no}" aria-label="${r.no}번 출결 적기">${esc(attBy[r.no] || '')}</button></td>
+    <td>${attSelHtml(r.no, k, attIx)}</td>
     <td><button type="button" class="tick" data-act="day-check" data-no="${r.no}" aria-label="${r.no}번 ${esc(cn)}">${checks[r.no] ? '✓' : ''}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 function saveDay(){ const k = S.jDate; const data = Object.assign({}, S.day, {date:k}); queueSet(DAYPATH(k), () => data, false); }
@@ -2484,6 +2485,20 @@ $('#att-csv').onclick = () => {
   });
   save(`출석부_${m.getFullYear()}-${pad(m.getMonth() + 1)}.csv`, csv(rows));
 };
+function attSelHtml(no, k, ix){
+  const a = ix[no + '|' + k], v = a ? `${a.kind}|${a.reason}` : '';
+  const opts = $('#at-kind').innerHTML.replace('출석 (기록 지우기)', '출석').replace(' (체험학습 등)', '').replace(/ selected(="[^"]*")?/g, '').replace(`value="${v}"`, `value="${v}" selected`);
+  return `<select class="att-sel ${v ? 'on' : ''}" data-attsel="${no}" aria-label="${no}번 출결">${opts}</select>`;
+}
+document.addEventListener('change', async e => {
+  const sel = e.target.closest && e.target.closest('[data-attsel]'); if (!sel || !S.uid) return;
+  const no = isNaN(+sel.dataset.attsel) ? sel.dataset.attsel : +sel.dataset.attsel, k = S.jDate;
+  const rec = attIndex()[no + '|' + k], v = sel.value;
+  sel.disabled = true;
+  const ok = await attWrite(no, k, rec, v, rec ? rec.e.text || '' : '', rec && rec.e.end ? rec.e.end : '');
+  sel.disabled = false;
+  if (ok) toast(v ? `${stuName(no)} ${sel.options[sel.selectedIndex].text}으로 적었어요. 사유는 출결 탭에서 더 적을 수 있어요.` : `${stuName(no)} 출석으로 바꿨어요.`);
+});
 function openAttCell(no, k){
   const rec = attIndex()[no + '|' + k];
   S.attCell = {no, k, rec};
@@ -2499,8 +2514,10 @@ $('#at-form').addEventListener('submit', async ev => {
   ev.preventDefault();
   if (!S.uid || !S.attCell) return;
   const {no, k, rec} = S.attCell;
-  const v = $('#at-kind').value, text = $('#at-text').value.trim();
-  const endV = $('#at-end').value; const start = rec && rec.e.end ? rec.e.date : k;
+  if (await attWrite(no, k, rec, $('#at-kind').value, $('#at-text').value.trim(), $('#at-end').value)){ closeDlgs(); toast($('#at-kind').value ? '출결을 적었어요.' : '출석으로 바꿨어요.'); }
+});
+async function attWrite(no, k, rec, v, text, endV){
+  const start = rec && rec.e.end ? rec.e.date : k;
   const end = endV && endV > start ? endV : null;
   const col = S.db.doc(PROFILE()).collection('journal');
   try {
@@ -2519,9 +2536,9 @@ $('#at-form').addEventListener('submit', async ev => {
       const [kind, reason] = v.split('|');
       await col.add({date:k, end, time:null, cat:'출결', text, students:[no], att:{kind, reason}, prio:'보통', imgs:[], done:false, createdAt:Date.now()});
     }
-    closeDlgs(); toast(v ? '출결을 적었어요.' : '출석으로 바꿨어요.');
-  } catch (e){ wErr(e, false); }
-});
+    return true;
+  } catch (e){ wErr(e, false); return false; }
+}
 function ledgerCsv(type){
   const rows = type === 'abs' ? [['번호', '이름', '시작일', '종료일', '결석일수', '종류', '사유(질병명)', '증빙서류', '서류완결', '나이스입력']] : [['번호', '이름', '시작일', '종료일', '교육과정일수', '체험활동명', '장소(기관)', '활동내용', '서류완결', '나이스입력']];
   ledgerRows(type).forEach(({e, no}) => {
