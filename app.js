@@ -2117,6 +2117,7 @@ $('#r-class').addEventListener('change', () => { if (!S.uid) return; S.profile.m
 
 $('#open-settings').onclick = async () => {
   if (window.__GAS_MODE && S.user && S.uid){ $('#st-myname-wrap').hidden = false; const ps = await S.user.profiles([S.uid]); $('#st-myname').value = (ps[S.uid] && ps[S.uid].name) || ''; }
+  $('#st-role').value = isJD() ? 'jd' : ''; $('#st-role-wrap').hidden = !S.uid;
   $('#st-name').value = S.settings.gradeName || ''; $('#st-count').value = S.settings.classCount || 4; $('#st-cnames').value = clsNames().filter(Boolean).join(', '); $('#st-lunch').value = String(lunchAt());
   if (GAS){ const ne = S.settings.neis; $('#ne-cur').textContent = ne ? `지금 학교: ${ne.name}` : '아직 학교를 정하지 않았어요.'; NE.schools = null; $('#ne-res').innerHTML = '<option value="">학교를 찾아 골라 주세요</option>'; const g = S.gcal || {}; $('#gc-target').value = g.target || 'app'; $('#gc-show').checked = !!g.show; }
   $$('#st-form input, #st-form select, #st-form textarea').forEach(el => { el.disabled = !S.canWrite; });
@@ -4126,13 +4127,14 @@ $('#jd-prev').onclick = () => jdGo(ymd(addDays(fromYmd(S.jDate), -1)));
 $('#jd-next').onclick = () => jdGo(ymd(addDays(fromYmd(S.jDate), 1)));
 $('#jd-today').onclick = () => jdGo(ymd(today()));
 $('#jd-date').addEventListener('change', e => { if (e.target.value) jdGo(e.target.value); });
-$('#cls-ask-jd').onclick = () => {
+$('#st-role').addEventListener('change', e => { if (!S.uid || (e.target.value === 'jd') === isJD()) return; closeDlgs(); setRole(e.target.value); });
+$('#cls-ask-jd').onclick = () => setRole(isJD() ? '' : 'jd');
+function setRole(to){
   if (!S.uid) return;
-  const to = isJD() ? '' : 'jd';
   S.profile.role = to; if (to) S.profile.myClass = S.profile.myClass || '';
   saveProfile(); S.clsAsk = !to && !S.profile.myClass; renderHeader(); applyRoute('me'); try { history.replaceState(null, '', '#me'); } catch (e){}
-  toast(to ? '전담 모드로 바꿨어요. 시간표·시수 탭에 전담 시간표를 넣어 주세요.' : '담임 모드로 바꿨어요.');
-};
+  toast(to ? '전담 모드로 바꿨어요. 나의 공간 시간표·시수 탭에 전담 시간표를 넣어 주세요.' : '담임 모드로 바꿨어요.');
+}
 
 
 /* ---------- 전담: 학년 · 차시 수업일지 ---------- */
