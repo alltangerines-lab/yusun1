@@ -3805,7 +3805,7 @@ function renderPlanPage(){
   const sf = subjFor(k), tt = sf.s || [];
   $('#pp-src').textContent = sf.off ? `${sf.off} · 수업이 없는 날이에요` : '과목은 시간표에서 가져와요. 칸을 벗어나면 저장되고, 학급일지 첫 페이지의 수업 계획과 같은 기록이에요.';
   $('#pp-ev').innerHTML = schoolEvents(k).map(t => `<span class="chip school">학교 행사 · ${esc(t)}</span>`).join('') + planOn(k).map(it => `<span class="chip">평가 · ${esc(it.name)}</span>`).join('');
-  if (document.activeElement && document.activeElement.closest('#p-plan')) return;
+  if (document.activeElement && document.activeElement.closest('#pp-rows, #pp-memo')) return;
   const plan = d.plan || [], L = lunchAt();
   let h = `<div class="tablewrap"><table class="pp-t"><thead><tr><th class="n">교시</th><th class="s">과목</th>${PP_F.map(([f, n]) => `<th class="c-${f}">${n}</th>`).join('')}</tr></thead><tbody>`;
   for (let i = 0; i < 6; i++){
