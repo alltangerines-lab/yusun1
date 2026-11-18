@@ -1539,6 +1539,7 @@ function listenDay(){
     if (S.space === 'me' && S.meTab === 'day') renderDayBoard();
     if (S.space === 'me' && S.meTab === 'plan') renderPlanPage();
     if (S.space === 'me' && S.meTab === 'jday') renderJDay();
+    if (S.space === 'me' && S.meTab === 'jles') renderJLes();
   }, () => {});
 }
 function listenDaily(){
@@ -1623,7 +1624,8 @@ function startPrivate(){
       if (busy(JLP())) return;
       S.jl = jlNorm(snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {});
       const ae = document.activeElement;
-      if (S.space === 'me' && S.meTab === 'jles' && !(ae && ae.closest('#jl-list, #jl-add'))) renderJLes();
+      if (S.space === 'me' && S.meTab === 'jles' && !(ae && ae.closest('#jl-add'))) renderJProg();
+      if (S.space === 'me' && S.meTab === 'jles' && !(ae && ae.closest('#jl-rows'))) renderJLes();
       if (S.space === 'me' && S.meTab === 'jprog') renderJProg();
       if (S.space === 'me' && S.meTab === 'jday') renderJDay();
     });
@@ -4075,7 +4077,7 @@ function renderJDay(){
   $$('#jd-cards textarea').forEach(growTa);
 }
 $('#jd-cards').addEventListener('input', e => { if (e.target.matches('textarea')) growTa(e.target); });
-$('#jd-cards').addEventListener('change', e => {
+function jdLogChange(e){
   const el = e.target.closest('[data-jdf]'); if (!el || !S.uid) return;
   const k = S.jDate, p = el.dataset.jdp, c = el.dataset.jdc, f = el.dataset.jdf;
   const jd = Object.assign({}, (S.day && S.day.jd) || {});
@@ -4086,9 +4088,11 @@ $('#jd-cards').addEventListener('change', e => {
   jd[p] = L; S.day.jd = jd; saveDay();
   const prev = S.jd.last[c];
   if (L.t || L.n){ if (!prev || prev.date <= k){ S.jd.last[c] = {date:k, t:L.t || '', n:L.n || ''}; jdSave(); } }
-  $('#jd-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5);
-  if (f !== 't' && f !== 'n') renderJDay(); else { const card = el.closest('.jd-card'); if (card) card.classList.toggle('done', !!L.done); const cb = card && card.querySelector('[data-jdf="done"]'); if (cb) cb.checked = !!L.done; }
-});
+  const tm = '저장했어요 ' + new Date().toTimeString().slice(0, 5); $('#jd-save').textContent = tm; $('#jl-save').textContent = tm;
+  if (f === 'done') { renderJDay(); renderJLes(); }
+  else { const card = el.closest('.jd-card, tr'); if (card) card.classList.toggle('done', !!L.done); const cb = card && card.querySelector('[data-jdf="done"]'); if (cb) cb.checked = !!L.done; }
+}
+$('#jd-cards').addEventListener('change', jdLogChange);
 $('#jd-memo').addEventListener('change', e => { if (!S.uid) return; S.day.memo = e.target.value; saveDay(); $('#jd-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5); });
 $('#p-jday').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#jd-cards, #jd-memo'))) renderJDay(); }, 0));
 const jdGo = k => { setJDate(k); renderJDay(); };
@@ -4135,35 +4139,43 @@ function jlMarkFromDay(c, k, L){
   } else if (L.les){ const x = list.find(y => y.id === L.les); if (x && x.done[c] && x.done[c].d === k) delete x.done[c]; delete L.les; }
   jlSave();
 }
-const JL = {g:null, open:null};
 function jlCurG(sel){ const gs = jdGrades(); if (!gs.includes(sel)) sel = gs[0] || null; return sel; }
 function gradeTabs(el, cur, attr){ const gs = jdGrades(); el.innerHTML = gs.length ? gs.map(g => `<button type="button" class="stab" ${attr}="${esc(g)}" ${g === cur ? 'aria-current="page"' : ''}>${/^\d$/.test(g) ? g + '학년' : esc(g)}</button>`).join('') : ''; }
 function renderJLes(){
   if (S.meTab !== 'jles') return;
-  JL.g = jlCurG(JL.g); gradeTabs($('#jl-grades'), JL.g, 'data-jlg');
-  if (!JL.g){ $('#jl-list').innerHTML = '<div class="jd-empty">먼저 <a href="#me-jtt">시간표·시수</a>에 전담 시간표를 넣어 주세요. 시간표에 나온 학년별로 수업일지가 생겨요.</div>'; $('#jl-add').hidden = true; return; }
-  $('#jl-add').hidden = false;
-  const list = jlList(JL.g), cls = jdGradeCls(JL.g);
-  if (!list.length){ $('#jl-list').innerHTML = `<div class="jd-empty">${JL.g}학년 차시 목록이 아직 없어요. 위 "단원·차시 넣기"를 열어 붙여 넣어 주세요.</div>`; $('#jl-add').open = true; return; }
-  const nexts = {}; cls.forEach(c => { const n = jlNext(c); if (n) nexts[c] = n.id; });
-  let h = '', pu = null;
-  list.forEach((x, i) => {
-    if (x.u !== pu){ h += `<div class="jl-unit">${esc(x.u || '단원 없음')}</div>`; pu = x.u; }
-    const open = JL.open === x.id;
-    h += `<div class="jl-row" data-jlid="${x.id}"><div class="jl-head" data-jlopen="${x.id}"><span class="k">${esc(x.k || (i + 1) + '')}</span><span class="q">${esc(x.q || '(학습 문제를 적어 주세요)')}${x.pg ? `<small>${esc(x.pg)}쪽</small>` : ''}</span>
-      <span class="jl-chips">${cls.map(c => `<button type="button" class="jl-chip ${x.done[c] ? 'on' : nexts[c] === x.id ? 'next' : ''}" data-jlck="${x.id}" data-c="${esc(c)}" title="${x.done[c] ? fmtMD(x.done[c].d) + '에 함 · 누르면 취소' : '누르면 오늘 한 걸로 표시'}">${esc(jdLabel(c))}${x.done[c] ? ' ' + jdMD(x.done[c].d) : ''}</button>`).join('')}</span></div>`;
-    if (open){
-      const F = (f, n, ph, ta) => `<label class="f" for="jlf-${f}-${x.id}">${n}${ta ? `<textarea id="jlf-${f}-${x.id}" data-jlf="${f}" rows="3" placeholder="${ph}">${esc(x[f] || '')}</textarea>` : `<input id="jlf-${f}-${x.id}" data-jlf="${f}" value="${esc(x[f] || '')}" placeholder="${ph}">`}</label>`;
-      h += `<div class="jl-body"><div class="jl-grid">${F('u', '단원', '1. My Name Is Eric')}${F('k', '차시', '1/4')}${F('pg', '쪽수', '8~9')}</div>${F('q', '학습 문제', '이름을 묻고 답할 수 있다')}<div class="jl-grid">${F('prep', '준비물', '단어 카드')}${F('hw', '과제', '워크북 3쪽')}</div>
-        <div class="jl-grid">${F('flow', '수업 흐름', '도입 - 전개 - 정리', 1)}${F('board', '중요 개념 · 판서 계획', '', 1)}</div>
-        <div><b style="font-size:13px">학급 특이사항</b><div class="jl-cls" style="margin-top:4px">${cls.map(c => `<div class="row"><b>${esc(jdLabel(c))}</b><input data-jlnote="${esc(c)}" value="${esc((x.done[c] || {}).n || '')}" placeholder="${x.done[c] ? fmtMD(x.done[c].d) + '에 함' : '아직 안 함'}" style="flex:1" aria-label="${esc(jdLabel(c))} 특이사항"></div>`).join('')}</div></div>
-        <div class="row"><button type="button" class="btn small" data-jlmv="-1">위로</button><button type="button" class="btn small" data-jlmv="1">아래로</button><button type="button" class="btn small" data-jlins>아래에 차시 하나 더</button><span class="grow"></span><button type="button" class="btn small" data-jldel>이 차시 지우기</button></div></div>`;
-    }
-    h += '</div>';
+  const k = S.jDate, d = S.day || {}, log = d.jd || {};
+  $('#jl-label').textContent = fmtLong(k); $('#jl-date').value = k;
+  const off = jdOff(k);
+  $('#jl-ev').innerHTML = (off && off !== '주말' ? `<span class="chip school">쉬는 날 · ${esc(off)}</span>` : '') + schoolEvents(k).map(t => `<span class="chip school">학교 행사 · ${esc(t)}</span>`).join('');
+  if (document.activeElement && document.activeElement.closest('#jl-rows, #jl-memo')) return;
+  if (document.activeElement !== $('#jl-memo')) $('#jl-memo').value = d.memo || '';
+  const cls = jdDayClasses(k);
+  if (!cls.some(Boolean)){
+    const noTT = !Object.values(S.jd.base).some(a => a.some(Boolean)) && !Object.keys(S.jd.weeks).length;
+    $('#jl-rows').innerHTML = `<div class="jd-empty">${noTT ? '먼저 <a href="#me-jtt">시간표·시수</a>에 전담 시간표를 넣어 주세요.' : off ? `${esc(off)}이라 수업이 없어요.` : '이 날은 들어가는 수업이 없어요.'}</div>`;
+    return;
+  }
+  const L0 = lunchAt();
+  let h = '<div class="tablewrap"><table class="pp-t jl-t"><thead><tr><th class="n">교시</th><th class="s">반</th><th>단원 · 차시</th><th>수업 활동</th><th>준비물 · 과제</th><th>특이사항</th><th class="n">함</th></tr></thead><tbody>';
+  cls.forEach((c, p) => {
+    if (p === L0) h += '<tr class="lunch"><td colspan="7">점심</td></tr>';
+    if (!c){ h += `<tr class="none"><td class="n">${p + 1}</td><td class="s" colspan="6" style="color:var(--muted)">—</td></tr>`; return; }
+    const L = log[p + 1] || {}, nx = jlNext(c), ph = nx ? jlTitle(nx) : '';
+    const T = (f, pl) => `<td><textarea rows="1" data-jdf="${f}" data-jdp="${p + 1}" data-jdc="${esc(c)}" placeholder="${esc(pl)}" aria-label="${p + 1}교시 ${esc(jdLabel(c))}">${esc(L[f] || '')}</textarea></td>`;
+    h += `<tr class="${L.done ? 'done' : ''}"><td class="n">${p + 1}</td><td class="s"><b>${esc(jdLabel(c))}</b></td>${T('t', ph || (p === 0 || !cls.slice(0, p).some(Boolean) ? '3단원 2/4차시' : ''))}${T('a', '')}${T('pp', '')}${T('n', '')}<td class="n"><input type="checkbox" data-jdf="done" data-jdp="${p + 1}" data-jdc="${esc(c)}" ${L.done ? 'checked' : ''} aria-label="${p + 1}교시 수업함"></td></tr>`;
   });
-  $('#jl-list').innerHTML = h;
+  $('#jl-rows').innerHTML = h + '</tbody></table></div>';
+  $$('#jl-rows textarea').forEach(growTa);
 }
-$('#jl-grades').addEventListener('click', e => { const b = e.target.closest('[data-jlg]'); if (!b) return; JL.g = b.dataset.jlg; JL.open = null; renderJLes(); });
+$('#jl-rows').addEventListener('input', e => { if (e.target.matches('textarea')) growTa(e.target); });
+$('#jl-rows').addEventListener('change', jdLogChange);
+$('#jl-memo').addEventListener('change', e => { if (!S.uid) return; S.day.memo = e.target.value; saveDay(); $('#jl-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5); });
+$('#p-jles').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#jl-rows, #jl-memo'))) renderJLes(); }, 0));
+const jlGo = k => { setJDate(k); renderJLes(); };
+$('#jl-prev').onclick = () => jlGo(ymd(addDays(fromYmd(S.jDate), -1)));
+$('#jl-next').onclick = () => jlGo(ymd(addDays(fromYmd(S.jDate), 1)));
+$('#jl-today').onclick = () => jlGo(ymd(today()));
+$('#jl-date').addEventListener('change', e => { if (e.target.value) jlGo(e.target.value); });
 function jlParse(text, g){
   const out = []; let unit = '';
   String(text || '').replace(/\r/g, '').split('\n').forEach(line => {
@@ -4184,31 +4196,12 @@ function jlParse(text, g){
 }
 $('#jl-paste').addEventListener('input', () => { const r = jlParse($('#jl-paste').value); $('#jl-paste-info').textContent = r.length ? `${new Set(r.map(x => x.u)).size}개 단원, ${r.length}개 차시를 찾았어요.` : ''; });
 $('#jl-paste-go').onclick = () => {
-  if (!S.uid || !JL.g) return;
+  if (!S.uid || !JP.g) return;
   const r = jlParse($('#jl-paste').value); if (!r.length){ toast('붙여 넣은 내용이 없어요.'); return; }
-  const g = S.jl.g[JL.g] = S.jl.g[JL.g] || {list:[]}; g.list = g.list.concat(r); jlSave();
-  $('#jl-paste').value = ''; $('#jl-paste-info').textContent = ''; $('#jl-add').open = false; renderJLes(); toast(`${r.length}개 차시를 넣었어요.`);
+  const g = S.jl.g[JP.g] = S.jl.g[JP.g] || {list:[]}; g.list = g.list.concat(r); jlSave();
+  $('#jl-paste').value = ''; $('#jl-paste-info').textContent = ''; $('#jl-add').open = false; renderJProg(); toast(`${r.length}개 차시를 넣었어요.`);
 };
-$('#jl-list').addEventListener('click', e => {
-  const ck = e.target.closest('[data-jlck]');
-  const row = e.target.closest('[data-jlid]'); if (!row) return;
-  const list = jlList(JL.g), i = list.findIndex(x => x.id === row.dataset.jlid), x = list[i]; if (!x) return;
-  if (ck){ e.stopPropagation(); const c = ck.dataset.c; if (x.done[c]) delete x.done[c]; else x.done[c] = {d:ymd(today())}; jlSave(); renderJLes(); return; }
-  if (e.target.closest('[data-jlopen]')){ JL.open = JL.open === x.id ? null : x.id; renderJLes(); return; }
-  const mv = e.target.closest('[data-jlmv]');
-  if (mv){ const j = i + +mv.dataset.jlmv; if (j < 0 || j >= list.length) return; [list[i], list[j]] = [list[j], list[i]]; jlSave(); renderJLes(); return; }
-  if (e.target.closest('[data-jlins]')){ list.splice(i + 1, 0, {id:'l' + Date.now().toString(36), u:x.u, k:'', q:'', pg:'', prep:'', hw:'', flow:'', board:'', done:{}}); JL.open = list[i + 1].id; jlSave(); renderJLes(); return; }
-  const del = e.target.closest('[data-jldel]');
-  if (del){ if (!twoStep(del, '정말 지울까요?')) return; list.splice(i, 1); JL.open = null; jlSave(); renderJLes(); }
-});
-$('#jl-list').addEventListener('change', e => {
-  const row = e.target.closest('[data-jlid]'); if (!row || !S.uid) return;
-  const x = jlList(JL.g).find(y => y.id === row.dataset.jlid); if (!x) return;
-  const f = e.target.dataset.jlf, nc = e.target.dataset.jlnote;
-  if (f){ x[f] = e.target.value.replace(/\s+$/, ''); jlSave(); }
-  else if (nc){ const v = e.target.value.trim(); if (!x.done[nc] && !v) return; x.done[nc] = Object.assign({d:ymd(today())}, x.done[nc] || {}, {n:v}); jlSave(); }
-});
-$('#jl-list').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#jl-list'))) renderJLes(); }, 0));
+$('#jl-clear').onclick = e => { if (!S.uid || !JP.g || !jlList(JP.g).length) return; if (!twoStep(e.currentTarget, `${JP.g}학년 차시 목록을 다 지울까요?`)) return; delete S.jl.g[JP.g]; jlSave(); renderJProg(); };
 
 /* ---------- 전담: 진도표 ---------- */
 const JP = {g:null, v:'les', month:null};
@@ -4219,9 +4212,10 @@ function renderJProg(){
   $('#jp-les').hidden = JP.v !== 'les'; $('#jp-cal').hidden = JP.v !== 'cal';
   $('#jp-grades').style.visibility = JP.v === 'cal' ? 'hidden' : '';
   if (JP.v === 'cal') return renderJProgCal();
-  if (!JP.g){ $('#jp-table').innerHTML = '<div class="jd-empty">시간표·시수에 전담 시간표를 넣고, 수업일지에 차시 목록을 넣으면 진도표가 저절로 만들어져요.</div>'; return; }
+  $('#jl-add').hidden = !JP.g;
+  if (!JP.g){ $('#jp-table').innerHTML = '<div class="jd-empty">먼저 <a href="#me-jtt">시간표·시수</a>에 전담 시간표를 넣어 주세요.</div>'; return; }
   const list = jlList(JP.g), cls = jdGradeCls(JP.g);
-  if (!list.length){ $('#jp-table').innerHTML = `<div class="jd-empty">${JP.g}학년 차시 목록이 없어요. <a href="#me-jles">수업일지</a>에서 단원·차시를 넣어 주세요.</div>`; return; }
+  if (!list.length){ $('#jp-table').innerHTML = `<div class="jd-empty">${JP.g}학년 차시 목록이 아직 없어요. 위 "단원·차시 목록 넣기"를 열어 붙여 넣으면 반별 진도표가 만들어져요.</div>`; $('#jl-add').open = true; return; }
   const nexts = {}; cls.forEach(c => { const n = jlNext(c); if (n) nexts[c] = n.id; });
   const cnt = c => list.filter(x => x.done[c]).length;
   let h = `<table class="jp-t"><thead><tr><th>단원</th><th>차시</th><th>학습 문제</th>${cls.map(c => `<th>${esc(jdLabel(c))}<br><small>${cnt(c)}/${list.length}</small></th>`).join('')}</tr></thead><tbody>`;
