@@ -1300,17 +1300,17 @@ body.ro .w-only{display:none!important}
 @media (min-width:1500px){
 .wrap{max-width:1880px !important}
   /* 학년 공간: 달력 | 그날·쓰기 | 공지·참고·자료 */
-  #v-grade .grid2{grid-template-columns:minmax(0,2.55fr) minmax(0,1fr) !important;align-items:start}
-  #v-grade .grid2 > .col:first-child{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) !important;grid-template-rows:min-content 1fr;align-items:start}
-  #v-grade .grid2 > .col:first-child > .pg-calendar:not(.pg-daily):not(.addcard){grid-column:1;grid-row:1 / span 2}
-  #v-grade .grid2 > .col:first-child > .pg-daily{grid-column:2;grid-row:1}
-  #v-grade .grid2 > .col:first-child > .addcard{grid-column:2;grid-row:2}
+  body[data-page="main"] #v-grade .grid2{grid-template-columns:minmax(0,2.55fr) minmax(0,1fr) !important;align-items:start}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) !important;grid-template-rows:min-content 1fr;align-items:start}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-calendar:not(.pg-daily):not(.addcard){grid-column:1;grid-row:1 / span 2}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-daily{grid-column:2;grid-row:1}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child > .addcard{grid-column:2;grid-row:2}
   /* 나의 공간: 오늘·할 일·우리 학년 | 메모·입력·학급일지 | 학생 */
-  #v-me #me-top{display:grid !important;grid-template-columns:minmax(300px,0.78fr) minmax(0,3fr);gap:16px;align-items:start}
-  #v-me #me-top > .summary{grid-column:1;grid-row:1;grid-template-columns:1fr !important;margin:0}
-  #v-me #me-top > #me-grade{grid-column:1;grid-row:2;margin:0}
-  #v-me #me-top > #me-grade .mg-cols{grid-template-columns:1fr !important}
-  #v-me #me-top > #me-row2{grid-column:2;grid-row:1 / span 3;margin:0;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) !important}
+  #v-me #me-top:not([hidden]):has(> #me-row2.docked){display:grid !important;grid-template-columns:minmax(300px,0.78fr) minmax(0,3fr);gap:16px;align-items:start}
+  #v-me #me-top:has(> #me-row2.docked) > .summary{grid-column:1;grid-row:1;grid-template-columns:1fr !important;margin:0}
+  #v-me #me-top:has(> #me-row2.docked) > #me-grade{grid-column:1;grid-row:2;margin:0}
+  #v-me #me-top:has(> #me-row2.docked) > #me-grade .mg-cols{grid-template-columns:1fr !important}
+  #v-me #me-top:has(> #me-row2.docked) > #me-row2{grid-column:2;grid-row:1 / span 3;margin:0;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) !important}
 }
 </style>
 
@@ -2459,8 +2459,8 @@ body.ro .w-only{display:none!important}
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- APP_VERSION 2.11 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@1039bc1d4f04b299edbf764da87c602db1d10d8a/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<!-- APP_VERSION 2.12 -->
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@80c49c1605c7a1e7d3b0942214093d2c737ae12b/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
