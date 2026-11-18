@@ -928,6 +928,13 @@ table.ls-lt,table.ls-pv,table.ls-jdt{width:100%;border-collapse:collapse}
 #mo-list{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
 #mo-list li{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
 #mo-list li.on{background:var(--accent-soft);border-color:var(--accent)}
+#mo-list li.mo-img{flex-direction:column;align-items:stretch;gap:0;overflow:hidden}
+.mo-imgs{display:grid;gap:6px;padding:8px 8px 0}
+.mo-imgs .thumb{display:block;width:100%;height:auto;border:0;border-radius:10px;overflow:hidden;background:var(--surface);max-width:100%}
+.mo-imgs .thumb img{display:block;width:100%;height:auto;max-height:70vh;object-fit:contain}
+.mo-imgbar{display:flex;align-items:center;gap:4px}
+.mo-imgbar .mo-chk{font-size:calc(22px * var(--mo));padding:8px 14px}
+#mo-list li.mo-img.on .mo-imgs{opacity:.45}
 .mo-ed{border:0;background:none;color:var(--muted);font-size:calc(20px * var(--mo));padding:6px 8px;cursor:pointer;border-radius:8px}
 .mo-ed:hover{background:var(--surface);color:var(--fg)}
 .mo-edf{flex:1;display:flex;gap:6px;align-items:center;padding:8px 10px}
@@ -2125,7 +2132,7 @@ body.ro .w-only{display:none!important}
       <section class="mo-card mo-tt"><h3>오늘 시간표</h3><ol id="mo-tt"></ol></section>
       <section class="mo-card mo-todo"><h3>오늘 할 일 <span id="mo-count"></span></h3>
         <ul id="mo-list"></ul>
-        <form id="mo-add" class="mo-add"><input type="text" id="mo-new" placeholder="오늘만 할 일 더하기 (예: 체육복 챙기기)" aria-label="오늘만 할 일"><button type="submit" class="btn">더하기</button></form>
+        <form id="mo-add" class="mo-add"><input type="text" id="mo-new" placeholder="오늘만 할 일 더하기 (예: 체육복 챙기기) · 사진은 여기 Ctrl+V" aria-label="오늘만 할 일"><button type="button" class="btn" data-pick="mo">사진</button><button type="submit" class="btn">더하기</button></form>
       </section>
       <section class="mo-card mo-meal" id="mo-meal-card"><h3>오늘 급식</h3><div id="mo-meal"></div></section>
     </div>
@@ -2237,7 +2244,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@f689627b5164f91f03a87f6d1e2cdf6b021a0955/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@37dc73dbf1236ebff3f50de88a55da535478598f/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
