@@ -861,7 +861,8 @@ select.lsubj{width:auto;padding:1px 4px;font-size:11.5px;margin-right:6px;border
 .mo-date b{font-size:calc(40px * var(--mo));letter-spacing:-.01em}
 .mo-date span{font-size:calc(18px * var(--mo));color:var(--muted)}
 .mo-size{display:flex;gap:6px}
-.mo-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr) minmax(0,1fr);gap:16px;align-items:start}
+.mo-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3.2fr);gap:16px;align-items:start}
+.mo-left{display:grid;gap:16px;min-width:0}
 @media (max-width:900px){.mo-grid{grid-template-columns:minmax(0,1fr)}.mo-todo{order:-1}}
 #tools.focus #tool-tabs,#tools.focus #tools-close{display:none}
 .ls-bar{gap:8px;margin-bottom:10px;flex-wrap:wrap}
@@ -2136,12 +2137,12 @@ body.ro .w-only{display:none!important}
   <div class="tool morn" id="tool-morn" hidden>
     <div class="mo-head"><div class="mo-date"><b id="mo-date"></b><span id="mo-hello"></span></div><div class="mo-size"><button type="button" class="btn small" id="mo-small" aria-label="글자 작게">가-</button><button type="button" class="btn small" id="mo-big" aria-label="글자 크게">가+</button></div></div>
     <div class="mo-grid">
-      <section class="mo-card mo-tt"><h3>오늘 시간표</h3><ol id="mo-tt"></ol></section>
+      <div class="mo-left"><section class="mo-card mo-tt"><h3>오늘 시간표</h3><ol id="mo-tt"></ol></section>
+      <section class="mo-card mo-meal" id="mo-meal-card"><h3>오늘 급식</h3><div id="mo-meal"></div></section></div>
       <section class="mo-card mo-todo"><h3>오늘 할 일 <span id="mo-count"></span></h3>
         <ul id="mo-list"></ul>
         <form id="mo-add" class="mo-add"><input type="text" id="mo-new" placeholder="오늘만 할 일 더하기 (예: 체육복 챙기기) · 사진은 여기 Ctrl+V" aria-label="오늘만 할 일"><button type="button" class="btn" data-pick="mo">사진</button><button type="submit" class="btn">더하기</button></form>
       </section>
-      <section class="mo-card mo-meal" id="mo-meal-card"><h3>오늘 급식</h3><div id="mo-meal"></div></section>
     </div>
     <details class="mo-manage"><summary>매일 할 일 고치기 · 지난 기록</summary>
       <div class="mo-man">
@@ -2251,7 +2252,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@e6620bbd7c50072a0b205096efb70db4e442eaad/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b7b2cd267cc600ba1de9a790a063a7a18d07161b/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
