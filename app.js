@@ -3389,13 +3389,37 @@ async function renderMorning(fetchDay){
   }
   const sf = subjFor(k), plan = (MO.day && MO.day.plan) || [];
   if (sf.off) $('#mo-tt').innerHTML = `<li class="off">${esc(sf.off)}</li>`;
-  else { const L = lunchAt(); let h = ''; for (let i = 0; i < 6; i++){ if (i === L) h += '<li class="lunch"><span class="p"></span><b>점심</b></li>'; const p = plan[i] || {}; const sj = p.s !== undefined && p.s !== null && p.s !== '' ? p.s : expand((sf.s || [])[i]); if (sj) h += `<li><span class="p">${i + 1}</span><b>${esc(sj)}</b>${p.p ? `<small class="prep">${esc(p.p)}</small>` : ''}</li>`; } $('#mo-tt').innerHTML = h || '<li class="off">시간표가 비어 있어요</li>'; }
+  else { const L = lunchAt(); let h = ''; for (let i = 0; i < 6; i++){ if (i === L) h += '<li class="lunch"><span class="p"></span><b>점심</b></li>'; const p = plan[i] || {}; const sj = p.s !== undefined && p.s !== null && p.s !== '' ? p.s : expand((sf.s || [])[i]); if (sj) h += `<li><span class="p">${i + 1}</span><b>${esc(sj)}</b><span class="mo-pw">${p.p ? `<small class="prep" title="준비물">${esc(p.p)}</small>` : ''}<button type="button" class="mo-pe ${p.m ? 'has' : ''}" data-mo-prep="${i}" title="과목 옆에 짧게 적기">${p.m ? esc(p.m) : '+ 메모'}</button></span></li>`; } $('#mo-tt').innerHTML = h || '<li class="off">시간표가 비어 있어요</li>'; }
   const ml = await mealFor(k);
   $('#mo-meal-card').hidden = !ml && !GAS;
   $('#mo-meal').innerHTML = ml ? ml.split(/\s*[,/]\s*/).filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('') : `<p class="hint">${GAS ? '설정 → 나이스에서 학교를 고르면 급식이 떠요.' : ''}</p>`;
 }
 $('#tool-morn').addEventListener('click', e => {
   if (!S.uid) return;
+  const pe = e.target.closest('[data-mo-prep]');
+  if (pe){
+    const i = +pe.dataset.moPrep, k = ymd(today());
+    const base = (S.jDate === k && S.day) ? S.day : (MO.day || {});
+    const cur = ((base.plan || [])[i] || {}).m || '';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'mo-pe-in'; inp.value = cur; inp.maxLength = 60; inp.setAttribute('aria-label', (i + 1) + '교시 메모');
+    pe.replaceWith(inp); inp.focus(); inp.select();
+    let done = false;
+    const fin = ok => {
+      if (done) return; done = true;
+      const v = inp.value.trim();
+      if (ok && v !== cur){
+        const plan = Array.from({length:6}, (_, j) => Object.assign({}, (base.plan || [])[j] || {}));
+        plan[i].m = v;
+        const data = Object.assign({}, base, {plan, date:k});
+        if (S.jDate === k && S.day){ S.day = data; } MO.day = data;
+        queueSet(DAYPATH(k), () => data, false);
+      }
+      renderMorning(false);
+    };
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ ev.preventDefault(); fin(true); } else if (ev.key === 'Escape'){ ev.preventDefault(); fin(false); } });
+    inp.addEventListener('blur', () => fin(true));
+    return;
+  }
   const r = rt(), k = ymd(today());
   const c = e.target.closest('[data-mo]');
   if (c){ const dn = Object.assign({}, r.done[k] || {}); if (dn[c.dataset.mo]) delete dn[c.dataset.mo]; else dn[c.dataset.mo] = Date.now(); r.done = Object.assign({}, r.done, {[k]:dn}); saveRoutine(); renderMorning(false); return; }
@@ -4627,7 +4651,7 @@ function ntRandom(){
 function ntApplyPick(){
   const k = ntTarget(); const cur = $('#nt-text').value;
   const lines = cur.split('\n').filter(l => l.trim());
-  const isSafe = l => /^\d+\.\s*\[[^\]]*\]/.test(l) || (NT.lastPickLine && l === NT.lastPickLine);
+  const bare = l => l.replace(/^\d+\.\s*/, ''); const isSafe = l => /^\d+\.\s*\[[^\]]*\]/.test(l) || (NT.lastPickLine && bare(l) === bare(NT.lastPickLine));
   const kept = lines.filter(l => !isSafe(l)).map(l => l.replace(/^\d+\.\s*/, ''));
   if (NT.pick) kept.push(ntTagFor(NT.pick) + NT.pick.t);
   NT.draft[k] = kept.map((l, i) => `${i + 1}.${l}`).join('\n');
@@ -4684,6 +4708,24 @@ $('#nt-big').onclick = async () => {
 $('#nt-redo').onclick = async () => { $('#nt-text').value = await ntCompose(true); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; toast('내일 시간표로 다시 만들었어요.'); };
 $('#nt-dice').onclick = () => { ntRandom(); ntApplyPick(); renderNoteTool(); };
 $('#nt-tag').addEventListener('change', e => { NT.tag = e.target.value; ntApplyPick(); });
+/* 줄 중간에서 엔터를 치면 새 줄에 번호를 붙이고, 아래 줄 번호(안전 문구 포함)를 하나씩 밀어요 */
+function ntRenumber(ta){
+  const pos = ta.selectionStart, v = ta.value;
+  const before = v.slice(0, pos), after = v.slice(pos);
+  const lines = before.split('\n'), cur = lines[lines.length - 1], prev = lines[lines.length - 2];
+  let ins = '';
+  if (prev != null && /^\d+\./.test(prev) && cur === '' && !/^\d+\./.test(after)) ins = '0.';
+  const all = (before + ins + after).split('\n');
+  let n = 0; const caretLine = lines.length - 1;
+  const out = all.map(l => { const m = l.match(/^(\d+)\.(.*)$/); if (!m) return l; n++; return n + '.' + m[2]; });
+  const lenBefore = out.slice(0, caretLine).join('\n').length + (caretLine ? 1 : 0);
+  const caretLineNew = out[caretLine], caretCol = cur.length;
+  const oldPrefix = (cur.match(/^\d+\./) || [''])[0], newPrefix = ((caretLineNew || '').match(/^\d+\./) || [''])[0];
+  const col = ins ? newPrefix.length : (oldPrefix && caretCol >= oldPrefix.length ? caretCol + (newPrefix.length - oldPrefix.length) : caretCol);
+  ta.value = out.join('\n');
+  ta.selectionStart = ta.selectionEnd = lenBefore + Math.max(0, col);
+}
+$('#nt-text').addEventListener('input', e => { if (e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph' || e.inputType === 'insertText' && e.data === '\n') ntRenumber(e.target); });
 $('#nt-text').addEventListener('input', e => { const k = ntTarget(); NT.draft[k] = e.target.value; ntKeepDraft(k, e.target.value); });
 $('#nt-cats').addEventListener('click', e => { const b = e.target.closest('[data-ntc]'); if (!b) return; NT.cat = b.dataset.ntc; renderNoteTool(); });
 $('#nt-list').addEventListener('click', e => {
