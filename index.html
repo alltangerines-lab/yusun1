@@ -1068,6 +1068,10 @@ table.jt-sum{border-collapse:collapse;font-size:13px}
 .jl-t tr.done td{background:var(--me-soft)}
 .jl-t input[type=checkbox]{width:18px;height:18px;margin-top:6px}
 .jl-t tr.none td{padding:4px}
+.jl-t tr.jl-dayh td{background:var(--surface-2);padding:6px 8px;font-size:13px}
+.jl-t tr.jl-dayh.today td{background:var(--me-soft)}
+.jl-t td.n small{color:var(--muted);font-size:11px}
+.jl-t .jl-cp{font-size:11px;padding:2px 6px;margin-top:3px;white-space:nowrap}
 .jg-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
 .jl-unit{margin:14px 0 6px;font-weight:700;font-size:14px;color:var(--me)}
 .jl-row{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:6px}
@@ -1726,14 +1730,15 @@ body.ro .w-only{display:none!important}
             <button type="button" class="btn small" id="jl-next" aria-label="다음 날">›</button>
             <button type="button" class="btn small" id="jl-today">오늘</button>
             <input type="date" id="jl-date" style="width:auto" aria-label="날짜 고르기">
+            <div class="seg" role="group" aria-label="보기" id="jl-view"><button type="button" data-v="week" aria-pressed="true">한 주</button><button type="button" data-v="day" aria-pressed="false">하루</button></div>
             <span class="grow"></span>
             <span class="hint" id="jl-save"></span>
           </div>
-          <p class="hint" style="margin:0 0 8px">반은 전담 시간표에서 가져와요. 칸을 벗어나면 저장되고, "오늘 수업"과 같은 기록이에요.</p>
+          <p class="hint" style="margin:0 0 8px">반은 전담 시간표에서 가져와요. 칸을 벗어나면 저장되고, "오늘 수업"과 같은 기록이에요. <b>똑같이</b>를 누르면 그 줄 내용이 같은 학년 다른 반의 빈칸에 반마다 한 번씩 들어가요 (한 주 보기는 그 주, 하루 보기는 그날).</p>
           <div class="attline" id="jl-ev"></div>
           <div id="jl-rows"></div>
-          <label class="f" for="jl-memo" style="margin-top:12px">이 날 메모</label>
-          <textarea id="jl-memo" rows="3"></textarea>
+          <div id="jl-memo-wrap"><label class="f" for="jl-memo" style="margin-top:12px">이 날 메모</label>
+          <textarea id="jl-memo" rows="3"></textarea></div>
         </div>
 
         <div class="panel" id="p-jprog" hidden>
@@ -2433,7 +2438,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@bfc8fab30f0808c8eaa960b30eb1e1200faa2c0c/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@c033d9e0dfa38c4060d71c077f41f48c84c6be62/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
