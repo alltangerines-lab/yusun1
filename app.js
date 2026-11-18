@@ -523,6 +523,7 @@ function imageTarget(name){
   if (name === 'notice') return {scope:'shared', add:refs => { S.stage.notice.push(...refs); renderStage('notice'); }};
   if (name === 'j' || name === 'cns' || name === 'stu') return {scope:'private', add:refs => { S.stage[name].push(...refs); renderStage(name); }};
   if (name === 'ops') return {scope:'shared', add:refs => { S.stage.ops = (S.stage.ops || []).concat(refs); renderStage('ops'); }};
+  if (name === 'mo') return {scope:'private', add:refs => { const r = rt(), k = ymd(today()); const cap = $('#mo-new').value.trim().slice(0, 40); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:cap, imgs:refs}])}); $('#mo-new').value = ''; saveRoutine(); renderMorning(false); toast('사진을 오늘 할 일에 붙였어요.'); }};
   if (name === 'mops') return {scope:'private', add:refs => { S.stage.mops = (S.stage.mops || []).concat(refs); renderStage('mops'); }};
   if (name === 'gmemo') return {scope:'shared', add:async refs => { const cur = (S.gmemo && S.gmemo.imgs) || []; try { await S.db.doc('grade/memo').set(Object.assign({}, S.gmemo || {}, {imgs:cur.concat(refs), updatedAt:Date.now(), updatedBy:S.uid})); } catch (e){ wErr(e, true); } }};
   if (name === 'daily') return {scope:'shared', add:refs => { S.dailyImgs.push(...refs); markDailyDirty(); renderDailyThumbs(); }};
@@ -545,6 +546,7 @@ function pasteTargetOf(el){
   if (el.closest('#gm-edit')) return 'gmemo';
   if (el.closest('#ops-form')) return 'ops';
   if (el.closest('#mops-form')) return 'mops';
+  if (el.closest('#mo-add')) return 'mo';
   if (el.id === 'd-plan' || el.id === 'd-notice') return 'daily';
   if (el.id === 'j-input') return 'j';
   if (el.id === 'cns-input') return 'cns';
@@ -3369,8 +3371,9 @@ async function renderMorning(fetchDay){
   const n = all.filter(x => dn[x.id]).length;
   $('#mo-count').textContent = all.length ? `${n}/${all.length}` : '';
   const ae = document.activeElement;
-  if (!(MO.editing && $('#mo-list .mo-edf'))) $('#mo-list').innerHTML = all.length ? all.map(x => `<li class="${dn[x.id] ? 'on' : ''}"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name)}</span>${x.daily ? '' : '<span class="tag">오늘만</span>'}</button><button type="button" class="mo-ed" data-mo-edit="${esc(x.id)}" data-daily="${x.daily ? 1 : ''}" aria-label="${esc(x.name)} 고치기" title="고치기">✎</button>${x.daily ? '' : `<button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button>`}</li>`).join('')
+  if (!(MO.editing && $('#mo-list .mo-edf'))) $('#mo-list').innerHTML = all.length ? all.map(x => (x.imgs && x.imgs.length) ? `<li class="mo-img ${dn[x.id] ? 'on' : ''}"><div class="mo-imgs">${thumbsHtml(x.imgs, '')}</div><div class="mo-imgbar"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name || '사진')}</span></button><button type="button" class="mo-ed" data-mo-edit="${esc(x.id)}" aria-label="설명 고치기" title="설명 고치기">✎</button><button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="사진 빼기">×</button></div></li>` : `<li class="${dn[x.id] ? 'on' : ''}"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name)}</span>${x.daily ? '' : '<span class="tag">오늘만</span>'}</button><button type="button" class="mo-ed" data-mo-edit="${esc(x.id)}" data-daily="${x.daily ? 1 : ''}" aria-label="${esc(x.name)} 고치기" title="고치기">✎</button>${x.daily ? '' : `<button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button>`}</li>`).join('')
     : '<li class="hint">아래 "매일 할 일 고치기"에서 아침 독서, 숙제 내기처럼 날마다 하는 일을 넣어 주세요.</li>';
+  hydrateImgs();
   if (ae !== $('#mo-daily-new')) $('#mo-daily').innerHTML = r.items.length ? r.items.map(x => `<li><span>${esc(x.name)}</span><button type="button" class="x" data-mo-ddel="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button></li>`).join('') : '<li class="hint">아직 없어요.</li>';
   const live = kk => r.items.filter(x => !x.at || ymd(new Date(x.at)) <= kk);
   const days = []; for (let i = 0; i < 14; i++){ const kk = ymd(addDays(today(), -i)); if ((isSchoolDay(kk) && live(kk).length) || (r.done[kk] && Object.keys(r.done[kk]).length) || (r.extra[kk] || []).length) days.push(kk); }
@@ -3414,7 +3417,7 @@ $('#tool-morn').addEventListener('click', e => {
   }
   if (e.target.closest('.mo-edf')) return;
   const d = e.target.closest('[data-mo-del]');
-  if (d){ r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).filter(x => x.id !== d.dataset.moDel)}); saveRoutine(); renderMorning(false); return; }
+  if (d){ const gone = (r.extra[k] || []).find(x => x.id === d.dataset.moDel); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).filter(x => x.id !== d.dataset.moDel)}); saveRoutine(); renderMorning(false); ((gone && gone.imgs) || []).forEach(dropImage); return; }
   const dd = e.target.closest('[data-mo-ddel]');
   if (dd){ if (!twoStep(dd, '빼기?')) return; r.items = r.items.filter(x => x.id !== dd.dataset.moDdel); saveRoutine(); renderMorning(false); }
 });
