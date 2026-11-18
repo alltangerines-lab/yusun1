@@ -3369,7 +3369,7 @@ async function renderMorning(fetchDay){
   const n = all.filter(x => dn[x.id]).length;
   $('#mo-count').textContent = all.length ? `${n}/${all.length}` : '';
   const ae = document.activeElement;
-  $('#mo-list').innerHTML = all.length ? all.map(x => `<li class="${dn[x.id] ? 'on' : ''}"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name)}</span>${x.daily ? '' : '<span class="tag">오늘만</span>'}</button>${x.daily ? '' : `<button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button>`}</li>`).join('')
+  if (!(MO.editing && $('#mo-list .mo-edf'))) $('#mo-list').innerHTML = all.length ? all.map(x => `<li class="${dn[x.id] ? 'on' : ''}"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name)}</span>${x.daily ? '' : '<span class="tag">오늘만</span>'}</button><button type="button" class="mo-ed" data-mo-edit="${esc(x.id)}" data-daily="${x.daily ? 1 : ''}" aria-label="${esc(x.name)} 고치기" title="고치기">✎</button>${x.daily ? '' : `<button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button>`}</li>`).join('')
     : '<li class="hint">아래 "매일 할 일 고치기"에서 아침 독서, 숙제 내기처럼 날마다 하는 일을 넣어 주세요.</li>';
   if (ae !== $('#mo-daily-new')) $('#mo-daily').innerHTML = r.items.length ? r.items.map(x => `<li><span>${esc(x.name)}</span><button type="button" class="x" data-mo-ddel="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button></li>`).join('') : '<li class="hint">아직 없어요.</li>';
   const live = kk => r.items.filter(x => !x.at || ymd(new Date(x.at)) <= kk);
@@ -3386,7 +3386,7 @@ async function renderMorning(fetchDay){
   }
   const sf = subjFor(k), plan = (MO.day && MO.day.plan) || [];
   if (sf.off) $('#mo-tt').innerHTML = `<li class="off">${esc(sf.off)}</li>`;
-  else { const L = lunchAt(); let h = ''; for (let i = 0; i < 6; i++){ if (i === L) h += '<li class="lunch">점심</li>'; const p = plan[i] || {}; const sj = p.s !== undefined && p.s !== null && p.s !== '' ? p.s : expand((sf.s || [])[i]); if (sj) h += `<li><span class="p">${i + 1}</span><b>${esc(sj)}</b>${p.p ? `<small class="prep">${esc(p.p)}</small>` : ''}</li>`; } $('#mo-tt').innerHTML = h || '<li class="off">시간표가 비어 있어요</li>'; }
+  else { const L = lunchAt(); let h = ''; for (let i = 0; i < 6; i++){ if (i === L) h += '<li class="lunch"><span class="p"></span><b>점심</b></li>'; const p = plan[i] || {}; const sj = p.s !== undefined && p.s !== null && p.s !== '' ? p.s : expand((sf.s || [])[i]); if (sj) h += `<li><span class="p">${i + 1}</span><b>${esc(sj)}</b>${p.p ? `<small class="prep">${esc(p.p)}</small>` : ''}</li>`; } $('#mo-tt').innerHTML = h || '<li class="off">시간표가 비어 있어요</li>'; }
   const ml = await mealFor(k);
   $('#mo-meal-card').hidden = !ml && !GAS;
   $('#mo-meal').innerHTML = ml ? ml.split(/\s*[,/]\s*/).filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('') : `<p class="hint">${GAS ? '설정 → 나이스에서 학교를 고르면 급식이 떠요.' : ''}</p>`;
@@ -3396,6 +3396,23 @@ $('#tool-morn').addEventListener('click', e => {
   const r = rt(), k = ymd(today());
   const c = e.target.closest('[data-mo]');
   if (c){ const dn = Object.assign({}, r.done[k] || {}); if (dn[c.dataset.mo]) delete dn[c.dataset.mo]; else dn[c.dataset.mo] = Date.now(); r.done = Object.assign({}, r.done, {[k]:dn}); saveRoutine(); renderMorning(false); return; }
+  const ed = e.target.closest('[data-mo-edit]');
+  if (ed){
+    const id = ed.dataset.moEdit, daily = !!ed.dataset.daily, li = ed.closest('li');
+    const cur = (daily ? r.items : (r.extra[k] || [])).find(x => x.id === id); if (!cur) return;
+    MO.editing = true;
+    li.innerHTML = `<form class="mo-edf"><input type="text" value="${esc(cur.name)}" maxlength="40" aria-label="할 일 고치기"><button type="submit" class="btn small primary">저장</button><button type="button" class="btn small" data-mo-cancel>취소</button></form>`;
+    const inp = li.querySelector('input'); inp.focus(); inp.select();
+    li.querySelector('form').addEventListener('submit', ev => {
+      ev.preventDefault(); const v = inp.value.trim(); if (!v) return; MO.editing = false;
+      if (daily) r.items = r.items.map(x => x.id === id ? Object.assign({}, x, {name:v.slice(0, 40)}) : x);
+      else r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).map(x => x.id === id ? Object.assign({}, x, {name:v.slice(0, 40)}) : x)});
+      saveRoutine(); renderMorning(false); toast(daily ? '매일 할 일을 고쳤어요. 내일부터도 바뀐 이름으로 나와요.' : '고쳤어요.');
+    });
+    li.querySelector('[data-mo-cancel]').onclick = ev => { ev.stopPropagation(); MO.editing = false; renderMorning(false); };
+    return;
+  }
+  if (e.target.closest('.mo-edf')) return;
   const d = e.target.closest('[data-mo-del]');
   if (d){ r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).filter(x => x.id !== d.dataset.moDel)}); saveRoutine(); renderMorning(false); return; }
   const dd = e.target.closest('[data-mo-ddel]');
