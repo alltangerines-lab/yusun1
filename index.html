@@ -1024,6 +1024,49 @@ table.ros td[data-r]{user-select:none}
 table.ros td[data-r] input{user-select:text}
 .pp-rows{display:grid}
 table.pp-t{border-collapse:collapse;width:100%;font-size:13px;min-width:760px}
+/* 전담: 오늘 수업 · 시간표와 시수 */
+.jd-cards{display:grid;gap:10px}
+.jd-card{display:grid;grid-template-columns:52px 88px minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.jd-card.done{background:var(--me-soft)}
+.jd-card.off{opacity:.55}
+.jd-card .pn{font-family:var(--mono);font-size:13px;color:var(--muted);padding-top:6px}
+.jd-card .cl{font-size:22px;font-weight:700;line-height:1.2}
+.jd-card .cl small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.jd-card .bd{display:grid;gap:6px;min-width:0}
+.jd-card .last{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.jd-card .last b{color:var(--fg);font-weight:600}
+.jd-card textarea{min-height:34px;resize:vertical}
+.jd-card .row{gap:8px}
+.jd-empty{padding:18px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:var(--r)}
+.jt-sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
+.jt-sec h3{margin:0 0 8px;font-size:15px}
+.jt-wrap{overflow-x:auto}
+table.jt-base{border-collapse:collapse;font-size:13px}
+.jt-base th,.jt-base td{border:1px solid var(--line);padding:2px;text-align:center}
+.jt-base th{background:var(--surface-2);color:var(--muted);font-weight:600;padding:4px 8px}
+.jt-base input{width:64px;text-align:center;padding:4px;border:0;background:transparent}
+table.jt-weeks{border-collapse:collapse;font-size:12px;white-space:nowrap}
+.jt-weeks th,.jt-weeks td{border:1px solid var(--line);padding:0;text-align:center}
+.jt-weeks th{background:var(--surface-2);color:var(--muted);font-weight:600;padding:3px 4px;position:sticky;top:0}
+.jt-weeks td.wk{padding:2px 6px;text-align:left;font-family:var(--mono);background:var(--surface)}
+.jt-weeks td.wk.now{background:var(--me-soft);font-weight:700}
+.jt-weeks th.dsep,.jt-weeks td.dsep{border-left:2px solid var(--muted)}
+.jt-weeks input{width:34px;padding:3px 1px;text-align:center;border:0;background:transparent;font-size:12px}
+.jt-weeks td.chg input{background:var(--grade-soft);font-weight:700}
+.jt-weeks td.off{background:repeating-linear-gradient(135deg,var(--surface-2) 0 4px,transparent 4px 8px)}
+.jt-weeks td.off input{color:var(--muted);text-decoration:line-through}
+.jt-weeks td.cnt{padding:2px 5px;font-family:var(--mono);color:var(--muted)}
+.jt-weeks td.cnt.z{color:var(--line)}
+.jt-weeks tr.past td.wk{color:var(--muted)}
+table.jt-sum{border-collapse:collapse;font-size:13px}
+.jt-sum th,.jt-sum td{border:1px solid var(--line);padding:4px 10px;text-align:center}
+.jt-sum th{background:var(--surface-2);color:var(--muted);font-weight:600}
+.jt-sum td.cls{font-weight:700}
+.jt-sum td.bad{color:var(--danger);font-weight:700}
+.jt-sum td.good{color:var(--ok);font-weight:700}
+.jt-sum input{width:54px;text-align:center;padding:3px}
+.jt-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:6px 0}
+.jt-legend i{display:inline-block;width:14px;height:12px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
 .pp-t th,.pp-t td{border-bottom:1px solid var(--line);padding:3px 4px;text-align:left;vertical-align:top}
 .pp-t th{background:var(--surface-2);font-weight:600;font-size:12px;color:var(--muted);padding:6px}
 .pp-t td.n,.pp-t th.n{width:38px;text-align:center;font-family:var(--mono);padding-top:9px}
@@ -1484,7 +1527,7 @@ body.ro .w-only{display:none!important}
   <section id="v-me" hidden>
     <div class="space-intro">
       <h1>나의 공간 · <button type="button" class="cls-btn" id="me-class" title="맡은 반 바꾸기">우리 반</button> 학급일지</h1>
-      <div class="cls-ask" id="cls-ask" hidden><b>몇 반 선생님인가요?</b><select id="cls-ask-sel" aria-label="내가 맡은 반"></select><span class="hint">또는</span><form id="cls-ask-form" class="row" style="gap:6px"><input type="text" id="cls-ask-txt" placeholder="직접 쓰기 (예: 사랑반)" maxlength="20" style="width:150px" aria-label="반 이름 직접 쓰기"><button type="submit" class="btn small">정하기</button></form><span class="hint">고르면 학년 명부의 우리 반 학생과 우리 반 일정·할 일이 나의 공간에 따라와요.</span></div>
+      <div class="cls-ask" id="cls-ask" hidden><b>몇 반 선생님인가요?</b><select id="cls-ask-sel" aria-label="내가 맡은 반"></select><span class="hint">또는</span><form id="cls-ask-form" class="row" style="gap:6px"><input type="text" id="cls-ask-txt" placeholder="직접 쓰기 (예: 사랑반)" maxlength="20" style="width:150px" aria-label="반 이름 직접 쓰기"><button type="submit" class="btn small">정하기</button></form><span class="hint">고르면 학년 명부의 우리 반 학생과 우리 반 일정·할 일이 나의 공간에 따라와요.</span><button type="button" class="btn small" id="cls-ask-jd">교과 전담이에요</button></div>
       <p class="motto" id="me-motto" contenteditable="true" spellcheck="false" aria-label="한마디"></p>
     </div>
     <div id="me-off" class="card" hidden><div class="card-b" style="padding-top:16px"><p class="empty" id="me-off-text"></p></div></div>
@@ -1608,6 +1651,55 @@ body.ro .w-only{display:none!important}
           <div id="pp-rows" class="pp-rows"></div>
           <label class="f" for="pp-memo" style="margin-top:12px">이 날 메모 <span class="hint">학급일지의 "업무 메모"와 같은 칸이에요</span></label>
           <textarea id="pp-memo" rows="3"></textarea>
+        </div>
+
+        <div class="panel" id="p-jday" hidden>
+          <div class="daynav">
+            <strong id="jd-label"></strong>
+            <button type="button" class="btn small" id="jd-prev" aria-label="전날">‹</button>
+            <button type="button" class="btn small" id="jd-next" aria-label="다음 날">›</button>
+            <button type="button" class="btn small" id="jd-today">오늘</button>
+            <input type="date" id="jd-date" style="width:auto" aria-label="날짜 고르기">
+            <span class="grow"></span>
+            <span class="hint" id="jd-save"></span>
+          </div>
+          <div class="attline" id="jd-ev"></div>
+          <div class="jd-cards" id="jd-cards"></div>
+          <label class="f" for="jd-memo" style="margin-top:12px">이 날 메모</label>
+          <textarea id="jd-memo" rows="3"></textarea>
+        </div>
+
+        <div class="panel" id="p-jtt" hidden>
+          <section class="jt-sec">
+            <div class="row" style="flex-wrap:wrap;gap:8px 14px">
+              <label class="row" for="jt-subj" style="gap:6px">맡은 과목 <input type="text" id="jt-subj" maxlength="20" placeholder="예: 체육" style="width:110px"></label>
+              <label class="row" for="jt-from" style="gap:6px">학기 <input type="date" id="jt-from" style="width:auto"></label>
+              <label class="row" for="jt-to" style="gap:6px">~ <input type="date" id="jt-to" style="width:auto"></label>
+              <span class="grow"></span>
+              <button type="button" class="btn small" id="jt-paste-open">스프레드시트에서 붙여 넣기</button>
+            </div>
+          </section>
+          <section class="jt-sec" id="jt-paste" hidden>
+            <h3>쓰던 시수표 붙여 넣기</h3>
+            <p class="hint" style="margin:0 0 6px">스프레드시트에서 <b>교시 번호 줄(1 2 3 4 5 6 1 2 …)</b>부터 마지막 주까지 골라 복사한 뒤 여기 붙여 넣으세요. 줄마다 "3. 9- 3.13"처럼 기간이 적혀 있어야 해요. 붙여 넣으면 지금 학기 시간표를 덮어써요.</p>
+            <textarea id="jt-paste-txt" rows="5" placeholder="여기에 Ctrl+V"></textarea>
+            <div class="row" style="margin-top:6px"><span class="hint grow" id="jt-paste-info"></span><button type="button" class="btn" id="jt-paste-cancel">닫기</button><button type="button" class="btn primary" id="jt-paste-go">넣기</button></div>
+          </section>
+          <section class="jt-sec">
+            <h3>반별 시수</h3>
+            <p class="hint" style="margin:0 0 6px">목표 시수를 적어 두면, 아래 주별 시간표로 계산한 시수와 맞는지 보여 줘요. 쉬는 날 칸은 빼고 세요.</p>
+            <div class="jt-wrap" id="jt-sum"></div>
+          </section>
+          <section class="jt-sec">
+            <h3>기본 시간표</h3>
+            <p class="hint" style="margin:0 0 6px">칸에 반을 적어요 (예: 4-1, 41, 3-2, 2안). 주별 시간표에 그대로 깔려요.</p>
+            <div class="jt-wrap" id="jt-base"></div>
+          </section>
+          <section class="jt-sec">
+            <div class="row"><h3 style="margin:0">주별 시간표</h3><span class="grow"></span><span class="hint">바뀐 주만 그 칸을 고치세요.</span></div>
+            <div class="jt-legend"><span><i style="background:var(--grade-soft)"></i>기본과 다른 칸</span><span><i style="background:repeating-linear-gradient(135deg,var(--surface-2) 0 4px,transparent 4px 8px)"></i>쉬는 날 (세지 않음)</span><span>확정 칸에 체크하면 그 주가 확정된 거예요</span></div>
+            <div class="jt-wrap" id="jt-weeks" style="max-height:70vh"></div>
+          </section>
         </div>
 
         <div class="panel" id="p-todo" hidden>
@@ -2252,7 +2344,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.08 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@296e4b0d6d2060e478294e8b97e66df21b226e28/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@04c9c31ef1442c8a8e1bf92c337c66ff749f4a1d/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
