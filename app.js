@@ -523,7 +523,7 @@ function imageTarget(name){
   if (name === 'notice') return {scope:'shared', add:refs => { S.stage.notice.push(...refs); renderStage('notice'); }};
   if (name === 'j' || name === 'cns' || name === 'stu') return {scope:'private', add:refs => { S.stage[name].push(...refs); renderStage(name); }};
   if (name === 'ops') return {scope:'shared', add:refs => { S.stage.ops = (S.stage.ops || []).concat(refs); renderStage('ops'); }};
-  if (name === 'mo') return {scope:'private', add:refs => { const r = rt(), k = ymd(today()); const cap = $('#mo-new').value.trim().slice(0, 40); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:cap, imgs:refs}])}); $('#mo-new').value = ''; saveRoutine(); renderMorning(false); toast('사진을 오늘 할 일에 붙였어요.'); }};
+  if (name === 'mo') return {scope:'private', add:refs => { const r = rt(), k = ymd(today()); const cap = $('#mo-new').value.trim().slice(0, 200); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:cap, imgs:refs}])}); $('#mo-new').value = ''; saveRoutine(); renderMorning(false); toast('사진을 오늘 할 일에 붙였어요.'); }};
   if (name === 'mops') return {scope:'private', add:refs => { S.stage.mops = (S.stage.mops || []).concat(refs); renderStage('mops'); }};
   if (name === 'gmemo') return {scope:'shared', add:async refs => { const cur = (S.gmemo && S.gmemo.imgs) || []; try { await S.db.doc('grade/memo').set(Object.assign({}, S.gmemo || {}, {imgs:cur.concat(refs), updatedAt:Date.now(), updatedBy:S.uid})); } catch (e){ wErr(e, true); } }};
   if (name === 'daily') return {scope:'shared', add:refs => { S.dailyImgs.push(...refs); markDailyDirty(); renderDailyThumbs(); }};
@@ -3497,12 +3497,12 @@ $('#tool-morn').addEventListener('click', e => {
     const id = ed.dataset.moEdit, daily = !!ed.dataset.daily, li = ed.closest('li');
     const cur = (daily ? r.items : (r.extra[k] || [])).find(x => x.id === id); if (!cur) return;
     MO.editing = true;
-    li.innerHTML = `<form class="mo-edf"><input type="text" value="${esc(cur.name)}" maxlength="40" aria-label="할 일 고치기"><button type="submit" class="btn small primary">저장</button><button type="button" class="btn small" data-mo-cancel>취소</button></form>`;
+    li.innerHTML = `<form class="mo-edf"><input type="text" value="${esc(cur.name)}" maxlength="200" aria-label="할 일 고치기"><button type="submit" class="btn small primary">저장</button><button type="button" class="btn small" data-mo-cancel>취소</button></form>`;
     const inp = li.querySelector('input'); inp.focus(); inp.select();
     li.querySelector('form').addEventListener('submit', ev => {
       ev.preventDefault(); const v = inp.value.trim(); if (!v) return; MO.editing = false;
-      if (daily) r.items = r.items.map(x => x.id === id ? Object.assign({}, x, {name:v.slice(0, 40)}) : x);
-      else r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).map(x => x.id === id ? Object.assign({}, x, {name:v.slice(0, 40)}) : x)});
+      if (daily) r.items = r.items.map(x => x.id === id ? Object.assign({}, x, {name:v.slice(0, 200)}) : x);
+      else r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).map(x => x.id === id ? Object.assign({}, x, {name:v.slice(0, 200)}) : x)});
       saveRoutine(); renderMorning(false); toast(daily ? '매일 할 일을 고쳤어요. 내일부터도 바뀐 이름으로 나와요.' : '고쳤어요.');
     });
     li.querySelector('[data-mo-cancel]').onclick = ev => { ev.stopPropagation(); MO.editing = false; renderMorning(false); };
@@ -3518,13 +3518,13 @@ $('#mo-add').addEventListener('submit', e => {
   e.preventDefault(); if (!S.uid) return;
   const v = $('#mo-new').value.trim(); if (!v) return;
   const r = rt(), k = ymd(today());
-  r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:v.slice(0, 40)}])});
+  r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:v.slice(0, 200)}])});
   $('#mo-new').value = ''; saveRoutine(); renderMorning(false);
 });
 $('#mo-daily-add').addEventListener('submit', e => {
   e.preventDefault(); if (!S.uid) return;
   const v = $('#mo-daily-new').value.trim(); if (!v) return;
-  const r = rt(); r.items = r.items.concat([{id:rid(), name:v.slice(0, 40), at:Date.now()}]);
+  const r = rt(); r.items = r.items.concat([{id:rid(), name:v.slice(0, 200), at:Date.now()}]);
   $('#mo-daily-new').value = ''; saveRoutine(); renderMorning(false);
 });
 $('#mo-big').onclick = () => { MO.size = Math.min(1.8, MO.size + .15); $('#tool-morn').style.setProperty('--mo', MO.size); };
@@ -3789,6 +3789,7 @@ const CHANGELOG = [
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
+    '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.'
   ]],
   ['2.12', '11월 18일 오후', [
