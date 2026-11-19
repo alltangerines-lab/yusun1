@@ -1186,6 +1186,18 @@ table.jc-t{border-collapse:collapse;font-size:13px}
 .un-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:3px 9px 3px 4px;font-size:12.5px;color:var(--fg);text-decoration:none;background:var(--surface);max-width:220px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .un-chip i{width:5px;align-self:stretch;border-radius:3px;background:var(--accent);flex-shrink:0}
 .un-chip:hover{border-color:var(--accent)}
+button.linkbtn{background:none;border:0;padding:0;font:inherit;font-weight:600;cursor:pointer}
+button.un-chip{font:inherit;font-size:12.5px;cursor:pointer;text-align:left}
+.un-chip .lk-k{font-style:normal;font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0}
+.un-chip.k-text i{background:var(--warn)}.un-chip.k-img i{background:#8a6bd1}.un-chip.k-file i{background:var(--muted)}
+.lk-pop{position:fixed;z-index:60;width:min(380px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:12px;display:grid;gap:8px;max-height:min(70vh,560px);overflow:auto}
+.lk-pop h4{margin:0;font-size:14px;padding-right:24px;overflow-wrap:anywhere}
+.lk-pop .x{position:absolute;top:6px;right:6px}
+.lk-pop .lk-url{width:100%;font-size:12.5px;color:var(--muted)}
+.lk-pop .lk-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:inherit;font-size:13.5px;line-height:1.6;background:var(--bg);border-radius:6px;padding:8px 10px;max-height:40vh;overflow:auto}
+.lk-pop .lk-imgs{display:flex;flex-wrap:wrap;gap:6px}.lk-pop .lk-imgs .thumb{width:110px;height:110px}
+.lk-pop .row{gap:6px}
+.un-add textarea{flex:2;min-width:160px;resize:vertical;min-height:34px;font:inherit}
 .un-plus{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--muted);background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;flex-shrink:0}
 .un-body{border-top:1px solid var(--line);padding:10px 14px 12px;display:grid;gap:6px;background:var(--surface-2);border-radius:0 0 12px 12px}
 .un-li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface);border-radius:8px;padding:6px 8px}
@@ -1592,11 +1604,11 @@ body.ro .w-only{display:none!important}
             <input type="file" id="un-file" accept=".hwp,.hwpx" hidden>
             <div class="list" id="links"></div>
             <details class="addform w-only" id="l-addbox">
-              <summary>+ 링크 추가</summary>
+              <summary>+ 자료 추가</summary>
               <form class="inner" id="l-form">
                 <input type="text" id="l-title" placeholder="이름 (예: 문해력 교과보충 자료)" autocomplete="off">
-                <input type="text" inputmode="url" id="l-url" placeholder="https:// (주소만 붙여도 돼요)" autocomplete="off">
-                <div class="row"><label class="hint" for="l-subj">과목</label><select id="l-subj" style="width:auto"></select><span class="grow"></span><button class="btn primary small" type="submit">추가</button></div>
+                <textarea id="l-url" rows="2" placeholder="https:// 주소, 또는 그냥 글을 적어도 돼요"></textarea>
+                <div class="row"><label class="hint" for="l-subj">과목</label><select id="l-subj" style="width:auto"></select><span class="grow"></span><button type="button" class="btn small" data-lkpic title="사진 올리기">사진</button><button type="button" class="btn small" data-lkfile title="파일 올리기 (3MB까지)">파일</button><button class="btn primary small" type="submit">추가</button></div>
               </form>
             </details>
           </div>
@@ -2465,6 +2477,8 @@ body.ro .w-only{display:none!important}
 </div>
 <div class="overlay lightbox" id="lightbox" hidden><img id="lb-img" alt="크게 본 사진"><span class="hint">아무 곳이나 누르면 닫혀요</span></div>
 <input type="file" id="img-picker" accept="image/*" multiple hidden>
+<input type="file" id="lk-file" multiple hidden>
+<div id="lk-pop" class="lk-pop" role="dialog" aria-label="자료" hidden></div>
 <div class="tools" id="tools" hidden>
   <div class="tools-h">
     <div class="seg" role="group" aria-label="도구 고르기" id="tool-tabs">
@@ -2598,8 +2612,8 @@ body.ro .w-only{display:none!important}
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- APP_VERSION 2.15 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3fd06871ec3c5d0d2f20b0190a2fd913fada388e/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<!-- APP_VERSION 2.16 -->
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@f3a16fc9def06ec1a5bd6427b326bf124a29cea0/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
