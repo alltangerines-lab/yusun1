@@ -3830,7 +3830,7 @@ const CHANGELOG = [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
     '할 일을 매주·매월 반복할 수 있어요. "매주 금요일 주간학습 안내 올리기", "매월 말일 출석부 마감"처럼 적거나, 학년 할 일 "고치기"에서 반복을 고르면 돼요. 끝내면 다음 차례가 저절로 생겨요.',
-    '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 한글 파일(.hwpx)을 올리면 과목·시기·단원·평가 요소가 원래 문서 순서대로 간단한 표로 정리되고, 줄을 누르면 성취기준과 성취수준이 펼쳐져요. 이번 달 평가만 골라 보거나 직접 넣고 고칠 수도 있어요. 사진으로 올리기도 그대로 돼요.',
+    '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 한글 파일(.hwpx)을 올리면 과목·시기·단원·평가 요소가 원래 문서 순서대로 간단한 표로 정리되고, 줄을 누르면 성취기준과 성취수준이 펼쳐져요. 끝낸 평가는 체크하면 목록에서 빠지고, 이번 달 평가만 골라 보거나 직접 넣고 고칠 수도 있어요. 사진으로 올리기도 그대로 돼요.',
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.'
   ]],
@@ -3986,7 +3986,7 @@ $('#pp-date').addEventListener('change', e => { if (e.target.value) ppGo(e.targe
 const EVP = () => `data/users/${S.uid}/evalplan`;
 S.ev = {imgs:[], items:[]};
 const evSave = () => { if (!S.uid) return; queueSet(EVP(), () => ({imgs:(S.ev.imgs || []).slice(), items:JSON.parse(JSON.stringify(S.ev.items || [])), updatedAt:Date.now()}), false); };
-const EV = {subj:'all', when:'all', open:null, edit:null, sort:'subj'};
+const EV = {subj:'all', when:'all', open:null, edit:null, sort:'subj', showDone:false};
 try { const v = localStorage.getItem('evSort'); if (v === 'subj' || v === 'when') EV.sort = v; } catch (e){}
 const EV_LV = ['매우 잘함', '잘함', '보통', '노력 요함'];
 const evItems = () => (S.ev.items || []);
@@ -4004,9 +4004,12 @@ function renderEval(){
   $$('#ev-when button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === EV.when));
   const cm = today().getMonth() + 1, nm = cm % 12 + 1;
   const thisN = all.filter(x => evMonth(x) === cm).length;
-  $('#ev-sum').textContent = all.length ? `${all.length}개 평가 · 이번 달(${cm}월) ${thisN}개. 줄을 누르면 성취기준과 성취수준이 펼쳐져요.` : '';
+  const doneN = all.filter(x => x.done).length;
+  $('#ev-sum').textContent = all.length ? `남은 평가 ${all.length - doneN}개 · 이번 달(${cm}월) ${all.filter(x => !x.done && evMonth(x) === cm).length}개. 끝낸 평가는 ☐를 눌러 체크해요.` : '';
+  $('#ev-done-tg').hidden = !doneN; $('#ev-done-tg').textContent = EV.showDone ? '끝낸 평가 숨기기' : `끝낸 평가 ${doneN}개 보기`;
   let list = all.map((x, i) => Object.assign({_i:i}, x));
   if (EV.subj !== 'all') list = list.filter(x => (x.subj || '기타') === EV.subj);
+  if (!EV.showDone) list = list.filter(x => !x.done);
   if (EV.when === 'now') list = list.filter(x => evMonth(x) === cm);
   if (EV.when === 'next') list = list.filter(x => [cm, nm].includes(evMonth(x)));
   const mo = x => { const m = evMonth(x); return m == null ? 99 : (m + 9) % 12; };
@@ -4017,20 +4020,20 @@ function renderEval(){
   list.forEach((x, k) => { x._first = k === 0 || (list[k - 1].subj || '기타') !== (x.subj || '기타'); });
   if (!all.length && EV.edit == null){ $('#ev-table').innerHTML = '<div class="jd-empty">평가 계획 한글 파일(.hwpx)을 가져오면 과목·시기·평가 요소가 표로 정리돼요. 위 "한글 파일(.hwpx)에서 가져오기"를 눌러 주세요.<br><small>.hwp 파일이면 한글에서 "다른 이름으로 저장 → HWPX"로 저장한 뒤 올려 주세요.</small></div>'; return; }
   let k0 = 0;
-  let h = '<div class="tablewrap"><table class="ev-t"><thead><tr><th class="n">시기</th><th>과목</th><th>단원</th><th>평가 요소</th><th>방법</th></tr></thead><tbody>';
-  if (EV.edit === -1) h += `<tr class="ev-open"><td colspan="5">${evForm({})}</td></tr>`;
+  let h = '<div class="tablewrap"><table class="ev-t"><thead><tr><th class="ck" aria-label="끝냄"></th><th class="n">시기</th><th>과목</th><th>단원</th><th>평가 요소</th><th>방법</th></tr></thead><tbody>';
+  if (EV.edit === -1) h += `<tr class="ev-open"><td colspan="6">${evForm({})}</td></tr>`;
   list.forEach(x => {
     const m = evMonth(x), now = m === cm;
-    h += `<tr class="ev-row ${now ? 'now' : ''} ${EV.sort === 'subj' && x._first && k0++ ? 'grp' : ''} ${EV.open === x._i ? 'on' : ''}" data-evi="${x._i}" tabindex="0"><td class="n">${esc(x.when || '')}</td><td class="sj">${EV.sort === 'subj' && x._first === false ? '' : esc(x.subj || '')}</td><td class="u">${esc(x.unit || '')}</td><td class="el">${esc(x.elem || '')}</td><td class="tg">${evTags(x).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</td></tr>`;
+    h += `<tr class="ev-row ${x.done ? 'done' : ''} ${now ? 'now' : ''} ${EV.sort === 'subj' && x._first && k0++ ? 'grp' : ''} ${EV.open === x._i ? 'on' : ''}" data-evi="${x._i}" tabindex="0"><td class="ck"><button type="button" class="chk ${x.done ? 'on' : ''}" data-evck="${x._i}" aria-label="${x.done ? '안 끝낸 평가로 되돌리기' : '평가 끝냄'}"></button></td><td class="n">${esc(x.when || '')}</td><td class="sj">${EV.sort === 'subj' && x._first === false ? '' : esc(x.subj || '')}</td><td class="u">${esc(x.unit || '')}</td><td class="el">${esc(x.elem || '')}</td><td class="tg">${evTags(x).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</td></tr>`;
     if (EV.open === x._i){
-      h += `<tr class="ev-open"><td colspan="5">${EV.edit === x._i ? evForm(x) : `<div class="ev-det">
+      h += `<tr class="ev-open"><td colspan="6">${EV.edit === x._i ? evForm(x) : `<div class="ev-det">
         ${x.std ? `<div><b>성취기준</b><p>${esc(x.std)}</p></div>` : ''}
         ${x.method ? `<div><b>수업·평가 방법</b><p>${esc(x.method)}</p></div>` : ''}
         ${(x.levels || []).length ? `<div><b>성취수준</b><table class="ev-lv">${x.levels.map(([n, t]) => `<tr><th>${esc(n)}</th><td>${esc(t)}</td></tr>`).join('')}</table></div>` : x.lvText ? `<div><b>성취수준</b><p>${esc(x.lvText)}</p></div>` : ''}
         <div class="row"><span class="grow"></span><button type="button" class="btn small" data-evedit="${x._i}">고치기</button><button type="button" class="btn small" data-evrm="${x._i}">지우기</button></div></div>`}</td></tr>`;
     }
   });
-  if (!list.length && EV.edit !== -1) h += `<tr><td colspan="5" class="hint" style="text-align:center;padding:14px">${EV.when === 'now' ? '이번 달 평가가 없어요.' : '해당하는 평가가 없어요.'}</td></tr>`;
+  if (!list.length && EV.edit !== -1) h += `<tr><td colspan="6" class="hint" style="text-align:center;padding:14px">${EV.when === 'now' ? '이번 달 남은 평가가 없어요.' : doneN && !EV.showDone ? '남은 평가가 없어요. 다 끝냈어요!' : '해당하는 평가가 없어요.'}</td></tr>`;
   $('#ev-table').innerHTML = h + '</tbody></table></div>';
 }
 function evForm(x){
@@ -4048,10 +4051,13 @@ function renderEvPhotos(){
   hydrateImgs();
 }
 $('#ev-subj').addEventListener('click', e => { const b = e.target.closest('[data-evs]'); if (!b) return; EV.subj = b.dataset.evs; EV.open = null; EV.edit = null; renderEval(); });
+$('#ev-done-tg').onclick = () => { EV.showDone = !EV.showDone; renderEval(); };
 $('#ev-sort').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; EV.sort = b.dataset.v; try { localStorage.setItem('evSort', EV.sort); } catch (er){} renderEval(); });
 $('#ev-when').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; EV.when = b.dataset.v; renderEval(); });
 $('#ev-new').onclick = () => { if (!S.uid) return; EV.edit = -1; EV.open = null; renderEval(); const f = $('#evf-subj'); if (f){ if (EV.subj !== 'all') f.value = EV.subj; f.focus(); } };
 $('#ev-table').addEventListener('click', e => {
+  const ck = e.target.closest('[data-evck]');
+  if (ck){ if (!S.uid) return; const it = S.ev.items[+ck.dataset.evck]; if (!it) return; it.done = !it.done; it.doneAt = it.done ? Date.now() : null; if (it.done && EV.open === +ck.dataset.evck) EV.open = null; evSave(); renderEval(); if (it.done) toast(`${it.subj} 평가를 끝냈어요.${EV.showDone ? '' : ' 목록에서 숨겼어요.'}`); return; }
   if (e.target.closest('[data-evcancel]')){ EV.edit = null; renderEval(); return; }
   const ed = e.target.closest('[data-evedit]'); if (ed){ EV.edit = +ed.dataset.evedit; renderEval(); return; }
   const rm = e.target.closest('[data-evrm]'); if (rm){ if (!twoStep(rm, '정말 지울까요?')) return; S.ev.items.splice(+rm.dataset.evrm, 1); EV.open = null; evSave(); renderEval(); return; }
@@ -4065,7 +4071,7 @@ $('#ev-table').addEventListener('submit', e => {
   const g = id => ($('#evf-' + id) || {}).value || '';
   const cur = EV.edit >= 0 ? S.ev.items[EV.edit] || {} : {};
   const lvNames = cur.levels && cur.levels.length ? cur.levels.map(l => l[0]) : EV_LV;
-  const it = {subj:g('subj').trim() || '기타', when:g('when').trim(), unit:g('unit').trim(), elem:g('elem').trim(), std:g('std').trim(), method:g('method').trim(), levels:lvNames.map((n, i) => [n, g('lv' + i).trim()]).filter(l => l[1]), lvText:cur.lvText || ''};
+  const it = {subj:g('subj').trim() || '기타', when:g('when').trim(), unit:g('unit').trim(), elem:g('elem').trim(), std:g('std').trim(), method:g('method').trim(), levels:lvNames.map((n, i) => [n, g('lv' + i).trim()]).filter(l => l[1]), lvText:cur.lvText || '', done:!!cur.done, doneAt:cur.doneAt || null};
   if (!it.elem && !it.unit){ toast('단원이나 평가 요소를 적어 주세요.'); return; }
   S.ev.items = S.ev.items || [];
   if (EV.edit >= 0){ S.ev.items[EV.edit] = it; EV.open = EV.edit; } else { S.ev.items.push(it); EV.open = S.ev.items.length - 1; }
@@ -4127,6 +4133,8 @@ $('#ev-file').addEventListener('change', async e => {
     const items = evParseXml(Object.keys(xs).sort((a, b) => a.localeCompare(b, 'en', {numeric:true})).map(k => xs[k]));
     if (!items.length){ toast('파일에서 평가 표를 찾지 못했어요. "평가 요소" 칸이 있는 표인지 확인해 주세요.'); return; }
     const had = (S.ev.items || []).length;
+    const key = x => `${x.subj}|${x.elem}`, was = {}; (S.ev.items || []).forEach(x => { if (x.done) was[key(x)] = x.doneAt || Date.now(); });
+    items.forEach(x => { if (was[key(x)]){ x.done = true; x.doneAt = was[key(x)]; } });
     S.ev.items = items; EV.subj = 'all'; EV.open = null; EV.edit = null; evSave(); renderEval();
     toast(`${new Set(items.map(x => x.subj)).size}개 과목, ${items.length}개 평가를 가져왔어요.${had ? ' (예전 목록은 바꿨어요)' : ''}`);
   } catch (er){ console.error(er); toast('파일을 읽지 못했어요. 한글에서 HWPX로 다시 저장해 보세요.'); }
