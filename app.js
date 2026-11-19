@@ -960,6 +960,9 @@ function renderLinks(){
   if (onPage) $('#link-subj').innerHTML = [['all', '전체']].concat(SUBJ).map(([k, n]) => `<a class="stab" href="#${k === 'all' ? 'links' : 'links-' + k}" ${cur === k ? 'aria-current="page"' : ''}>${n}${k === 'all' ? ` <small>${all.length}</small>` : cnt[k] ? ` <small>${cnt[k]}</small>` : ''}</a>`).join('');
   if (document.activeElement !== $('#l-subj')) $('#l-subj').innerHTML = SUBJ.map(([k, n]) => `<option value="${k}" ${(cur === 'all' ? 'etc' : cur) === k ? 'selected' : ''}>${n}</option>`).join('');
   $('#link-count').textContent = all.length ? String(all.length) : '';
+  const unitMode = onPage && cur !== 'all' && cur !== 'etc' && cur !== 'cre';
+  $('#unit-bar').hidden = !unitMode; $('#l-addbox').hidden = unitMode;
+  if (unitMode){ renderUnits(cur, list); return; }
   $('#links').innerHTML = list.length ? list.map(l => {
     const armed = S.armed === 'link:' + l.id;
     const ok = /^https?:\/\//i.test(l.url || '');
@@ -970,6 +973,87 @@ function renderLinks(){
   }).join('') : `<p class="empty">${cur === 'all' ? '자주 여는 자료 사이트나 영상 링크를 모아 두세요.' : subjName(cur) + ' 자료가 아직 없어요. 아래 "+ 링크 추가"에서 과목을 ' + subjName(cur) + '(으)로 골라 넣어 주세요.'}</p>`;
 }
 $('#links').addEventListener('change', async e => { const sel = e.target.closest('[data-link-subj]'); if (!sel) return; try { await S.db.doc('links/' + sel.dataset.linkSubj).update({subj:sel.value}); } catch (er){ wErr(er, true); } });
+/* ---------- 수업자료: 과목별 단원 목차 ---------- */
+/* 출판사별 목차. 확인한 것만 넣어요. 없으면 "목차 고치기"로 한 번 붙여 넣어요 */
+const UNIT_LIB = {};
+const UN = {open:new Set(), add:null, edit:false};
+const gradeNum = () => { const m = String(S.settings.gradeName || '').match(/(\d)/); return m ? m[1] : '3'; };
+const curSem = () => { const m = today().getMonth() + 1; return m >= 3 && m <= 7 ? '1' : '2'; };
+function unitCfg(subj){ const u = (S.gunits || {})[subj] || {}; return {pub:u.pub || '', custom:u.custom || {}}; }
+function unitLibPubs(subj){ return Object.keys(((UNIT_LIB[gradeNum()] || {})[subj]) || {}); }
+function unitList(subj, sem){
+  const c = unitCfg(subj), lib = (((UNIT_LIB[gradeNum()] || {})[subj] || {})[c.pub] || {})[sem];
+  return (lib && lib.length ? lib : (c.custom[sem] || [])).slice();
+}
+async function unitSave(subj, patch){
+  S.gunits = S.gunits || {}; S.gunits[subj] = Object.assign({}, S.gunits[subj] || {}, patch);
+  try { await S.db.doc('grade/units').set(JSON.parse(JSON.stringify(S.gunits))); } catch (e){ wErr(e, true); }
+}
+function renderUnits(subj, list){
+  const sem = UN.sem || curSem(), c = unitCfg(subj), pubs = unitLibPubs(subj), units = unitList(subj, sem);
+  const can = S.canWrite;
+  $('#unit-bar').innerHTML = `<div class="un-bar">
+    <div class="seg" role="group" aria-label="학기">${['1', '2'].map(x => `<button type="button" data-unsem="${x}" aria-pressed="${sem === x}">${gradeNum()}-${x}</button>`).join('')}</div>
+    <label class="row" style="gap:6px">출판사 <select id="un-pub" ${can ? '' : 'disabled'} style="width:auto"><option value="">${pubs.length ? '고르기' : '직접 만든 목차'}</option>${pubs.map(p => `<option ${c.pub === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}<option value="__own" ${(c.pub && !pubs.includes(c.pub)) || UN.own ? 'selected' : ''}>${c.pub && !pubs.includes(c.pub) ? esc(c.pub) + ' (직접)' : '목록에 없어요'}</option></select></label>${UN.own ? `<input id="un-pubname" placeholder="출판사 이름 (예: 천재교과서)" style="width:180px" value="${esc(c.pub && !pubs.includes(c.pub) ? c.pub : '')}">` : ''}
+    <span class="grow"></span>${can ? `<button type="button" class="btn small" id="un-edit">${units.length ? '목차 고치기' : '목차 넣기'}</button>` : ''}</div>
+    ${UN.edit ? `<div class="un-edit"><p class="hint" style="margin:0 0 4px">${esc(subjName(subj))} ${gradeNum()}-${sem} 단원을 한 줄에 하나씩 적거나 붙여 넣어요. 교과서 차례에서 단원 이름만 복사해 와도 돼요. 동학년 모두에게 같이 보여요.</p>
+      <textarea id="un-text" rows="7" placeholder="1. 물체와 물질&#10;2. 지구와 바다&#10;3. 소리의 성질">${esc(units.join('\n'))}</textarea>
+      <div class="row" style="margin-top:6px"><span class="grow"></span><button type="button" class="btn small" id="un-cancel">취소</button><button type="button" class="btn small primary" id="un-save">저장</button></div></div>` : ''}`;
+  const keyOf = l => l.unit && l.unit.startsWith(sem + '|') ? l.unit.slice(2) : (l.unit ? '__other' : '');
+  const groups = [['', '단원 무관']].concat(units.map((u, i) => [u, u]));
+  const linkChip = l => `<a class="un-chip" href="${esc(/^https?:\/\//i.test(l.url || '') ? l.url : '#')}" target="_blank" rel="noopener noreferrer" title="${esc(l.url || '')}"><i></i>${esc(l.title || l.url)}</a>`;
+  const rowLinks = key => list.filter(l => keyOf(l) === key);
+  let h = groups.map(([key, name], gi) => {
+    const ls = rowLinks(key), open = UN.open.has(gi);
+    const nm0 = String(name).match(/^\s*(\d+)\s*[.)]?\s/);
+    const num = gi === 0 || !nm0 ? `<span class="un-dot" ${gi === 0 ? '' : 'style="background:var(--warn)"'}></span>` : `<span class="un-n">${String(+nm0[1]).padStart(2, '0')}</span>`;
+    const nm = gi === 0 ? name : name.replace(/^\s*\d+\s*[.)]?\s+/, '');
+    return `<div class="un-row ${open ? 'open' : ''}"><div class="un-head" data-untg="${gi}">${num}<b>${esc(nm)}</b><span class="un-chips">${ls.slice(0, 6).map(linkChip).join('')}${ls.length > 6 ? `<span class="hint">+${ls.length - 6}</span>` : ''}</span><button type="button" class="un-plus" data-untg="${gi}" aria-label="${esc(nm)} ${open ? '접기' : '펼치기'}">${open ? '−' : '+'}</button></div>
+      ${open ? `<div class="un-body">${ls.map(l => `<div class="un-li">${linkChip(l)}<span class="hint un-url">${esc((l.url || '').replace(/^https?:\/\//, ''))}</span><span class="grow"></span>${can ? `<select class="lsubj" data-unmove="${l.id}" aria-label="단원 옮기기"><option value="">단원 무관</option>${units.map(u => `<option value="${esc(u)}" ${keyOf(l) === u ? 'selected' : ''}>${esc(u.replace(/^\s*\d+\s*[.)]\s*/, ''))}</option>`).join('')}</select><button type="button" class="btn small ${S.armed === 'link:' + l.id ? 'armed' : 'danger'}" data-act="link-del" data-id="${l.id}">${S.armed === 'link:' + l.id ? '정말 삭제' : '삭제'}</button>` : ''}</div>`).join('') || '<p class="hint" style="margin:2px 0">아직 자료가 없어요.</p>'}
+        ${can ? `<form class="un-add" data-unadd="${esc(key)}"><input type="text" placeholder="이름 (예: 교과서 PDF)" aria-label="자료 이름"><input type="text" inputmode="url" placeholder="https:// 주소" aria-label="자료 주소"><button type="submit" class="btn small primary">넣기</button></form>` : ''}</div>` : ''}</div>`;
+  }).join('');
+  const other = list.filter(l => keyOf(l) === '__other');
+  if (other.length) h += `<p class="hint" style="margin:8px 0 0">다른 학기 단원에 넣은 자료 ${other.length}개는 ${gradeNum()}-${sem === '1' ? '2' : '1'}을 누르면 보여요.</p>`;
+  if (!units.length && !UN.edit) h = `<div class="jd-empty" style="margin-bottom:8px">${esc(subjName(subj))} ${gradeNum()}-${sem} 목차가 아직 없어요.${can ? ' 위 "목차 넣기"로 단원 이름을 한 번 붙여 넣으면, 동학년 모두에게 단원별 칸이 생겨요.' : ''}</div>` + h;
+  $('#links').innerHTML = `<div class="un-list">${h}</div>`;
+}
+$('#unit-bar').addEventListener('click', async e => {
+  const sb = e.target.closest('[data-unsem]'); if (sb){ UN.sem = sb.dataset.unsem; UN.open.clear(); renderLinks(); return; }
+  const subj = S.linkSubj;
+  if (e.target.id === 'un-edit'){ UN.edit = !UN.edit; renderLinks(); if (UN.edit) $('#un-text').focus(); return; }
+  if (e.target.id === 'un-cancel'){ UN.edit = false; renderLinks(); return; }
+  if (e.target.id === 'un-save'){
+    const sem = UN.sem || curSem(), lines = $('#un-text').value.split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 40);
+    const c = unitCfg(subj), custom = Object.assign({}, c.custom, {[sem]:lines});
+    const libHas = unitLibPubs(subj).includes(c.pub);
+    UN.edit = false; await unitSave(subj, {custom, pub:libHas ? '' : c.pub}); renderLinks(); toast(`${subjName(subj)} ${gradeNum()}-${sem} 단원 ${lines.length}개를 넣었어요.`);
+  }
+});
+$('#unit-bar').addEventListener('change', async e => {
+  if (e.target.id !== 'un-pub' && e.target.id !== 'un-pubname') return;
+  let v = e.target.value;
+  if (e.target.id === 'un-pubname'){ await unitSave(S.linkSubj, {pub:e.target.value.trim()}); UN.own = false; renderLinks(); return; }
+  if (v === '__own'){ UN.own = true; renderLinks(); const i = $('#un-pubname'); if (i) i.focus(); return; }
+  UN.own = false; await unitSave(S.linkSubj, {pub:v}); renderLinks();
+});
+$('#links').addEventListener('click', e => {
+  const tg = e.target.closest('[data-untg]'); if (!tg || e.target.closest('a')) return;
+  const i = +tg.dataset.untg; UN.open.has(i) ? UN.open.delete(i) : UN.open.add(i); renderLinks();
+});
+$('#links').addEventListener('submit', async e => {
+  const f = e.target.closest('[data-unadd]'); if (!f) return; e.preventDefault();
+  const [ti, ui] = f.querySelectorAll('input'); let url = ui.value.trim(), title = ti.value.trim();
+  if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+  if (!url){ toast('주소를 적어 주세요.'); ui.focus(); return; }
+  const key = f.dataset.unadd, sem = UN.sem || curSem();
+  try { await S.db.collection('links').add({title:title || url, url, subj:S.linkSubj, unit:key ? sem + '|' + key : '', createdBy:S.uid, createdAt:Date.now()}); toast('자료를 넣었어요.'); }
+  catch (er){ wErr(er, true); }
+});
+$('#links').addEventListener('change', async e => {
+  const sel = e.target.closest('[data-unmove]'); if (!sel) return;
+  const sem = UN.sem || curSem();
+  try { await S.db.doc('links/' + sel.dataset.unmove).update({unit:sel.value ? sem + '|' + sel.value : ''}); } catch (er){ wErr(er, true); }
+});
 function renderDay(){
   const dp = document.querySelector('.daypanel'); if (dp) dp.classList.toggle('is-today', S.selDate === ymd(today()));
   const k = S.selDate;
@@ -1625,6 +1709,7 @@ function startListening(){
   listen(db.doc('grade/jdtt'), 'jdtt', snap => { LS.jd = snap.exists ? ((snap.data() || {}).map || {}) : {}; renderLessons(); });
   listen(db.collection('ops'), 'ops', snap => { S.ops = docs(snap); if (S.page === 'ops') renderOps(); });
   listen(db.collection('phrases'), 'phrases', snap => { S.phG = docs(snap); if (S.page === 'ops') renderPhrases(); });
+  listen(db.doc('grade/units'), 'gunits', snap => { if (busy('grade/units')) return; S.gunits = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {}; renderLinks(); });
   listen(db.doc('grade/memo'), 'gmemo', snap => { S.gmemo = snap.exists ? snap.data() : {}; renderGMemo(); });
   listen(db.collection('budget'), 'budget', snap => { S.budG = docs(snap); if (S.page === 'budget' && S.space === 'grade') BUD.g.render(); });
   listen(db.collection('roster'), 'roster', snap => {
@@ -3849,6 +3934,7 @@ const CHANGELOG = [
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
+    '수업자료: 과목을 고르면 단원별 칸이 생겨요. 학기마다 목차를 한 번 넣어 두면 동학년 모두에게 단원 칸이 보이고, 칸마다 자료를 넣을 수 있어요.',
     '새로고침해도 학년 공간 첫 화면이 아니라 보던 탭으로 돌아와요.',
     '예산: 줄마다 메모 칸과 산출내역 칸이 생기고, 비어 있는 에듀파인 칸(세부사업·원가통계비목)은 숨겨요. 학급 줄은 "반마다"를 누르면 반별 줄로 나눠져요.',
     '나의 공간 학생별: 왼쪽에 학생 이름이 두 줄(앞 번호 절반은 왼쪽, 뒤 절반은 오른쪽)로 있고, 누르면 오른쪽에 그 학생 카드와 누가기록이 한눈에 보이는 폭으로 나와요.',
