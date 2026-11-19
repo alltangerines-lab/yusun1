@@ -3759,7 +3759,9 @@ $('#j-week').addEventListener('click', e => { const b = e.target.closest('[data-
 
 /* ================= 아침 안내 (교실 도구) ================= */
 const ROUTINE = () => `data/users/${S.uid}/routine`;
-const MO = {size:1, day:null, dayKey:null};
+const MO = {size:1, day:null, dayKey:null, view:null};
+/* 아침 안내 날짜: 기본은 오늘, 화살표로 다음 등교일을 미리 써 둘 수 있어요 */
+const moK = () => MO.view || ymd(today());
 function rt(){ S.routine = S.routine || {items:[], done:{}, extra:{}}; if (!S.routine.extra) S.routine.extra = {}; if (!S.routine.done) S.routine.done = {}; return S.routine; }
 function saveRoutine(){
   const r = rt(); const keep = ymd(addDays(today(), -120));
@@ -3768,9 +3770,11 @@ function saveRoutine(){
 }
 function renderRoutine(){ if (!$('#tool-morn').hidden && !$('#tools').hidden) renderMorning(false); }
 async function renderMorning(fetchDay){
-  const k = ymd(today()), d = today();
-  $('#mo-date').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일`;
-  $('#mo-hello').textContent = HOLIDAYS[k] ? HOLIDAYS[k] : '좋은 아침이에요!';
+  if (MO.view && MO.view < ymd(addDays(today(), -60))) MO.view = null;
+  const k = moK(), d = fromYmd(k), isT = k === ymd(today());
+  $('#mo-date').innerHTML = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일${isT ? '' : `<span class="ahead-tag">${k > ymd(today()) ? '미리 쓰는 중' : '지난 날'}</span>`}`;
+  $('#mo-hello').textContent = HOLIDAYS[k] ? HOLIDAYS[k] : isT ? '좋은 아침이에요!' : k > ymd(today()) ? '그날 아침에 이대로 떠요. 오늘 할 일·과목 메모를 미리 넣어 두세요.' : '지난 날 아침 안내예요.';
+  $('#mo-today').setAttribute('aria-pressed', isT);
   if (!S.uid){ $('#mo-list').innerHTML = '<li class="hint">로그인한 상태로 열어야 쓸 수 있어요.</li>'; return; }
   const r = rt(), dn = r.done[k] || {}, ex = r.extra[k] || [];
   const all = r.items.map(x => Object.assign({daily:true}, x)).concat(ex);
@@ -3804,7 +3808,7 @@ $('#tool-morn').addEventListener('click', e => {
   if (!S.uid) return;
   const pe = e.target.closest('[data-mo-prep]');
   if (pe){
-    const i = +pe.dataset.moPrep, k = ymd(today());
+    const i = +pe.dataset.moPrep, k = moK();
     const base = (S.jDate === k && S.day) ? S.day : (MO.day || {});
     const cur = ((base.plan || [])[i] || {}).m || '';
     const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'mo-pe-in'; inp.value = cur; inp.maxLength = 60; inp.setAttribute('aria-label', (i + 1) + '교시 메모');
@@ -3826,7 +3830,7 @@ $('#tool-morn').addEventListener('click', e => {
     inp.addEventListener('blur', () => fin(true));
     return;
   }
-  const r = rt(), k = ymd(today());
+  const r = rt(), k = moK();
   const c = e.target.closest('[data-mo]');
   if (c){ const dn = Object.assign({}, r.done[k] || {}); if (dn[c.dataset.mo]) delete dn[c.dataset.mo]; else dn[c.dataset.mo] = Date.now(); r.done = Object.assign({}, r.done, {[k]:dn}); saveRoutine(); renderMorning(false); return; }
   const ed = e.target.closest('[data-mo-edit]');
@@ -3854,7 +3858,7 @@ $('#tool-morn').addEventListener('click', e => {
 $('#mo-add').addEventListener('submit', e => {
   e.preventDefault(); if (!S.uid) return;
   const v = $('#mo-new').value.trim(); if (!v) return;
-  const r = rt(), k = ymd(today());
+  const r = rt(), k = moK();
   r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:v.slice(0, 200)}])});
   $('#mo-new').value = ''; saveRoutine(); renderMorning(false);
 });
@@ -3864,6 +3868,9 @@ $('#mo-daily-add').addEventListener('submit', e => {
   const r = rt(); r.items = r.items.concat([{id:rid(), name:v.slice(0, 200), at:Date.now()}]);
   $('#mo-daily-new').value = ''; saveRoutine(); renderMorning(false);
 });
+$('#mo-prev').onclick = () => { MO.view = prevSchoolDay(moK()); if (MO.view === ymd(today())) MO.view = null; renderMorning(true); };
+$('#mo-next').onclick = () => { MO.view = nextSchoolDay(moK()); if (MO.view === ymd(today())) MO.view = null; renderMorning(true); };
+$('#mo-today').onclick = () => { MO.view = null; renderMorning(true); };
 $('#mo-big').onclick = () => { MO.size = Math.min(1.8, MO.size + .15); $('#tool-morn').style.setProperty('--mo', MO.size); };
 $('#mo-small').onclick = () => { MO.size = Math.max(.7, MO.size - .15); $('#tool-morn').style.setProperty('--mo', MO.size); };
 async function bulkLate(kind){
@@ -4136,6 +4143,7 @@ const CHANGELOG = [
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.',
     '수업자료 단원: 학년 진도표(한글 .hwp·.hwpx)를 "진도표 올리기"로 올리면 과목마다 "단원명" 칸을 읽어 단원 목차가 한 번에 들어가요. 3학년 출판사 목차(영어 천재 함순애, 미술 동아출판 포함)는 목록에서 고르기만 하면 돼요.',
+    '아침 안내와 알림장을 미리 써 둘 수 있어요. 날짜 옆 ›를 누르면 다음 등교일로 넘어가고, 거기서 쓴 할 일·과목 메모·알림장이 그날 그대로 떠요. "오늘"을 누르면 돌아와요.',
     '위쪽 탭 줄 끝 "탭 정리"에서 안 쓰는 탭을 숨기고 ↑↓로 순서를 바꿀 수 있어요. 수업자료 과목 줄 끝 "과목 정리"로 안 쓰는 과목을 숨기거나 순서를 바꿔요. 둘 다 내 화면에만 적용돼요.'
   ]],
   ['2.12', '11월 18일 오후', [
@@ -5748,7 +5756,9 @@ const NT_BANK = [
 const NT_REC = {1:['vacation', 'season'], 2:['vacation', 'season', 'school'], 3:['school', 'friend', 'traffic'], 4:['traffic', 'friend', 'media'], 5:['traffic', 'life', 'health'],
   6:['season', 'health', 'life'], 7:['vacation', 'season', 'health'], 8:['vacation', 'season'], 9:['school', 'friend', 'health'], 10:['friend', 'life', 'traffic'],
   11:['season', 'school', 'friend'], 12:['vacation', 'season', 'stranger']};
-const NT = {cat:'rec', tag:'auto', pick:null, draft:{}, bank:{items:[], used:{}}, loaded:false, sub:null};
+const NT = {cat:'rec', tag:'auto', pick:null, draft:{}, bank:{items:[], used:{}}, loaded:false, sub:null, view:null};
+/* 알림장 쓰는 날: 기본은 오늘, 화살표로 다음 등교일 알림장을 미리 써 둬요 (내용은 그 다음 등교일 준비) */
+const ntWriteDay = () => NT.view || ymd(today());
 function ntLoad(){
   if (NT.sub || !S.uid || !S.db) return;
   NT.sub = S.db.doc(NOTEP()).onSnapshot(snap => {
@@ -5793,7 +5803,7 @@ function ntFresh(list){
   const fresh = list.filter(x => !(used[x.t] && used[x.t] >= lim));
   return fresh.length ? fresh : list;
 }
-function ntTarget(){ return nextSchoolDay(ymd(today())); }
+function ntTarget(){ return nextSchoolDay(ntWriteDay()); }
 function ntAbbr(s){ s = String(s || '').trim(); if (!s) return ''; const m = {'창체':'창', '자율':'자', '동아리':'동', '학교자율':'학', '융':'학', '진로':'진'}; return m[s] || s[0]; }
 async function ntCompose(force){
   const k = ntTarget();
@@ -5848,10 +5858,12 @@ function ntApplyPick(){
 }
 async function renderNoteTool(){
   ntLoad();
-  const k = ntTarget(), d = fromYmd(k), t0 = today();
-  /* 알림장 날짜는 쓰는 날(오늘), 내용은 다음 등교일 준비 */
+  if (NT.view && NT.view < ymd(addDays(today(), -20))) NT.view = null;
+  const k = ntTarget(), d = fromYmd(k), w0 = ntWriteDay(), t0 = fromYmd(w0), isT = w0 === ymd(today());
+  /* 알림장 날짜는 쓰는 날, 내용은 그 다음 등교일 준비 */
   NT.title = `${t0.getMonth() + 1}월 ${t0.getDate()}일 ${WD[t0.getDay()]}요일 알림장`;
-  $('#nt-for').innerHTML = `${esc(NT.title)} <small style="font-weight:400;color:var(--muted)">· ${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]}) 준비</small>`;
+  $('#nt-for').innerHTML = `${esc(NT.title)}${isT ? '' : `<span class="ahead-tag">${w0 > ymd(today()) ? '미리 쓰는 중' : '지난 알림장'}</span>`} <small style="font-weight:400;color:var(--muted)">· ${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]}) 준비</small>`;
+  $('#nt-today').setAttribute('aria-pressed', isT);
   if (!S.uid){ $('#nt-text').value = ''; $('#nt-text').placeholder = '로그인한 상태로 열어야 쓸 수 있어요.'; return; }
   if (!NT.loaded) for (let i = 0; i < 80 && !NT.loaded; i++) await new Promise(r => setTimeout(r, 100));
   if (!NT.loaded){ $('#nt-text').placeholder = '쓰던 알림장을 불러오는 중이에요…'; return; }
@@ -5896,7 +5908,11 @@ $('#nt-big').onclick = async () => {
   $('#big').hidden = false;
   S.bigMode = 'note'; $('#big-hint').textContent = '글을 눌러 고쳐 쓰면 알림장에 바로 저장돼요';
 };
-$('#nt-redo').onclick = async () => { $('#nt-text').value = await ntCompose(true); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; toast('내일 시간표로 다시 만들었어요.'); };
+$('#nt-redo').onclick = async () => { $('#nt-text').value = await ntCompose(true); NT.lastPickLine = NT.pick ? $('#nt-text').value.split('\n').slice(-1)[0] : null; toast('다음 등교일 시간표로 다시 만들었어요.'); };
+function ntGo(v){ if (document.activeElement === $('#nt-text')) $('#nt-text').blur(); NT.view = v && v !== ymd(today()) ? v : null; NT.pickFor = null; renderNoteTool(); }
+$('#nt-prev').onclick = () => ntGo(prevSchoolDay(ntWriteDay()));
+$('#nt-next').onclick = () => ntGo(nextSchoolDay(ntWriteDay()));
+$('#nt-today').onclick = () => ntGo(null);
 $('#nt-dice').onclick = () => { ntRandom(); ntApplyPick(); renderNoteTool(); };
 $('#nt-tag').addEventListener('change', e => { NT.tag = e.target.value; ntApplyPick(); });
 /* 줄 중간에서 엔터를 치면 새 줄에 번호를 붙이고, 아래 줄 번호(안전 문구 포함)를 하나씩 밀어요 */
