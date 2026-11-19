@@ -1414,6 +1414,7 @@ function renderStu(){
   $('#stu-relink').hidden = !fix.length;
   if (fix.length) $('#stu-relink').innerHTML = `<span>학생 이름으로 적었지만 학생 카드에 아직 이어지지 않은 기록이 ${fix.length}개 있어요.</span><button type="button" class="btn small primary" id="relink-go">학생 카드에 이어 붙이기</button>`;
   if ((S.selStu === null || !roster.some(r => r.no === S.selStu)) && roster.length) S.selStu = roster[0].no;
+  $('#stu-grid').style.setProperty('--rows', Math.ceil(roster.length / 2));
   $('#stu-grid').innerHTML = roster.map(r => `<button type="button" data-stu="${r.no}" aria-pressed="${S.selStu === r.no}"><span>${esc(stuName(r.no))}</span><span class="n">${counts[r.no] || 0}</span></button>`).join('');
   $('#stu-form').hidden = S.selStu === null;
   if (S.selStu !== null) $('#stu-input').placeholder = `${stuName(S.selStu)} 기록 적기 (예: 쉬는 시간 다툼 후 화해함)`;
@@ -3850,7 +3851,7 @@ const CHANGELOG = [
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
     '새로고침해도 학년 공간 첫 화면이 아니라 보던 탭으로 돌아와요.',
     '예산: 줄마다 메모 칸과 산출내역 칸이 생기고, 비어 있는 에듀파인 칸(세부사업·원가통계비목)은 숨겨요. 학급 줄은 "반마다"를 누르면 반별 줄로 나눠져요.',
-    '나의 공간 학생별: 왼쪽에 학생 이름이 두 줄로 쭉 있고, 누르면 오른쪽에 그 학생 카드와 누가기록이 한눈에 보이는 폭으로 나와요.',
+    '나의 공간 학생별: 왼쪽에 학생 이름이 두 줄(앞 번호 절반은 왼쪽, 뒤 절반은 오른쪽)로 있고, 누르면 오른쪽에 그 학생 카드와 누가기록이 한눈에 보이는 폭으로 나와요.',
     '알림장 제목 날짜를 내일이 아니라 쓰는 날(오늘)로 바꿨어요. 1번 시간표와 준비물은 그대로 다음 등교일 것이에요.',
     '할 일을 매주·매월 반복할 수 있어요. "매주 금요일 주간학습 안내 올리기", "매월 말일 출석부 마감"처럼 적거나, 학년 할 일 "고치기"에서 반복을 고르면 돼요. 끝내면 다음 차례가 저절로 생겨요.',
     '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 한글 파일(.hwpx)을 올리면 과목·시기·단원·평가 요소가 원래 문서 순서대로 간단한 표로 정리되고, 줄을 누르면 성취기준과 성취수준이 펼쳐져요. 끝낸 평가는 체크하면 목록에서 빠지고, 이번 달 평가만 골라 보거나 직접 넣고 고칠 수도 있어요. 사진으로 올리기도 그대로 돼요.',
