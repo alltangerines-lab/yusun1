@@ -1348,6 +1348,8 @@ body.ro .w-only{display:none!important}
   body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-calendar:not(.pg-daily):not(.addcard){grid-column:1;grid-row:1 / span 3}
   body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-daily.is-today{display:none}
   body[data-page="main"] #v-grade .grid2 > .col:first-child > .gmemo-card{grid-column:2;grid-row:3}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child:has(> .pg-daily.is-today) > .addcard{grid-row:1}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child:has(> .pg-daily.is-today) > .gmemo-card{grid-row:2}
   body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-daily{grid-column:2;grid-row:1}
   body[data-page="main"] #v-grade .grid2 > .col:first-child > .addcard{grid-column:2;grid-row:2}
   /* 나의 공간: 오늘·할 일·우리 학년 | 메모·입력·학급일지 | 학생 */
@@ -2550,7 +2552,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.15 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@5ae82c28c606f811659520fdcc2d3cf48f244cfe/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@311c352858781b5a84466982a3c936090675b3bd/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
