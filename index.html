@@ -532,6 +532,10 @@ table.plan{border-collapse:collapse;width:100%;font-size:13px}
 .stab .grid-ico{width:10px;height:10px;border:1.5px solid currentColor;border-radius:2px;background:linear-gradient(currentColor,currentColor) 50% 0/1.5px 100% no-repeat,linear-gradient(currentColor,currentColor) 0 50%/100% 1.5px no-repeat;opacity:.7}
 .stab-sep{width:1px;align-self:stretch;margin:6px 6px 8px;background:var(--line);flex-shrink:0}
 .stab.add{color:var(--accent);border:0;font-weight:600}
+.stab.ta-open{color:var(--muted);margin-left:auto}
+.ta-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--line)}
+.ta-row .ta-name{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-weight:600}
+.ta-row.off .ta-name{color:var(--muted);font-weight:400;text-decoration:line-through}
 body:not([data-page="main"]) #v-grade .grid2{grid-template-columns:minmax(0,1fr)}
 body[data-page="calendar"] .cell{min-height:124px}
 .openlink{font-size:12px;color:var(--accent);text-decoration:none;font-weight:600;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:999px;padding:2px 9px;white-space:nowrap}
@@ -1582,6 +1586,7 @@ body.ro .w-only{display:none!important}
           <div class="card-b">
             <nav class="subj-tabs" id="link-subj" aria-label="과목"></nav>
             <div id="unit-bar" hidden></div>
+            <input type="file" id="un-file" accept=".hwp,.hwpx" hidden>
             <div class="list" id="links"></div>
             <details class="addform w-only" id="l-addbox">
               <summary>+ 링크 추가</summary>
@@ -2285,6 +2290,15 @@ body.ro .w-only{display:none!important}
   </div>
 </div>
 
+<div class="overlay" id="dlg-tabs" hidden>
+  <div class="dlg">
+    <h2>탭 정리</h2>
+    <p class="hint" style="margin:0 0 8px">안 쓰는 탭은 체크를 풀어 숨기고, ↑↓로 순서를 바꿔요. 내 화면에만 적용돼요. 다른 선생님 화면은 그대로예요.</p>
+    <div id="ta-list"></div>
+    <div class="acts"><button type="button" class="btn small" id="ta-reset">처음대로</button><span class="grow"></span><button type="button" class="btn primary" data-close>다 했어요</button></div>
+  </div>
+</div>
+
 <div class="overlay" id="dlg-newtab" hidden>
   <form class="dlg" id="nt-form">
     <h2>새 학년 탭</h2>
@@ -2573,7 +2587,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.15 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@a01776193f4669cef92efc8caea700a1940f21de/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@0fbf8a9b384f3f849becfcd20988c38e58da46ec/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
