@@ -401,6 +401,13 @@ details.addform .inner{display:grid;gap:8px;margin-top:8px}
 .attline{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .entry .who{font-weight:600}
 .stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin-bottom:14px}
+/* 학생별: 왼쪽 이름 세로 목록, 오른쪽 학생 카드 */
+.stu-wrap{display:grid;grid-template-columns:168px minmax(0,1fr);gap:18px;align-items:start}
+.stu-side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;padding-right:2px}
+.stu-side .stu-grid{grid-template-columns:1fr;gap:3px;margin:0}
+.stu-side .stu-grid button{padding:6px 10px;font-size:14px}
+.stu-main{min-width:0;max-width:980px}
+@media (max-width:760px){.stu-wrap{grid-template-columns:1fr}.stu-side{position:static;max-height:none}.stu-side .stu-grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}}
 .stu-grid button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 8px;text-align:left;display:flex;justify-content:space-between;gap:4px;font-size:13px;min-width:0}
 .stu-grid button span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stu-grid button .n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
@@ -1913,7 +1920,9 @@ body.ro .w-only{display:none!important}
 
         <div class="panel" id="p-stu" hidden>
           <div class="relink" id="stu-relink" hidden></div>
-          <div class="stu-grid" id="stu-grid"></div>
+          <div class="stu-wrap">
+          <nav class="stu-side" aria-label="학생 목록"><div class="stu-grid" id="stu-grid"></div></nav>
+          <div class="stu-main">
           <form class="quick" id="stu-form" hidden style="margin-bottom:12px">
             <div class="line">
               <input type="text" id="stu-input" autocomplete="off" placeholder="이 학생 기록 적기">
@@ -1923,6 +1932,8 @@ body.ro .w-only{display:none!important}
             <div class="thumbs" id="stu-thumbs"></div>
           </form>
           <div id="stu-detail"></div>
+          </div>
+          </div>
         </div>
 
         <div class="panel" id="p-cns" hidden>
@@ -2536,7 +2547,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.15 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@1489df8cc52e4d19b2de34aa5cc68355c30825ab/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@dab7c540082b4f4742a0e4ae713dda466c51a357/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
