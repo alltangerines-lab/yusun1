@@ -1030,6 +1030,29 @@ table.ros td[data-r] input{user-select:text}
 .pp-rows{display:grid}
 table.pp-t{border-collapse:collapse;width:100%;font-size:13px;min-width:760px}
 /* 전담: 오늘 수업 · 시간표와 시수 */
+.ev-t{border-collapse:collapse;width:100%;font-size:14px}
+.ev-t th{background:var(--surface-2);color:var(--muted);font-weight:600;font-size:12.5px;text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);position:sticky;top:0}
+.ev-t td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.ev-t th.n,.ev-t td.n{width:84px;white-space:nowrap;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.ev-row{cursor:pointer;background:var(--surface)}
+.ev-row:hover,.ev-row:focus{background:var(--surface-2);outline:none}
+.ev-row.now td.n{color:var(--me);font-weight:700}
+.ev-row.now{box-shadow:inset 3px 0 0 var(--me)}
+.ev-row.on{background:var(--me-soft)}
+.ev-t td.sj{white-space:nowrap;font-weight:700;width:1%}
+.ev-t td.u{color:var(--muted);font-size:13px;min-width:160px}
+.ev-t td.el{min-width:220px}
+.ev-t td.tg{width:1%;white-space:nowrap}
+.ev-t td.tg .chip{font-size:11px;margin:1px}
+.ev-open > td{background:var(--surface);padding:12px 14px 14px}
+.ev-det{display:grid;gap:10px;font-size:13.5px}
+.ev-det b{font-size:12.5px;color:var(--muted)}
+.ev-det p{margin:2px 0 0;max-width:none}
+.ev-lv{border-collapse:collapse;width:100%;margin-top:4px}
+.ev-lv th{width:84px;text-align:left;font-weight:600;padding:4px 8px;background:var(--surface-2);border:1px solid var(--line);white-space:nowrap;font-size:12.5px}
+.ev-lv td{padding:4px 8px;border:1px solid var(--line)}
+.ev-form{display:grid;gap:6px}
+@media (max-width:760px){.ev-t td.u,.ev-t th:nth-child(3),.ev-t td.tg,.ev-t th:nth-child(5){display:none}}
 .ev-item{margin:0 0 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .ev-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--surface-2)}
 .ev-img .thumb{display:block;width:auto;height:auto;max-width:100%;border:0;border-radius:0;background:var(--surface)}
@@ -1757,10 +1780,21 @@ body.ro .w-only{display:none!important}
         <div class="panel" id="p-eval" hidden>
           <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">
             <b style="font-size:16px">평가 계획</b>
-            <span class="hint grow">평가 계획 사진(jpg·png)을 올려 두면 원래 크기로 쭉 보여요. 여러 장을 한 번에 골라도 되고, 이 화면을 누르고 Ctrl+V로 붙여 넣어도 돼요. 나만 봐요.</span>
-            <button type="button" class="btn primary" data-pick="eval">사진 올리기</button>
+            <span class="hint grow" id="ev-sum"></span>
+            <button type="button" class="btn" id="ev-new">+ 평가 직접 넣기</button>
+            <button type="button" class="btn primary" id="ev-file-btn">한글 파일(.hwpx)에서 가져오기</button>
+            <input type="file" id="ev-file" accept=".hwpx" hidden>
           </div>
-          <div id="ev-list" tabindex="0" aria-label="평가 계획 사진. 누르고 Ctrl+V로 붙여 넣기"></div>
+          <div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:8px">
+            <nav class="jg-tabs" id="ev-subj" aria-label="과목" style="margin:0"></nav>
+            <span class="grow"></span>
+            <div class="seg" role="group" aria-label="시기" id="ev-when"><button type="button" data-v="all" aria-pressed="true">전체</button><button type="button" data-v="now" aria-pressed="false">이번 달</button><button type="button" data-v="next" aria-pressed="false">다음 달까지</button></div>
+          </div>
+          <div id="ev-table"></div>
+          <details class="jt-sec" id="ev-photos" style="margin-top:16px"><summary><b>사진으로 보기</b> <span class="hint" id="ev-photo-n"></span></summary>
+            <div class="row" style="margin:8px 0"><span class="hint grow">평가 계획 사진(jpg·png)을 올려 두면 원래 크기로 보여요. 여러 장을 한 번에 골라도 되고, 이 칸을 누르고 Ctrl+V로 붙여도 돼요.</span><button type="button" class="btn small" data-pick="eval">사진 올리기</button></div>
+            <div id="ev-list" tabindex="0" aria-label="평가 계획 사진. 누르고 Ctrl+V로 붙여 넣기"></div>
+          </details>
         </div>
 
         <div class="panel" id="p-jday" hidden>
@@ -2497,7 +2531,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.15 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@cc6deae49f489b868abb52f4ac64e5a261eb12e0/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@12e1a1738be46edf254b9090ae264068acee6837/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
