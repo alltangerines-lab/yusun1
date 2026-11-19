@@ -1302,8 +1302,10 @@ body.ro .w-only{display:none!important}
 .wrap{max-width:1880px !important}
   /* 학년 공간: 달력 | 그날·쓰기 | 공지·참고·자료 */
   body[data-page="main"] #v-grade .grid2{grid-template-columns:minmax(0,2.55fr) minmax(0,1fr) !important;align-items:start}
-  body[data-page="main"] #v-grade .grid2 > .col:first-child{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) !important;grid-template-rows:min-content 1fr;align-items:start}
-  body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-calendar:not(.pg-daily):not(.addcard){grid-column:1;grid-row:1 / span 2}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) !important;grid-template-rows:min-content min-content 1fr;align-items:start}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-calendar:not(.pg-daily):not(.addcard){grid-column:1;grid-row:1 / span 3}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-daily.is-today{display:none}
+  body[data-page="main"] #v-grade .grid2 > .col:first-child > .gmemo-card{grid-column:2;grid-row:3}
   body[data-page="main"] #v-grade .grid2 > .col:first-child > .pg-daily{grid-column:2;grid-row:1}
   body[data-page="main"] #v-grade .grid2 > .col:first-child > .addcard{grid-column:2;grid-row:2}
   /* 나의 공간: 오늘·할 일·우리 학년 | 메모·입력·학급일지 | 학생 */
@@ -2478,8 +2480,8 @@ body.ro .w-only{display:none!important}
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- APP_VERSION 2.14 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3765077a67bb2f2f8c92dcc308f15d21ff5cdce0/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<!-- APP_VERSION 2.15 -->
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@36a283c0b24145d416198c0cc41e22d6a4793cd6/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
