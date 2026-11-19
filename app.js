@@ -975,7 +975,14 @@ function renderLinks(){
 $('#links').addEventListener('change', async e => { const sel = e.target.closest('[data-link-subj]'); if (!sel) return; try { await S.db.doc('links/' + sel.dataset.linkSubj).update({subj:sel.value}); } catch (er){ wErr(er, true); } });
 /* ---------- 수업자료: 과목별 단원 목차 ---------- */
 /* 출판사별 목차. 확인한 것만 넣어요. 없으면 "목차 고치기"로 한 번 붙여 넣어요 */
-const UNIT_LIB = {};
+const UNIT_LIB = {
+  '3': {
+    math:{'지학사':{'1':['1. 덧셈과 뺄셈', '2. 평면도형', '3. 나눗셈', '4. 곱셈', '5. 길이와 시간', '6. 분수와 소수', '프로젝트'], '2':['1. 곱셈', '2. 원', '3. 나눗셈', '4. 무게와 들이', '5. 분수', '6. 그림그래프', '프로젝트']}},
+    mus:{'지학사':{'1':['1. 음악과 만나요', '2. 음악을 열어요', '3. 음악과 놀아요', '4. 음악을 나누어요'], '2':['1. 음악과 만나요', '2. 음악을 열어요', '3. 음악과 놀아요', '4. 음악을 나누어요']}},
+    pe:{'지학사':{'1':['1. 운동', '2. 스포츠', '3. 표현'], '2':['1. 운동', '2. 스포츠', '3. 표현']}},
+    sci:{'아이스크림미디어':{'2':['안전하게 탐구하기', '1. 물체와 물질', '2. 지구와 바다', '3. 소리의 성질', '4. 감염병과 건강한 생활']}}
+  }
+};
 const UN = {open:new Set(), add:null, edit:false};
 const gradeNum = () => { const m = String(S.settings.gradeName || '').match(/(\d)/); return m ? m[1] : '3'; };
 const curSem = () => { const m = today().getMonth() + 1; return m >= 3 && m <= 7 ? '1' : '2'; };
