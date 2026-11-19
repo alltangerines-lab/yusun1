@@ -876,6 +876,9 @@ select.lsubj{width:auto;padding:1px 4px;font-size:11.5px;margin-right:6px;border
 .tk-add{display:flex;gap:8px;margin-bottom:4px}.tk-add input{flex:1;min-width:0}
 .tool.morn{--mo:1;display:grid;gap:16px;width:min(100%,2400px);margin:0 auto;align-content:start;justify-content:stretch;align-items:start;flex:none}
 .mo-head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.day-nav{display:inline-flex;gap:4px;align-items:center}
+.day-nav #mo-today[aria-pressed="true"],.day-nav #nt-today[aria-pressed="true"]{opacity:.5}
+.ahead-tag{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:var(--warn-bg, #fff4d6);color:var(--warn, #9a6b00);font-size:12px;font-weight:700;vertical-align:middle;white-space:nowrap}
 .mo-date{flex:1;display:grid}
 .mo-date b{font-size:calc(40px * var(--mo));letter-spacing:-.01em}
 .mo-date span{font-size:calc(18px * var(--mo));color:var(--muted)}
@@ -2479,7 +2482,7 @@ body.ro .w-only{display:none!important}
     <button type="button" class="btn small" id="tools-close">닫기</button>
   </div>
   <div class="tool morn" id="tool-morn" hidden>
-    <div class="mo-head"><div class="mo-date"><b id="mo-date"></b><span id="mo-hello"></span></div><div class="mo-size"><button type="button" class="btn small" id="mo-small" aria-label="글자 작게">가-</button><button type="button" class="btn small" id="mo-big" aria-label="글자 크게">가+</button></div></div>
+    <div class="mo-head"><div class="mo-date"><b id="mo-date"></b><span id="mo-hello"></span></div><div class="day-nav" role="group" aria-label="날짜 옮기기"><button type="button" class="btn small" id="mo-prev" aria-label="앞 등교일">‹</button><button type="button" class="btn small" id="mo-today">오늘</button><button type="button" class="btn small" id="mo-next" aria-label="다음 등교일 (미리 쓰기)">›</button></div><div class="mo-size"><button type="button" class="btn small" id="mo-small" aria-label="글자 작게">가-</button><button type="button" class="btn small" id="mo-big" aria-label="글자 크게">가+</button></div></div>
     <div class="mo-grid">
       <div class="mo-left"><section class="mo-card mo-tt"><h3>오늘 시간표</h3><ol id="mo-tt"></ol></section>
       <section class="mo-card mo-meal" id="mo-meal-card"><h3>오늘 급식</h3><div id="mo-meal"></div></section></div>
@@ -2499,9 +2502,9 @@ body.ro .w-only{display:none!important}
   <div class="tool nt" id="tool-note" hidden>
     <div class="nt-grid">
       <section class="mo-card nt-out">
-        <div class="row"><h3 id="nt-for" style="margin:0"></h3><span class="grow"></span><button type="button" class="btn small" id="nt-redo" title="내일 시간표·준비물로 처음부터 다시 만들기">다시 만들기</button></div>
+        <div class="row"><h3 id="nt-for" style="margin:0"></h3><span class="day-nav" role="group" aria-label="날짜 옮기기"><button type="button" class="btn small" id="nt-prev" aria-label="앞 등교일 알림장">‹</button><button type="button" class="btn small" id="nt-today">오늘</button><button type="button" class="btn small" id="nt-next" aria-label="다음 등교일 알림장 (미리 쓰기)">›</button></span><span class="grow"></span><button type="button" class="btn small" id="nt-redo" title="내일 시간표·준비물로 처음부터 다시 만들기">다시 만들기</button></div>
         <textarea id="nt-text" rows="8" aria-label="알림장 내용" spellcheck="false"></textarea>
-        <div class="row"><span class="hint grow">1번은 내일 시간표예요. 수업 계획에 적은 준비물과 내일 학사 일정도 저절로 들어가요. 고쳐 써도 돼요.</span><button type="button" class="btn" id="nt-big">크게 보기</button><button type="button" class="btn" id="nt-copy">복사하기</button><button type="button" class="btn primary" id="nt-send">복사하고 학교종이 열기</button></div>
+        <div class="row"><span class="hint grow">1번은 다음 등교일 시간표예요. 수업 계획에 적은 준비물과 그날 학사 일정도 저절로 들어가요. 고쳐 써도 돼요.</span><button type="button" class="btn" id="nt-big">크게 보기</button><button type="button" class="btn" id="nt-copy">복사하기</button><button type="button" class="btn primary" id="nt-send">복사하고 학교종이 열기</button></div>
       </section>
       <section class="mo-card nt-safe">
         <div class="row"><h3 style="margin:0">안전 문구</h3><span class="grow"></span>
@@ -2596,7 +2599,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.15 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@c377251ba797056d02986eb4a5a5748bc22d4867/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3fd06871ec3c5d0d2f20b0190a2fd913fada388e/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
