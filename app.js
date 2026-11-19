@@ -3830,7 +3830,7 @@ const CHANGELOG = [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
     '할 일을 매주·매월 반복할 수 있어요. "매주 금요일 주간학습 안내 올리기", "매월 말일 출석부 마감"처럼 적거나, 학년 할 일 "고치기"에서 반복을 고르면 돼요. 끝내면 다음 차례가 저절로 생겨요.',
-    '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 한글 파일(.hwpx)을 올리면 과목·시기·단원·평가 요소가 간단한 표로 정리되고, 줄을 누르면 성취기준과 성취수준이 펼쳐져요. 이번 달 평가만 골라 보거나 직접 넣고 고칠 수도 있어요. 사진으로 올리기도 그대로 돼요.',
+    '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 한글 파일(.hwpx)을 올리면 과목·시기·단원·평가 요소가 원래 문서 순서대로 간단한 표로 정리되고, 줄을 누르면 성취기준과 성취수준이 펼쳐져요. 이번 달 평가만 골라 보거나 직접 넣고 고칠 수도 있어요. 사진으로 올리기도 그대로 돼요.',
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.'
   ]],
@@ -3986,7 +3986,8 @@ $('#pp-date').addEventListener('change', e => { if (e.target.value) ppGo(e.targe
 const EVP = () => `data/users/${S.uid}/evalplan`;
 S.ev = {imgs:[], items:[]};
 const evSave = () => { if (!S.uid) return; queueSet(EVP(), () => ({imgs:(S.ev.imgs || []).slice(), items:JSON.parse(JSON.stringify(S.ev.items || [])), updatedAt:Date.now()}), false); };
-const EV = {subj:'all', when:'all', open:null, edit:null};
+const EV = {subj:'all', when:'all', open:null, edit:null, sort:'subj'};
+try { const v = localStorage.getItem('evSort'); if (v === 'subj' || v === 'when') EV.sort = v; } catch (e){}
 const EV_LV = ['매우 잘함', '잘함', '보통', '노력 요함'];
 const evItems = () => (S.ev.items || []);
 const evMonth = it => { const m = String(it.when || '').match(/(\d{1,2})\s*월/); return m ? +m[1] : null; };
@@ -4009,13 +4010,18 @@ function renderEval(){
   if (EV.when === 'now') list = list.filter(x => evMonth(x) === cm);
   if (EV.when === 'next') list = list.filter(x => [cm, nm].includes(evMonth(x)));
   const mo = x => { const m = evMonth(x); return m == null ? 99 : (m + 9) % 12; };
-  if (EV.subj === 'all') list.sort((a, b) => mo(a) - mo(b) || a._i - b._i);
+  const so = {}; subs.forEach((x, i) => so[x] = i);
+  if (EV.sort === 'when') list.sort((a, b) => mo(a) - mo(b) || a._i - b._i);
+  else list.sort((a, b) => a._i - b._i);
+  $$('#ev-sort button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === EV.sort));
+  list.forEach((x, k) => { x._first = k === 0 || (list[k - 1].subj || '기타') !== (x.subj || '기타'); });
   if (!all.length && EV.edit == null){ $('#ev-table').innerHTML = '<div class="jd-empty">평가 계획 한글 파일(.hwpx)을 가져오면 과목·시기·평가 요소가 표로 정리돼요. 위 "한글 파일(.hwpx)에서 가져오기"를 눌러 주세요.<br><small>.hwp 파일이면 한글에서 "다른 이름으로 저장 → HWPX"로 저장한 뒤 올려 주세요.</small></div>'; return; }
+  let k0 = 0;
   let h = '<div class="tablewrap"><table class="ev-t"><thead><tr><th class="n">시기</th><th>과목</th><th>단원</th><th>평가 요소</th><th>방법</th></tr></thead><tbody>';
   if (EV.edit === -1) h += `<tr class="ev-open"><td colspan="5">${evForm({})}</td></tr>`;
   list.forEach(x => {
     const m = evMonth(x), now = m === cm;
-    h += `<tr class="ev-row ${now ? 'now' : ''} ${EV.open === x._i ? 'on' : ''}" data-evi="${x._i}" tabindex="0"><td class="n">${esc(x.when || '')}</td><td class="sj">${esc(x.subj || '')}</td><td class="u">${esc(x.unit || '')}</td><td class="el">${esc(x.elem || '')}</td><td class="tg">${evTags(x).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</td></tr>`;
+    h += `<tr class="ev-row ${now ? 'now' : ''} ${EV.sort === 'subj' && x._first && k0++ ? 'grp' : ''} ${EV.open === x._i ? 'on' : ''}" data-evi="${x._i}" tabindex="0"><td class="n">${esc(x.when || '')}</td><td class="sj">${EV.sort === 'subj' && x._first === false ? '' : esc(x.subj || '')}</td><td class="u">${esc(x.unit || '')}</td><td class="el">${esc(x.elem || '')}</td><td class="tg">${evTags(x).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</td></tr>`;
     if (EV.open === x._i){
       h += `<tr class="ev-open"><td colspan="5">${EV.edit === x._i ? evForm(x) : `<div class="ev-det">
         ${x.std ? `<div><b>성취기준</b><p>${esc(x.std)}</p></div>` : ''}
@@ -4042,6 +4048,7 @@ function renderEvPhotos(){
   hydrateImgs();
 }
 $('#ev-subj').addEventListener('click', e => { const b = e.target.closest('[data-evs]'); if (!b) return; EV.subj = b.dataset.evs; EV.open = null; EV.edit = null; renderEval(); });
+$('#ev-sort').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; EV.sort = b.dataset.v; try { localStorage.setItem('evSort', EV.sort); } catch (er){} renderEval(); });
 $('#ev-when').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; EV.when = b.dataset.v; renderEval(); });
 $('#ev-new').onclick = () => { if (!S.uid) return; EV.edit = -1; EV.open = null; renderEval(); const f = $('#evf-subj'); if (f){ if (EV.subj !== 'all') f.value = EV.subj; f.focus(); } };
 $('#ev-table').addEventListener('click', e => {
