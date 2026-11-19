@@ -556,7 +556,7 @@ function imageTarget(name){
   if (name === 'j' || name === 'cns' || name === 'stu') return {scope:'private', add:refs => { S.stage[name].push(...refs); renderStage(name); }};
   if (name === 'ops') return {scope:'shared', add:refs => { S.stage.ops = (S.stage.ops || []).concat(refs); renderStage('ops'); }};
   if (name === 'mo') return {scope:'private', add:refs => { const r = rt(), k = ymd(today()); const cap = $('#mo-new').value.trim().slice(0, 200); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:cap, imgs:refs}])}); $('#mo-new').value = ''; saveRoutine(); renderMorning(false); toast('사진을 오늘 할 일에 붙였어요.'); }};
-  if (name === 'eval') return {scope:'private', add:refs => { S.ev.imgs = (S.ev.imgs || []).concat(refs); evSave(); renderEval(); toast(`평가 계획 사진 ${refs.length}장을 올렸어요.`); }};
+  if (name === 'eval') return {scope:'private', add:refs => { S.ev.imgs = (S.ev.imgs || []).concat(refs); evSave(); $('#ev-photos').open = true; renderEval(); toast(`평가 계획 사진 ${refs.length}장을 올렸어요.`); }};
   if (name === 'mops') return {scope:'private', add:refs => { S.stage.mops = (S.stage.mops || []).concat(refs); renderStage('mops'); }};
   if (name === 'gmemo') return {scope:'shared', add:async refs => { const cur = (S.gmemo && S.gmemo.imgs) || []; try { await S.db.doc('grade/memo').set(Object.assign({}, S.gmemo || {}, {imgs:cur.concat(refs), updatedAt:Date.now(), updatedBy:S.uid})); } catch (e){ wErr(e, true); } }};
   if (name === 'daily') return {scope:'shared', add:refs => { S.dailyImgs.push(...refs); markDailyDirty(); renderDailyThumbs(); }};
@@ -1670,8 +1670,8 @@ function startPrivate(){
     });
     listen(db.doc(EVP()), 'evalplan', snap => {
       if (busy(EVP())) return;
-      S.ev = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {imgs:[]}; if (!Array.isArray(S.ev.imgs)) S.ev.imgs = [];
-      if (S.space === 'me' && S.meTab === 'eval') renderEval();
+      S.ev = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {imgs:[]}; if (!Array.isArray(S.ev.imgs)) S.ev.imgs = []; if (!Array.isArray(S.ev.items)) S.ev.items = [];
+      if (S.space === 'me' && S.meTab === 'eval' && !(document.activeElement && document.activeElement.closest('#ev-form'))) renderEval();
     });
     listen(db.doc(JDP()), 'jd', snap => {
       if (busy(JDP())) return;
@@ -3830,7 +3830,7 @@ const CHANGELOG = [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
     '할 일을 매주·매월 반복할 수 있어요. "매주 금요일 주간학습 안내 올리기", "매월 말일 출석부 마감"처럼 적거나, 학년 할 일 "고치기"에서 반복을 고르면 돼요. 끝내면 다음 차례가 저절로 생겨요.',
-    '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 사진(jpg)을 여러 장 올려 두면 원래 크기로 쭉 보여요.',
+    '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 한글 파일(.hwpx)을 올리면 과목·시기·단원·평가 요소가 간단한 표로 정리되고, 줄을 누르면 성취기준과 성취수준이 펼쳐져요. 이번 달 평가만 골라 보거나 직접 넣고 고칠 수도 있어요. 사진으로 올리기도 그대로 돼요.',
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.'
   ]],
@@ -3984,15 +3984,146 @@ $('#pp-date').addEventListener('change', e => { if (e.target.value) ppGo(e.targe
 
 /* ---------- 나의 공간: 평가 (평가 계획 사진) ---------- */
 const EVP = () => `data/users/${S.uid}/evalplan`;
-S.ev = {imgs:[]};
-const evSave = () => { if (!S.uid) return; queueSet(EVP(), () => ({imgs:(S.ev.imgs || []).slice(), updatedAt:Date.now()}), false); };
+S.ev = {imgs:[], items:[]};
+const evSave = () => { if (!S.uid) return; queueSet(EVP(), () => ({imgs:(S.ev.imgs || []).slice(), items:JSON.parse(JSON.stringify(S.ev.items || [])), updatedAt:Date.now()}), false); };
+const EV = {subj:'all', when:'all', open:null, edit:null};
+const EV_LV = ['매우 잘함', '잘함', '보통', '노력 요함'];
+const evItems = () => (S.ev.items || []);
+const evMonth = it => { const m = String(it.when || '').match(/(\d{1,2})\s*월/); return m ? +m[1] : null; };
+const evTags = it => (String(it.method || '').match(/\[([^\]]+)\]/g) || []).map(x => x.slice(1, -1)).filter((x, i, a) => a.indexOf(x) === i);
 function renderEval(){
   if (S.meTab !== 'eval') return;
+  const all = evItems(), im = S.ev.imgs || [];
+  $('#ev-photo-n').textContent = im.length ? `${im.length}장` : '';
+  if (!all.length && im.length && !$('#ev-photos').open) $('#ev-photos').open = true;
+  renderEvPhotos();
+  const subs = [...new Set(all.map(x => x.subj || '기타'))];
+  if (EV.subj !== 'all' && !subs.includes(EV.subj)) EV.subj = 'all';
+  $('#ev-subj').innerHTML = all.length ? [['all', `전체 ${all.length}`]].concat(subs.map(x => [x, `${x} ${all.filter(y => (y.subj || '기타') === x).length}`])).map(([k, n]) => `<button type="button" class="stab" data-evs="${esc(k)}" ${EV.subj === k ? 'aria-current="page"' : ''}>${esc(n)}</button>`).join('') : '';
+  $$('#ev-when button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === EV.when));
+  const cm = today().getMonth() + 1, nm = cm % 12 + 1;
+  const thisN = all.filter(x => evMonth(x) === cm).length;
+  $('#ev-sum').textContent = all.length ? `${all.length}개 평가 · 이번 달(${cm}월) ${thisN}개. 줄을 누르면 성취기준과 성취수준이 펼쳐져요.` : '';
+  let list = all.map((x, i) => Object.assign({_i:i}, x));
+  if (EV.subj !== 'all') list = list.filter(x => (x.subj || '기타') === EV.subj);
+  if (EV.when === 'now') list = list.filter(x => evMonth(x) === cm);
+  if (EV.when === 'next') list = list.filter(x => [cm, nm].includes(evMonth(x)));
+  const mo = x => { const m = evMonth(x); return m == null ? 99 : (m + 9) % 12; };
+  if (EV.subj === 'all') list.sort((a, b) => mo(a) - mo(b) || a._i - b._i);
+  if (!all.length && EV.edit == null){ $('#ev-table').innerHTML = '<div class="jd-empty">평가 계획 한글 파일(.hwpx)을 가져오면 과목·시기·평가 요소가 표로 정리돼요. 위 "한글 파일(.hwpx)에서 가져오기"를 눌러 주세요.<br><small>.hwp 파일이면 한글에서 "다른 이름으로 저장 → HWPX"로 저장한 뒤 올려 주세요.</small></div>'; return; }
+  let h = '<div class="tablewrap"><table class="ev-t"><thead><tr><th class="n">시기</th><th>과목</th><th>단원</th><th>평가 요소</th><th>방법</th></tr></thead><tbody>';
+  if (EV.edit === -1) h += `<tr class="ev-open"><td colspan="5">${evForm({})}</td></tr>`;
+  list.forEach(x => {
+    const m = evMonth(x), now = m === cm;
+    h += `<tr class="ev-row ${now ? 'now' : ''} ${EV.open === x._i ? 'on' : ''}" data-evi="${x._i}" tabindex="0"><td class="n">${esc(x.when || '')}</td><td class="sj">${esc(x.subj || '')}</td><td class="u">${esc(x.unit || '')}</td><td class="el">${esc(x.elem || '')}</td><td class="tg">${evTags(x).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</td></tr>`;
+    if (EV.open === x._i){
+      h += `<tr class="ev-open"><td colspan="5">${EV.edit === x._i ? evForm(x) : `<div class="ev-det">
+        ${x.std ? `<div><b>성취기준</b><p>${esc(x.std)}</p></div>` : ''}
+        ${x.method ? `<div><b>수업·평가 방법</b><p>${esc(x.method)}</p></div>` : ''}
+        ${(x.levels || []).length ? `<div><b>성취수준</b><table class="ev-lv">${x.levels.map(([n, t]) => `<tr><th>${esc(n)}</th><td>${esc(t)}</td></tr>`).join('')}</table></div>` : x.lvText ? `<div><b>성취수준</b><p>${esc(x.lvText)}</p></div>` : ''}
+        <div class="row"><span class="grow"></span><button type="button" class="btn small" data-evedit="${x._i}">고치기</button><button type="button" class="btn small" data-evrm="${x._i}">지우기</button></div></div>`}</td></tr>`;
+    }
+  });
+  if (!list.length && EV.edit !== -1) h += `<tr><td colspan="5" class="hint" style="text-align:center;padding:14px">${EV.when === 'now' ? '이번 달 평가가 없어요.' : '해당하는 평가가 없어요.'}</td></tr>`;
+  $('#ev-table').innerHTML = h + '</tbody></table></div>';
+}
+function evForm(x){
+  const F = (f, n, ta, ph) => `<label class="f" for="evf-${f}">${n}${ta ? `<textarea id="evf-${f}" rows="2" placeholder="${ph || ''}">${esc(x[f] || '')}</textarea>` : `<input id="evf-${f}" value="${esc(x[f] || '')}" placeholder="${ph || ''}">`}</label>`;
+  const lv = x.levels && x.levels.length ? x.levels : EV_LV.map(n => [n, '']);
+  return `<form class="ev-form" id="ev-form"><div class="jl-grid">${F('subj', '과목', 0, '국어')}${F('when', '평가 시기', 0, '10월')}${F('unit', '단원 (평가영역)', 0, '4. 서로 존중하며 대화해요 (듣기·말하기)')}</div>
+    ${F('elem', '평가 요소', 1)}${F('std', '성취기준', 1, '[4국01-04] …')}${F('method', '수업·평가 방법', 1, '[실기][협력적 문제해결력 평가] …')}
+    <div><b style="font-size:13px">성취수준</b>${lv.map(([n, t], i) => `<div class="row" style="margin-top:4px"><span style="min-width:70px;font-size:13px">${esc(n)}</span><input id="evf-lv${i}" value="${esc(t)}" style="flex:1" aria-label="${esc(n)}"></div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><span class="grow"></span><button type="button" class="btn" data-evcancel>취소</button><button type="submit" class="btn primary">저장</button></div></form>`;
+}
+function renderEvPhotos(){
   const im = S.ev.imgs || [];
   $('#ev-list').innerHTML = im.length ? im.map((r, i) => `<figure class="ev-item"><div class="ev-bar"><b>${i + 1}</b><span class="grow"></span><button type="button" class="btn small" data-evmv="-1" data-i="${i}" ${i ? '' : 'disabled'} aria-label="${i + 1}번째 사진 위로">위로</button><button type="button" class="btn small" data-evmv="1" data-i="${i}" ${i < im.length - 1 ? '' : 'disabled'} aria-label="${i + 1}번째 사진 아래로">아래로</button><button type="button" class="btn small" data-evdel="${i}" aria-label="${i + 1}번째 사진 지우기">지우기</button></div><div class="ev-img">${thumbsHtml([r], '')}</div></figure>`).join('')
-    : '<div class="jd-empty">아직 올린 사진이 없어요. 위 "사진 올리기"로 평가 계획 jpg를 골라 주세요. 여러 장을 한 번에 골라도 돼요.</div>';
+    : '<p class="hint" style="margin:4px 0">올린 사진이 없어요.</p>';
   hydrateImgs();
 }
+$('#ev-subj').addEventListener('click', e => { const b = e.target.closest('[data-evs]'); if (!b) return; EV.subj = b.dataset.evs; EV.open = null; EV.edit = null; renderEval(); });
+$('#ev-when').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; EV.when = b.dataset.v; renderEval(); });
+$('#ev-new').onclick = () => { if (!S.uid) return; EV.edit = -1; EV.open = null; renderEval(); const f = $('#evf-subj'); if (f){ if (EV.subj !== 'all') f.value = EV.subj; f.focus(); } };
+$('#ev-table').addEventListener('click', e => {
+  if (e.target.closest('[data-evcancel]')){ EV.edit = null; renderEval(); return; }
+  const ed = e.target.closest('[data-evedit]'); if (ed){ EV.edit = +ed.dataset.evedit; renderEval(); return; }
+  const rm = e.target.closest('[data-evrm]'); if (rm){ if (!twoStep(rm, '정말 지울까요?')) return; S.ev.items.splice(+rm.dataset.evrm, 1); EV.open = null; evSave(); renderEval(); return; }
+  if (e.target.closest('.ev-form')) return;
+  const r = e.target.closest('[data-evi]'); if (!r) return;
+  const i = +r.dataset.evi; EV.open = EV.open === i ? null : i; EV.edit = null; renderEval();
+});
+$('#ev-table').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-evi]')){ e.preventDefault(); e.target.click(); } });
+$('#ev-table').addEventListener('submit', e => {
+  e.preventDefault(); if (!S.uid) return;
+  const g = id => ($('#evf-' + id) || {}).value || '';
+  const cur = EV.edit >= 0 ? S.ev.items[EV.edit] || {} : {};
+  const lvNames = cur.levels && cur.levels.length ? cur.levels.map(l => l[0]) : EV_LV;
+  const it = {subj:g('subj').trim() || '기타', when:g('when').trim(), unit:g('unit').trim(), elem:g('elem').trim(), std:g('std').trim(), method:g('method').trim(), levels:lvNames.map((n, i) => [n, g('lv' + i).trim()]).filter(l => l[1]), lvText:cur.lvText || ''};
+  if (!it.elem && !it.unit){ toast('단원이나 평가 요소를 적어 주세요.'); return; }
+  S.ev.items = S.ev.items || [];
+  if (EV.edit >= 0){ S.ev.items[EV.edit] = it; EV.open = EV.edit; } else { S.ev.items.push(it); EV.open = S.ev.items.length - 1; }
+  EV.edit = null; evSave(); renderEval(); toast('저장했어요.');
+});
+/* 한글(.hwpx) 평가 계획 읽기: hwpx는 zip 안에 표가 XML로 들어 있어요 */
+async function unzipText(buf, want){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), out = {};
+  let e = buf.byteLength - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('zip');
+  let p = dv.getUint32(e + 16, true); const n = dv.getUint16(e + 10, true), td = new TextDecoder();
+  for (let k = 0; k < n; k++){
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+    const name = td.decode(u8.subarray(p + 46, p + 46 + nl)); p += 46 + nl + xl + cl;
+    if (!want(name)) continue;
+    const ds = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true), data = u8.subarray(ds, ds + csize);
+    out[name] = method === 0 ? td.decode(data) : await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+  }
+  return out;
+}
+function evParseXml(xmls){
+  const items = []; let subj = '';
+  const lname = el => el.localName;
+  const kids = (el, n) => [...el.children].filter(c => lname(c) === n);
+  const cellText = tc => [...tc.getElementsByTagNameNS('*', 'p')].map(p => [...p.getElementsByTagNameNS('*', 't')].map(t => t.textContent).join('')).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ').trim();
+  xmls.forEach(xml => {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    [...doc.getElementsByTagNameNS('*', 'tbl')].forEach(tbl => {
+      const rows = kids(tbl, 'tr').map(tr => kids(tr, 'tc').map(tc => { const a = kids(tc, 'cellAddr')[0], sp = kids(tc, 'cellSpan')[0]; return {c:+(a && a.getAttribute('colAddr') || 0), rs:+(sp && sp.getAttribute('rowSpan') || 1), t:cellText(tc)}; }));
+      if (!rows.length) return;
+      if (rows.length === 1){ const t = rows[0].map(c => c.t).join(' '); const m = t.match(/\d\s*학년\s*\d\s*학기\s*(.+)$/); if (m) subj = m[1].trim(); return; }
+      const head = rows[0], col = re => (head.find(c => re.test(c.t.replace(/\s/g, ''))) || {}).c;
+      const cE = col(/평가요소/); if (cE == null) return;
+      const cS = col(/성취기준/), cU = col(/단원|평가영역/), cM = col(/방법/), cL = col(/성취수준/), cW = col(/시기/);
+      const at = (r, c) => (c == null ? '' : ((r.find(x => x.c === c) || {}).t || ''));
+      let cur = null;
+      rows.slice(1).forEach(r => {
+        const starts = r.some(x => x.c === cE);
+        if (starts){
+          cur = {subj:subj || '기타', std:at(r, cS), unit:at(r, cU), elem:at(r, cE).replace(/^▪\s*/, '').replace(/\s▪\s*/g, ' · '), method:at(r, cM).replace(/^▪\s*/, '').replace(/\s▪\s*/g, ' · '), when:at(r, cW), levels:[], lvText:''};
+          items.push(cur);
+        }
+        if (!cur || cL == null) return;
+        const nm = at(r, cL), tx = at(r, cL + 1);
+        if (EV_LV.includes(nm.replace(/\s+/g, ' '))) cur.levels.push([nm, tx]);
+        else if (starts && nm) cur.lvText = nm;
+      });
+    });
+  });
+  return items;
+}
+$('#ev-file-btn').onclick = () => { if (!S.uid) return; $('#ev-file').value = ''; $('#ev-file').click(); };
+$('#ev-file').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  if (/\.hwp$/i.test(f.name)){ toast('.hwp 파일은 읽을 수 없어요. 한글에서 "다른 이름으로 저장 → HWPX"로 저장한 뒤 올려 주세요.'); return; }
+  try {
+    const xs = await unzipText(await f.arrayBuffer(), n => /^Contents\/section\d+\.xml$/.test(n));
+    const items = evParseXml(Object.keys(xs).sort((a, b) => a.localeCompare(b, 'en', {numeric:true})).map(k => xs[k]));
+    if (!items.length){ toast('파일에서 평가 표를 찾지 못했어요. "평가 요소" 칸이 있는 표인지 확인해 주세요.'); return; }
+    const had = (S.ev.items || []).length;
+    S.ev.items = items; EV.subj = 'all'; EV.open = null; EV.edit = null; evSave(); renderEval();
+    toast(`${new Set(items.map(x => x.subj)).size}개 과목, ${items.length}개 평가를 가져왔어요.${had ? ' (예전 목록은 바꿨어요)' : ''}`);
+  } catch (er){ console.error(er); toast('파일을 읽지 못했어요. 한글에서 HWPX로 다시 저장해 보세요.'); }
+});
 $('#ev-list').addEventListener('click', async e => {
   if (!S.uid) return;
   const mv = e.target.closest('[data-evmv]'), del = e.target.closest('[data-evdel]');
