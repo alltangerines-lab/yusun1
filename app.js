@@ -649,7 +649,8 @@ const sortedTabs = () => S.tabs.slice().sort((a, b) => (a.createdAt || 0) - (b.c
 function applyRoute(r){
   let space = 'grade', page = 'main';
   let m = curMP().find(x => x[0] === r); const g = GPAGES.find(x => x[0] === r);
-  if (!m && (MPAGES.concat(JPAGES)).some(x => x[0] === r)){ r = 'me'; m = curMP()[0]; try { history.replaceState(null, '', '#me'); } catch (e){} }
+  let redirected = false;
+  if (!m && (MPAGES.concat(JPAGES)).some(x => x[0] === r)){ if (!S.profileLoaded && !S.pendDone) S.pendRoute = r; r = 'me'; m = curMP()[0]; redirected = true; try { history.replaceState(null, '', '#me'); } catch (e){} }
   if (m){ space = 'me'; S.meTab = m[2]; }
   else if (g){ page = g[2]; if (r === 'links') S.linkSubj = 'all'; }
   else if (r === 'daily'){ r = 'calendar'; page = 'calendar'; }
@@ -658,6 +659,8 @@ function applyRoute(r){
   else r = 'grade';
   const changed = S.route !== r;
   S.route = r; S.space = space; S.page = page;
+  /* 새로고침해도 보던 곳으로 돌아오게 기억해 둬요 */
+  if (!redirected){ try { localStorage.setItem('gyomu.lastRoute', r); } catch (e){} }
   document.body.dataset.space = space;
   document.body.dataset.page = space === 'me' ? 'me' : page;
   try { placeGmemo(); } catch (e){}
@@ -1646,7 +1649,8 @@ function startPrivate(){
       if (busy(PROFILE())) return;
       const wasJD = isJD();
       S.profile = Object.assign({myClass:'', roster:[]}, snap.exists ? snap.data() : {});
-      if (wasJD !== isJD() && S.space === 'me'){ applyRoute(S.route); }
+      if (S.pendRoute){ const pr = S.pendRoute; S.pendRoute = null; S.pendDone = true; try { history.replaceState(null, '', '#' + pr); } catch (e){} applyRoute(pr); }
+      else if (wasJD !== isJD() && S.space === 'me'){ applyRoute(S.route); }
       if (!snap.metadata.fromCache){ S.profileLoaded = true; setTimeout(maybeShowNews, 600); }
       renderHeader(); renderTasks(); if (S.space === 'me') renderMe();
     });
@@ -3844,6 +3848,7 @@ const CHANGELOG = [
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
+    '새로고침해도 학년 공간 첫 화면이 아니라 보던 탭으로 돌아와요.',
     '예산: 줄마다 메모 칸과 산출내역 칸이 생기고, 비어 있는 에듀파인 칸(세부사업·원가통계비목)은 숨겨요. 학급 줄은 "반마다"를 누르면 반별 줄로 나눠져요.',
     '나의 공간 학생별: 왼쪽에 학생 이름이 두 줄로 쭉 있고, 누르면 오른쪽에 그 학생 카드와 누가기록이 한눈에 보이는 폭으로 나와요.',
     '알림장 제목 날짜를 내일이 아니라 쓰는 날(오늘)로 바꿨어요. 1번 시간표와 준비물은 그대로 다음 등교일 것이에요.',
@@ -5291,7 +5296,11 @@ $$('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === 
 window.addEventListener('hashchange', () => applyRoute(routeOf(location.hash)));
 
 window.__parse = parseLine; window.__cat = inferCat; window.__att = inferAtt;
-applyRoute(routeOf(location.hash));
+(() => {
+  let r0 = routeOf(location.hash);
+  if (!location.hash || location.hash === '#'){ try { const v = localStorage.getItem('gyomu.lastRoute'); if (v && /^[A-Za-z0-9_-]+$/.test(v)){ r0 = v; history.replaceState(null, '', '#' + v); } } catch (e){} }
+  applyRoute(r0);
+})();
 $('#note-done-btn').onclick = () => { S.notesDoneOpen = !S.notesDoneOpen; renderNotesDone(); };
 
 $('#me-class').onclick = () => { if (!S.uid || S.arc) return; S.clsAsk = !S.clsAsk || (!S.profile.myClass && !isJD()); renderHeader(); if (S.clsAsk) $('#cls-ask-sel').focus(); };
