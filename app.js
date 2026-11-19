@@ -690,16 +690,25 @@ function saveTabPrefs(items){
   tp[k] = {order:items.map(x => x.key), hidden:items.filter(x => x.hidden).map(x => x.key)};
   S.profile.tabPrefs = tp; saveProfile(); renderStrip(); renderTabArrange();
 }
+/* 과목 숨기기·순서: 내 화면에만 */
+function subjPref(){ return (((S.profile || {}).tabPrefs || {}).subj) || {}; }
+function subjOrdered(){ const ord = subjPref().order || [], pos = k => { const i = ord.indexOf(k); return i < 0 ? 1e4 : i; }; return SUBJ.map((x, i) => [x, i]).sort((a, b) => (pos(a[0][0]) - pos(b[0][0])) || (a[1] - b[1])).map(x => x[0]); }
+function saveSubjPref(order, hidden){ const tp = Object.assign({}, S.profile.tabPrefs || {}); tp.subj = {order, hidden}; S.profile.tabPrefs = tp; saveProfile(); renderSubjArrange(); renderLinks(); }
 function renderSubjArrange(){
-  const hid = new Set((((S.profile || {}).tabPrefs || {}).subj || {}).hidden || []);
-  $('#sa-list').innerHTML = SUBJ.map(([k, n]) => `<div class="ta-row ${hid.has(k) ? 'off' : ''}"><label class="ta-name"><input type="checkbox" data-sah="${k}" ${hid.has(k) ? '' : 'checked'}> ${esc(n)}</label></div>`).join('');
+  const hid = new Set(subjPref().hidden || []), list = subjOrdered();
+  $('#sa-list').innerHTML = list.map(([k, n], i) => `<div class="ta-row ${hid.has(k) ? 'off' : ''}"><label class="ta-name"><input type="checkbox" data-sah="${k}" ${hid.has(k) ? '' : 'checked'}> ${esc(n)}</label><button type="button" class="btn small" data-samv="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="${esc(n)} 앞으로">↑</button><button type="button" class="btn small" data-samv="${k}" data-d="1" ${i === list.length - 1 ? 'disabled' : ''} aria-label="${esc(n)} 뒤로">↓</button></div>`).join('');
 }
 $('#link-subj').addEventListener('click', e => { if (e.target.id !== 'subj-arr') return; $('#dlg-subj').hidden = false; renderSubjArrange(); });
 $('#dlg-subj').addEventListener('change', e => {
   const c = e.target.closest('[data-sah]'); if (!c) return;
-  const tp = Object.assign({}, S.profile.tabPrefs || {}), hid = new Set((tp.subj || {}).hidden || []);
+  const hid = new Set(subjPref().hidden || []);
   c.checked ? hid.delete(c.dataset.sah) : hid.add(c.dataset.sah);
-  tp.subj = {hidden:[...hid]}; S.profile.tabPrefs = tp; saveProfile(); renderSubjArrange(); renderLinks();
+  saveSubjPref(subjOrdered().map(x => x[0]), [...hid]);
+});
+$('#dlg-subj').addEventListener('click', e => {
+  const bt = e.target.closest('[data-samv]');
+  if (bt){ const o = subjOrdered().map(x => x[0]), i = o.indexOf(bt.dataset.samv), j = i + +bt.dataset.d; if (i < 0 || j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; saveSubjPref(o, subjPref().hidden || []); const nb = $(`#sa-list [data-samv="${bt.dataset.samv}"][data-d="${bt.dataset.d}"]`); if (nb && !nb.disabled) nb.focus(); return; }
+  if (e.target.id === 'sa-reset'){ const tp = Object.assign({}, S.profile.tabPrefs || {}); delete tp.subj; S.profile.tabPrefs = tp; saveProfile(); renderSubjArrange(); renderLinks(); toast('과목을 처음대로 돌렸어요.'); }
 });
 function renderTabArrange(){
   const box = $('#ta-list'); if (!box || $('#dlg-tabs').hidden) return;
@@ -1005,7 +1014,7 @@ function renderLinks(){
   const cnt = {}; all.forEach(l => { const k = subjOf(l); cnt[k] = (cnt[k] || 0) + 1; });
   $('#link-subj').hidden = !onPage;
   const subjHid = new Set((((S.profile || {}).tabPrefs || {}).subj || {}).hidden || []);
-  if (onPage) $('#link-subj').innerHTML = [['all', '전체']].concat(SUBJ).filter(([k]) => !subjHid.has(k) || k === cur).map(([k, n]) => `<a class="stab" href="#${k === 'all' ? 'links' : 'links-' + k}" ${cur === k ? 'aria-current="page"' : ''}>${n}${k === 'all' ? ` <small>${all.length}</small>` : cnt[k] ? ` <small>${cnt[k]}</small>` : ''}</a>`).join('') + (S.uid ? '<button type="button" class="stab add" id="subj-arr" title="안 쓰는 과목 숨기기" style="margin-left:auto;color:var(--muted)">과목 정리</button>' : '');
+  if (onPage) $('#link-subj').innerHTML = [['all', '전체']].concat(subjOrdered()).filter(([k]) => !subjHid.has(k) || k === cur).map(([k, n]) => `<a class="stab" href="#${k === 'all' ? 'links' : 'links-' + k}" ${cur === k ? 'aria-current="page"' : ''}>${n}${k === 'all' ? ` <small>${all.length}</small>` : cnt[k] ? ` <small>${cnt[k]}</small>` : ''}</a>`).join('') + (S.uid ? '<button type="button" class="stab add" id="subj-arr" title="과목 숨기기·순서 바꾸기" style="margin-left:auto;color:var(--muted)">과목 정리</button>' : '');
   if (document.activeElement !== $('#l-subj')) $('#l-subj').innerHTML = SUBJ.map(([k, n]) => `<option value="${k}" ${(cur === 'all' ? 'etc' : cur) === k ? 'selected' : ''}>${n}</option>`).join('');
   $('#link-count').textContent = all.length ? String(all.length) : '';
   const unitMode = onPage && cur !== 'all' && cur !== 'etc' && cur !== 'cre';
@@ -4127,7 +4136,7 @@ const CHANGELOG = [
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.',
     '수업자료 단원: 학년 진도표(한글 .hwp·.hwpx)를 "진도표 올리기"로 올리면 과목마다 "단원명" 칸을 읽어 단원 목차가 한 번에 들어가요. 3학년 출판사 목차(영어 천재 함순애, 미술 동아출판 포함)는 목록에서 고르기만 하면 돼요.',
-    '위쪽 탭 줄 끝 "탭 정리"에서 안 쓰는 탭을 숨기고 ↑↓로 순서를 바꿀 수 있어요. 수업자료 과목 줄 끝 "과목 정리"로 안 쓰는 과목도 숨겨요. 둘 다 내 화면에만 적용돼요.'
+    '위쪽 탭 줄 끝 "탭 정리"에서 안 쓰는 탭을 숨기고 ↑↓로 순서를 바꿀 수 있어요. 수업자료 과목 줄 끝 "과목 정리"로 안 쓰는 과목을 숨기거나 순서를 바꿔요. 둘 다 내 화면에만 적용돼요.'
   ]],
   ['2.12', '11월 18일 오후', [
     '큰 모니터에서 나의 공간 다른 탭을 눌러도 내용이 안 보이던 것, 학년 공간 다른 탭에서 입력 칸이 오른쪽에 붙던 것을 고쳤어요. 세 줄 배치는 학년 "오늘"과 나의 공간 "학급일지"에서만 써요.'
