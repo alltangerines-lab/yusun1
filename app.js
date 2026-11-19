@@ -204,7 +204,14 @@ function namesIn(s){
 function parseLine(raw, opts = {}){
   const base = today();
   let s = ' ' + raw + ' ';
-  let date = null, time = null, end = null;
+  let date = null, time = null, end = null, every = null, eom = false;
+  s = s.replace(/#?매\s*주(마다)?/, () => { every = 'w'; return ' '; });
+  if (!every) s = s.replace(/#?매\s*(월|달)(마다)?/, () => { every = 'm'; return ' '; });
+  if (every === 'm'){
+    s = s.replace(/말\s*일/, () => { eom = true; return ' '; });
+    s = s.replace(/(?<![\d\/.월])\s(\d{1,2})\s*일(?![요])/, (all, d) => { const t = new Date(base.getFullYear(), base.getMonth(), +d); date = t < new Date(base.getFullYear(), base.getMonth(), base.getDate()) ? new Date(base.getFullYear(), base.getMonth() + 1, +d) : t; return ' '; });
+    if (eom){ date = new Date(base.getFullYear(), base.getMonth() + 1, 0); }
+  }
   s = s.replace(/20\d\d\s*(?:[.\/-]|년)\s*(?=\d{1,2}\s*(?:[.\/-]|월))/g, ' ');
   const take = (re, fn) => { const m = s.match(re); if (m){ fn(m); s = s.replace(m[0], ' '); return true; } return false; };
   const mkEnd = (sm, sd, em, ed) => { const a = mkDate(sm, sd, base); let b = new Date(a.getFullYear(), (em || sm) - 1, ed); if (b < a) b = new Date(a.getFullYear() + 1, (em || sm) - 1, ed); return [a, b]; };
@@ -255,8 +262,33 @@ function parseLine(raw, opts = {}){
   const lead = text.match(/^(출결|상담|생활|행발|행동발달|학부모|수업|할일|할 일|메모)\s*[:·]?\s+/);
   if (lead){ const c = lead[1] === '행동발달' ? '행발' : lead[1] === '할 일' ? '할일' : lead[1]; tags.unshift(c); text = text.slice(lead[0].length); }
   if (end && date && end <= date) end = null;
+  if (every && !date) date = new Date(base.getFullYear(), base.getMonth(), base.getDate());
   return { date: date ? ymd(date) : null, end: end ? ymd(end) : null, time, tags, who, students, text, prio,
-           repeat: tags.some(t => /^(반복|매년)$/.test(t)) };
+           repeat: tags.some(t => /^(반복|매년)$/.test(t)), every, eom:eom || undefined };
+}
+/* 매주·매월 할 일: 끝내면 다음 차례를 새로 만들어요 */
+const EVERY_NAME = {w:'매주', m:'매월'};
+function nextDue(k, every, eom){
+  const d = fromYmd(k);
+  if (every === 'w') return ymd(addDays(d, 7));
+  if (eom) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
+  const n = new Date(d.getFullYear(), d.getMonth() + 1, 1), last = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate();
+  return ymd(new Date(n.getFullYear(), n.getMonth(), Math.min(d.getDate(), last)));
+}
+async function spawnNext(kind, x){
+  if (!x || !x.every || x.spawned) return;
+  const tk = ymd(today()); let n = nextDue((kind === 'task' ? x.due : x.date) || tk, x.every, x.eom);
+  for (let i = 0; i < 60 && n < tk; i++) n = nextDue(n, x.every, x.eom);
+  try {
+    if (kind === 'task'){
+      await S.db.collection('tasks').add({title:x.title, due:n, who:x.who || '전체', repeat:!!x.repeat, every:x.every, eom:!!x.eom, prio:x.prio || '보통', kind:x.kind || null, done:false, note:x.note || '', createdBy:S.uid, createdAt:Date.now()});
+      await S.db.doc('tasks/' + x.id).update({spawned:true});
+    } else {
+      await S.db.doc(PROFILE()).collection('journal').add({date:n, end:null, time:x.time || null, cat:'할일', text:x.text, students:[], att:null, prio:x.prio || '보통', area:x.area || '', imgs:[], every:x.every, eom:!!x.eom, done:false, createdAt:Date.now()});
+      await S.db.doc(PROFILE()).collection('journal').doc(x.id).update({spawned:true});
+    }
+    toast(`${EVERY_NAME[x.every]} 할 일이라 다음 차례(${fmtMD(n)})를 만들어 뒀어요.`);
+  } catch (e){ wErr(e, kind === 'task'); }
 }
 function inferCat(text, tags, forced, hasStu){
   if (forced) return forced;
@@ -849,7 +881,7 @@ function taskRow(t){
     <button type="button" class="chk ${t.done ? 'on' : ''}" data-act="task-toggle" data-id="${t.id}" aria-label="${t.done ? '안 끝낸 일로 되돌리기' : '끝냄'}" ${S.canWrite ? '' : 'disabled'}></button>
     <div class="main">
       <button type="button" class="linkbtn title" data-act="task-edit" data-id="${t.id}"><span class="kdot k-${tkKind(t)}"></span>${esc(t.title)}</button>
-      <div class="meta">${t.hold ? '<span class="chip warn">보류</span>' : dueLabel(t)}<span class="chip acc">${esc(clsLabel(t.who || '전체'))}</span>${S.canWrite ? `<select class="ksel" data-tk-kind="${t.id}" aria-label="할 일 색 바꾸기">${EV_KINDS.map(([k, n]) => `<option value="${k}" ${tkKind(t) === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : `<span class="chip">${kindName(tkKind(t))}</span>`}${t.repeat ? '<span class="chip">매년</span>' : ''}${t.hold && S.canWrite ? `<button type="button" class="btn small" data-act="task-hold" data-id="${t.id}">다시 하기</button>` : ''}</div>
+      <div class="meta">${t.hold ? '<span class="chip warn">보류</span>' : dueLabel(t)}<span class="chip acc">${esc(clsLabel(t.who || '전체'))}</span>${S.canWrite ? `<select class="ksel" data-tk-kind="${t.id}" aria-label="할 일 색 바꾸기">${EV_KINDS.map(([k, n]) => `<option value="${k}" ${tkKind(t) === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : `<span class="chip">${kindName(tkKind(t))}</span>`}${t.repeat ? '<span class="chip">매년</span>' : ''}${t.every ? `<span class="chip">↻ ${EVERY_NAME[t.every]}</span>` : ''}${t.hold && S.canWrite ? `<button type="button" class="btn small" data-act="task-hold" data-id="${t.id}">다시 하기</button>` : ''}</div>
       ${t.note ? `<div class="note">${linkify(esc(t.note))}</div>` : ''}
     </div></div>`;
 }
@@ -972,6 +1004,7 @@ function renderGaPreview(){
   } else {
     chips.push(`<span class="chip acc">마감 <b>${p.date ? fmtMD(p.date) : '없음'}</b></span>`);
     if (p.repeat) chips.push('<span class="chip">매년</span>');
+    if (p.every) chips.push(`<span class="chip">↻ ${EVERY_NAME[p.every]}${p.eom ? ' 말일' : ''}</span>`);
     const kk = S.gaKind && S.gaKind !== 'auto' ? S.gaKind : guessKind(p.text);
     chips.push(`<span class="chip kchip k-${kk}"><i></i>${kindName(kk)}${S.gaKind && S.gaKind !== 'auto' ? '' : ' (자동)'}</span>`);
   }
@@ -1020,7 +1053,7 @@ function dueHtml(mineOnly, lim){
       <div class="m"><span class="t"><span class="kdot k-submit"></span>${esc(t.title)}</span><span class="meta"><span class="chip ksub">제출 ${fmtMD(t.due)}${t.time ? ' ' + t.time : ''}</span>${late ? lab : n === 0 ? lab : ''}${t.who && t.who !== '전체' ? `<span class="chip acc">${esc(clsLabel(t.who))}</span>` : ''}</span></div></div>`;
     const tk = tkKind(t);
     return `<div class="wk-t ${late ? 'late' : ''} ${tk === 'submit' ? 'sub' : ''}"><button type="button" class="chk" data-act="task-toggle" data-id="${t.id}" aria-label="끝냄" ${dis}></button>
-      <div class="m"><span class="t"><span class="kdot k-${tk}"></span>${t.prio === '높음' ? '★ ' : ''}${esc(t.title)}</span><span class="meta">${tk === 'submit' ? `<span class="chip ksub">제출 ${fmtMD(t.due)}</span>${late || n === 0 ? lab : ''}` : lab}${t.who && t.who !== '전체' ? `<span class="chip acc">${esc(clsLabel(t.who))}</span>` : ''}</span></div>
+      <div class="m"><span class="t"><span class="kdot k-${tk}"></span>${t.prio === '높음' ? '★ ' : ''}${esc(t.title)}${t.every ? ` <small title="${EVERY_NAME[t.every]} 반복">↻</small>` : ''}</span><span class="meta">${tk === 'submit' ? `<span class="chip ksub">제출 ${fmtMD(t.due)}</span>${late || n === 0 ? lab : ''}` : lab}${t.who && t.who !== '전체' ? `<span class="chip acc">${esc(clsLabel(t.who))}</span>` : ''}</span></div>
       ${S.canWrite ? `<button type="button" class="btn small" data-act="task-defer" data-id="${t.id}" title="다음 주 같은 요일로 미루기">미루기</button><button type="button" class="btn small" data-act="task-hold" data-id="${t.id}" title="지금은 못 하는 일로 빼 두기">보류</button>` : ''}</div>`;
   };
   const grp = [['밀린 일', open.filter(t => t.due < k)], ['이번 주', open.filter(t => t.due >= k && t.due <= we0)], ['다음 주', open.filter(t => t.due > we0)]].filter(g => g[1].length);
@@ -1087,8 +1120,8 @@ function entryRow(e, showDate){
 function myTodos(){
   const my = S.profile.myClass;
   const out = [];
-  if (S.tdSrc !== 'grade') S.journal.filter(e => e.cat === '할일' && !e.done && !e.hold).forEach(e => out.push({src:'me', id:e.id, title:e.text, due:e.date || null, prio:e.prio || '보통', time:e.time, tag:e.area || '나', area:e.area || ''}));
-  if (S.tdSrc !== 'me') S.tasks.filter(t => !t.done && !t.hold && (t.who === '전체' || !t.who || (my && t.who === my))).forEach(t => out.push({src:'grade', id:t.id, title:t.title, due:t.due || null, prio:t.prio || '보통', tag:'학년 · ' + (t.who || '전체')}));
+  if (S.tdSrc !== 'grade') S.journal.filter(e => e.cat === '할일' && !e.done && !e.hold).forEach(e => out.push({src:'me', id:e.id, title:e.text, due:e.date || null, prio:e.prio || '보통', time:e.time, tag:e.area || '나', area:e.area || '', every:e.every}));
+  if (S.tdSrc !== 'me') S.tasks.filter(t => !t.done && !t.hold && (t.who === '전체' || !t.who || (my && t.who === my))).forEach(t => out.push({src:'grade', id:t.id, title:t.title, due:t.due || null, prio:t.prio || '보통', tag:'학년 · ' + (t.who || '전체'), every:t.every}));
   return out;
 }
 function renderToday(){
@@ -1234,7 +1267,7 @@ function renderTodo(){
   $('#td-donecount').textContent = doneN ? `끝낸 내 할 일 ${doneN}개` : '';
   const row = i => `<div class="li"><button type="button" class="chk" data-act="todo-toggle" data-src="${i.src}" data-id="${i.id}" aria-label="끝냄" ${i.src === 'grade' && !S.canWrite ? 'disabled' : ''}></button>
     <div class="main"><div class="title">${esc(i.title) || '<span class="hint">(내용 없음)</span>'}</div>
-    <div class="meta">${prioTag(i.prio)}${i.due ? `<span class="mono">${fmtMD(i.due)}</span>` : ''}${i.time ? `<span class="mono">${i.time}</span>` : ''}<span class="chip ${i.src === 'grade' ? 'acc' : ''}">${esc(i.tag)}</span></div></div>
+    <div class="meta">${prioTag(i.prio)}${i.due ? `<span class="mono">${fmtMD(i.due)}</span>` : ''}${i.time ? `<span class="mono">${i.time}</span>` : ''}<span class="chip ${i.src === 'grade' ? 'acc' : ''}">${esc(i.tag)}</span>${i.every ? `<span class="chip">↻ ${EVERY_NAME[i.every]}</span>` : ''}</div></div>
     <div class="acts">${i.src === 'me' && i.due && i.due < k ? `<button type="button" class="btn small" data-act="todo-today" data-id="${i.id}">오늘로</button>` : ''}${i.due ? calBtn((i.src === 'me' ? 'j:' : 'tk:') + i.id) : ''}
     ${i.src === 'me' ? `<button type="button" class="btn small" data-act="me-hold" data-id="${i.id}">${i.hold ? '다시 하기' : '보류'}</button>` : `<button type="button" class="btn small" data-act="task-hold" data-id="${i.id}" ${S.canWrite ? '' : 'disabled'}>보류</button>`}
     <button type="button" class="btn small" data-act="${i.src === 'me' ? 'entry-edit' : 'task-edit'}" data-id="${i.id}">고치기</button></div></div>`;
@@ -1722,7 +1755,7 @@ async function addEvent(p){
 }
 async function addTask(p){
   const kind = p.kind || guessKind(p.text);
-  try { await S.db.collection('tasks').add({title:p.text, due:p.date, who:p.who || '전체', repeat:p.repeat, prio:p.prio || '보통', kind, done:false, note:'', createdBy:S.uid, createdAt:Date.now()}); }
+  try { await S.db.collection('tasks').add({title:p.text, due:p.date, who:p.who || '전체', repeat:p.repeat, every:p.every || null, eom:!!p.eom, prio:p.prio || '보통', kind, done:false, note:'', createdBy:S.uid, createdAt:Date.now()}); }
   catch (e){ wErr(e, true); return false; }
   return true;
 }
@@ -1775,7 +1808,7 @@ document.addEventListener('click', async ev => {
   const id = a.dataset.id, act = a.dataset.act;
   if (act === 'task-toggle'){
     const t = S.tasks.find(x => x.id === id); if (!t) return;
-    try { await S.db.doc('tasks/' + id).update({done:!t.done, doneAt:!t.done ? Date.now() : null}); } catch (e){ wErr(e, true); }
+    try { await S.db.doc('tasks/' + id).update({done:!t.done, doneAt:!t.done ? Date.now() : null}); if (!t.done) spawnNext('task', t); } catch (e){ wErr(e, true); }
   } else if (act === 'event-done'){
     const e = S.events.find(x => x.id === id); if (!e) return;
     try { await S.db.doc('events/' + id).update({done:!e.done, doneAt:!e.done ? Date.now() : null}); toast(e.done ? '다시 남은 제출로 돌렸어요.' : '제출 끝! 달력에도 줄이 그어져요.'); } catch (er){ wErr(er, true); }
@@ -1794,7 +1827,7 @@ document.addEventListener('click', async ev => {
     const t = S.tasks.find(x => x.id === id); if (!t) return;
     S.editTask = id; S.armed = null;
     $('#t-title').value = t.title || ''; $('#t-due').value = t.due || ''; $('#t-who').innerHTML = classOptions(t.who || '전체');
-    $('#t-repeat').checked = !!t.repeat; $('#t-note').value = t.note || '';
+    $('#t-repeat').checked = !!t.repeat; $('#t-note').value = t.note || ''; $('#t-every').value = t.every === 'm' && t.eom ? 'me' : (t.every || '');
     $('#t-del').textContent = '삭제'; $('#t-del').classList.remove('armed');
     $$('#t-form input,#t-form select,#t-form textarea').forEach(el => { el.disabled = !S.canWrite; });
     openDlg('#dlg-task');
@@ -1809,7 +1842,7 @@ document.addEventListener('click', async ev => {
     if (arm('link:' + id)){ S.armed = null; try { await S.db.doc('links/' + id).delete(); } catch (e){ wErr(e, true); } }
   } else if (act === 'entry-toggle'){
     const e = S.journal.find(x => x.id === id); if (!e) return;
-    try { await S.db.doc(PROFILE()).collection('journal').doc(id).update({done:!e.done}); } catch (er){ wErr(er, false); }
+    try { await S.db.doc(PROFILE()).collection('journal').doc(id).update({done:!e.done}); if (!e.done) spawnNext('entry', e); } catch (er){ wErr(er, false); }
   } else if (act === 'entry-edit'){
     const e = S.journal.find(x => x.id === id); if (!e) return;
     S.editEntry = id; S.armed = null;
@@ -1872,8 +1905,8 @@ document.addEventListener('click', async ev => {
     if (arm('row:' + id)){ S.armed = null; const r = S.rows.find(x => x.id === id); try { await S.db.doc(`tabs/${S.tabId}/rows/${id}`).delete(); Object.values((r && r.cells) || {}).forEach(v => { if (Array.isArray(v)) v.forEach(dropImage); }); } catch (er){ wErr(er, true); } }
     else renderTabPage();
   } else if (act === 'todo-toggle'){
-    if (a.dataset.src === 'me'){ try { await S.db.doc(PROFILE()).collection('journal').doc(id).update({done:true}); toast('끝냈어요.'); } catch (er){ wErr(er, false); } }
-    else { try { await S.db.doc('tasks/' + id).update({done:true, doneAt:Date.now()}); toast('학년 할 일을 끝냈어요.'); } catch (er){ wErr(er, true); } }
+    if (a.dataset.src === 'me'){ try { await S.db.doc(PROFILE()).collection('journal').doc(id).update({done:true}); toast('끝냈어요.'); spawnNext('entry', S.journal.find(x => x.id === id)); } catch (er){ wErr(er, false); } }
+    else { try { await S.db.doc('tasks/' + id).update({done:true, doneAt:Date.now()}); toast('학년 할 일을 끝냈어요.'); spawnNext('task', S.tasks.find(x => x.id === id)); } catch (er){ wErr(er, true); } }
   } else if (act === 'todo-today'){
     try { await S.db.doc(PROFILE()).collection('journal').doc(id).update({date:ymd(today())}); } catch (er){ wErr(er, false); }
   } else if (act === 'att-fill'){
@@ -2005,7 +2038,7 @@ $('#t-form').addEventListener('submit', async ev => {
   ev.preventDefault();
   const id = S.editTask; if (!id || !S.canWrite) return;
   const title = $('#t-title').value.trim(); if (!title){ toast('할 일을 적어 주세요.'); return; }
-  try { await S.db.doc('tasks/' + id).update({title, due:$('#t-due').value || null, who:$('#t-who').value, repeat:$('#t-repeat').checked, note:$('#t-note').value.trim()}); closeDlgs(); toast('저장했어요.'); }
+  try { await S.db.doc('tasks/' + id).update({title, due:$('#t-due').value || null, who:$('#t-who').value, repeat:$('#t-repeat').checked, every:({w:'w', m:'m', me:'m'})[$('#t-every').value] || null, eom:$('#t-every').value === 'me', note:$('#t-note').value.trim()}); closeDlgs(); toast('저장했어요.'); }
   catch (e){ wErr(e, true); }
 });
 $('#t-del').onclick = async () => {
@@ -2022,7 +2055,7 @@ $('#j-form').addEventListener('submit', async ev => {
   const p = parseLine(v, {students:true});
   const cat = inferCat(p.text, p.tags, S.jForced, p.students.length > 0);
   const entry = {date:p.date || (cat === '할일' ? null : S.jDate), end:p.end || null, time:p.time || null, cat, text:p.text, students:p.students,
-    att:cat === '출결' ? inferAtt(p.text, p.students.length > 0) : null, prio:p.prio || '보통', area:areaOf(p), imgs:S.stage.j.slice(), done:false, createdAt:Date.now()};
+    att:cat === '출결' ? inferAtt(p.text, p.students.length > 0) : null, prio:p.prio || '보통', area:areaOf(p), imgs:S.stage.j.slice(), every:cat === '할일' ? p.every || null : null, eom:!!p.eom, done:false, createdAt:Date.now()};
   try { await S.db.doc(PROFILE()).collection('journal').add(entry); }
   catch (e){ wErr(e, false); return; }
   $('#j-input').value = ''; S.jForced = null; S.stage.j = []; renderStage('j'); renderCats(); renderJPreview();
@@ -2069,7 +2102,7 @@ async function addEntryFrom(stageName, inputSel, opts){
   const students = p.students.slice(); if (opts.student != null && !students.includes(opts.student)) students.unshift(opts.student);
   const cat = opts.cat || inferCat(p.text, p.tags, null, students.length > 0);
   const entry = {date:p.date || ymd(today()), end:p.end || null, time:p.time || null, cat, text:p.text, students,
-    att:cat === '출결' ? inferAtt(p.text, students.length > 0) : null, prio:p.prio || '보통', area:areaOf(p), imgs:S.stage[stageName].slice(), done:false, createdAt:Date.now()};
+    att:cat === '출결' ? inferAtt(p.text, students.length > 0) : null, prio:p.prio || '보통', area:areaOf(p), imgs:S.stage[stageName].slice(), every:cat === '할일' ? p.every || null : null, eom:!!p.eom, done:false, createdAt:Date.now()};
   try { const ref = await S.db.doc(PROFILE()).collection('journal').add(entry); if (ref && ref.id && inputSel === '#j-input' && entry.date) setTimeout(() => addAfter('j:' + ref.id, '#cal-also-j'), 300); } catch (e){ wErr(e, false); return; }
   $(inputSel).value = ''; S.stage[stageName] = []; renderStage(stageName); toast(`${fmtMD(entry.date)} ${cat} 기록으로 적었어요.`);
 }
@@ -2204,7 +2237,7 @@ $('#td-form').addEventListener('submit', async ev => {
   const v = $('#td-input').value.trim(); if (!v) return;
   const p = parseLine(v);
   if (!p.text){ toast('할 일을 함께 적어 주세요.'); return; }
-  try { await S.db.doc(PROFILE()).collection('journal').add({date:p.date, time:p.time, cat:'할일', text:p.text, students:[], att:null, prio:p.prio || '보통', area:areaOf(p), done:false, createdAt:Date.now()}); }
+  try { await S.db.doc(PROFILE()).collection('journal').add({date:p.date, time:p.time, cat:'할일', text:p.text, students:[], att:null, prio:p.prio || '보통', area:areaOf(p), every:p.every || null, eom:!!p.eom, done:false, createdAt:Date.now()}); }
   catch (e){ wErr(e, false); return; }
   $('#td-input').value = ''; toast(p.date ? `${fmtMD(p.date)} 할 일로 적었어요.` : '언젠가 할 일로 적었어요.');
 });
@@ -3796,6 +3829,7 @@ const CHANGELOG = [
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
+    '할 일을 매주·매월 반복할 수 있어요. "매주 금요일 주간학습 안내 올리기", "매월 말일 출석부 마감"처럼 적거나, 학년 할 일 "고치기"에서 반복을 고르면 돼요. 끝내면 다음 차례가 저절로 생겨요.',
     '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 사진(jpg)을 여러 장 올려 두면 원래 크기로 쭉 보여요.',
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.'
