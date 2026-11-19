@@ -599,7 +599,7 @@ document.addEventListener('paste', e => {
 });
 let pickTarget = null;
 function pickImages(name){ pickTarget = name; const p = $('#img-picker'); p.value = ''; p.click(); }
-$('#img-picker').addEventListener('change', e => { const files = [...(e.target.files || [])]; if (pickTarget && files.length) attach(pickTarget, files); pickTarget = null; });
+$('#img-picker').addEventListener('change', e => { const files = [...(e.target.files || [])]; if (pickTarget === 'lkadd'){ if (files.length) lkAddImgs(files); } else if (pickTarget && files.length) attach(pickTarget, files); pickTarget = null; });
 async function removeImg(key, i){
   const [kind, a, b] = key.split('|');
   if (kind === 'stage'){ S.stage[a] = S.stage[a] || []; const r = S.stage[a].splice(i, 1)[0]; renderStage(a); if (r) dropImage(r); }
@@ -1022,10 +1022,10 @@ function renderLinks(){
   if (unitMode){ renderUnits(cur, list); return; }
   $('#links').innerHTML = list.length ? list.map(l => {
     const armed = S.armed === 'link:' + l.id;
-    const ok = /^https?:\/\//i.test(l.url || '');
+    const ok = /^https?:\/\//i.test(l.url || ''), lk = lkKind(l);
     return `<div class="li"><div class="main">
-      ${ok ? `<a class="title" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">${esc(l.title || l.url)}</a>` : `<span class="title">${esc(l.title)}</span>`}
-      <div class="meta" style="overflow-wrap:anywhere">${onPage && S.canWrite ? `<select class="lsubj" data-link-subj="${l.id}" aria-label="과목 바꾸기">${SUBJ.map(([k, n]) => `<option value="${k}" ${subjOf(l) === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : `<span class="chip">${subjName(subjOf(l))}</span>`}${esc((l.url || '').replace(/^https?:\/\//, '').slice(0, 60))}</div>
+      ${ok && lk === 'link' ? `<a class="title" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-lk="${esc(l.id)}" style="color:var(--accent)">${esc(l.title || l.url)}</a>` : `<button type="button" class="title linkbtn" data-lk="${esc(l.id)}" style="color:var(--accent);text-align:left">${LK_LBL[lk] ? `<small class="chip">${LK_LBL[lk]}</small> ` : ''}${esc(l.title || LK_LBL[lk])}</button>`}
+      <div class="meta" style="overflow-wrap:anywhere">${onPage && S.canWrite ? `<select class="lsubj" data-link-subj="${l.id}" aria-label="과목 바꾸기">${SUBJ.map(([k, n]) => `<option value="${k}" ${subjOf(l) === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : `<span class="chip">${subjName(subjOf(l))}</span>`}${esc(lkSub(l).slice(0, 60))}</div>
     </div>${S.canWrite ? `<div class="acts"><button type="button" class="btn small ${armed ? 'armed' : 'danger'}" data-act="link-del" data-id="${l.id}">${armed ? '정말 삭제' : '삭제'}</button></div>` : ''}</div>`;
   }).join('') : `<p class="empty">${cur === 'all' ? '자주 여는 자료 사이트나 영상 링크를 모아 두세요.' : subjName(cur) + ' 자료가 아직 없어요. 아래 "+ 링크 추가"에서 과목을 ' + subjName(cur) + '(으)로 골라 넣어 주세요.'}</p>`;
 }
@@ -1070,7 +1070,7 @@ function renderUnits(subj, list){
       <div class="row" style="margin-top:6px"><span class="grow"></span><button type="button" class="btn small" id="un-cancel">취소</button><button type="button" class="btn small primary" id="un-save">저장</button></div></div>` : ''}`;
   const keyOf = l => l.unit && l.unit.startsWith(sem + '|') ? l.unit.slice(2) : (l.unit ? '__other' : '');
   const groups = [['', '단원 무관']].concat(units.map((u, i) => [u, u]));
-  const linkChip = l => `<a class="un-chip" href="${esc(/^https?:\/\//i.test(l.url || '') ? l.url : '#')}" target="_blank" rel="noopener noreferrer" title="${esc(l.url || '')}"><i></i>${esc(l.title || l.url)}</a>`;
+  const linkChip = lkChip;
   const rowLinks = key => list.filter(l => keyOf(l) === key);
   let h = groups.map(([key, name], gi) => {
     const ls = rowLinks(key), open = UN.open.has(gi);
@@ -1078,8 +1078,8 @@ function renderUnits(subj, list){
     const num = gi === 0 || !nm0 ? `<span class="un-dot" ${gi === 0 ? '' : 'style="background:var(--warn)"'}></span>` : `<span class="un-n">${String(+nm0[1]).padStart(2, '0')}</span>`;
     const nm = gi === 0 ? name : name.replace(/^\s*\d+\s*[.)]?\s+/, '');
     return `<div class="un-row ${open ? 'open' : ''}"><div class="un-head" data-untg="${gi}">${num}<b>${esc(nm)}</b><span class="un-chips">${ls.slice(0, 6).map(linkChip).join('')}${ls.length > 6 ? `<span class="hint">+${ls.length - 6}</span>` : ''}</span><button type="button" class="un-plus" data-untg="${gi}" aria-label="${esc(nm)} ${open ? '접기' : '펼치기'}">${open ? '−' : '+'}</button></div>
-      ${open ? `<div class="un-body">${ls.map(l => `<div class="un-li">${linkChip(l)}<span class="hint un-url">${esc((l.url || '').replace(/^https?:\/\//, ''))}</span><span class="grow"></span>${can ? `<select class="lsubj" data-unmove="${l.id}" aria-label="단원 옮기기"><option value="">단원 무관</option>${units.map(u => `<option value="${esc(u)}" ${keyOf(l) === u ? 'selected' : ''}>${esc(u.replace(/^\s*\d+\s*[.)]\s*/, ''))}</option>`).join('')}</select><button type="button" class="btn small ${S.armed === 'link:' + l.id ? 'armed' : 'danger'}" data-act="link-del" data-id="${l.id}">${S.armed === 'link:' + l.id ? '정말 삭제' : '삭제'}</button>` : ''}</div>`).join('') || '<p class="hint" style="margin:2px 0">아직 자료가 없어요.</p>'}
-        ${can ? `<form class="un-add" data-unadd="${esc(key)}"><input type="text" placeholder="자료 이름" aria-label="자료 이름"><input type="text" inputmode="url" placeholder="https:// 주소" aria-label="자료 주소"><button type="submit" class="btn small primary">넣기</button></form>` : ''}</div>` : ''}</div>`;
+      ${open ? `<div class="un-body">${ls.map(l => `<div class="un-li">${linkChip(l)}<span class="hint un-url">${esc(lkSub(l))}</span><span class="grow"></span>${can ? `<select class="lsubj" data-unmove="${l.id}" aria-label="단원 옮기기"><option value="">단원 무관</option>${units.map(u => `<option value="${esc(u)}" ${keyOf(l) === u ? 'selected' : ''}>${esc(u.replace(/^\s*\d+\s*[.)]\s*/, ''))}</option>`).join('')}</select><button type="button" class="btn small ${S.armed === 'link:' + l.id ? 'armed' : 'danger'}" data-act="link-del" data-id="${l.id}">${S.armed === 'link:' + l.id ? '정말 삭제' : '삭제'}</button>` : ''}</div>`).join('') || '<p class="hint" style="margin:2px 0">아직 자료가 없어요.</p>'}
+        ${can ? `<form class="un-add" data-unadd="${esc(key)}"><input type="text" placeholder="자료 이름" aria-label="자료 이름"><textarea rows="1" placeholder="https:// 주소 또는 줄글" aria-label="주소나 글"></textarea><button type="button" class="btn small" data-lkpic title="사진 올리기">사진</button><button type="button" class="btn small" data-lkfile title="파일 올리기 (3MB까지)">파일</button><button type="submit" class="btn small primary">넣기</button></form>` : ''}</div>` : ''}</div>`;
   }).join('');
   const other = list.filter(l => keyOf(l) === '__other');
   if (other.length) h += `<p class="hint" style="margin:8px 0 0">다른 학기 단원에 넣은 자료 ${other.length}개는 ${gradeNum()}-${sem === '1' ? '2' : '1'}을 누르면 보여요.</p>`;
@@ -1227,22 +1227,136 @@ $('#un-file').addEventListener('change', async e => {
   } catch (er){ console.error(er); toast('파일을 읽지 못했어요. 한글 파일(.hwp, .hwpx)인지 확인해 주세요.'); }
 });
 $('#links').addEventListener('click', e => {
-  const tg = e.target.closest('[data-untg]'); if (!tg || e.target.closest('a')) return;
+  const tg = e.target.closest('[data-untg]'); if (!tg || e.target.closest('a, [data-lk]')) return;
   const i = +tg.dataset.untg; UN.open.has(i) ? UN.open.delete(i) : UN.open.add(i); renderLinks();
 });
 $('#links').addEventListener('submit', async e => {
   const f = e.target.closest('[data-unadd]'); if (!f) return; e.preventDefault();
-  const [ti, ui] = f.querySelectorAll('input'); let url = ui.value.trim(), title = ti.value.trim();
-  if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
-  if (!url){ toast('주소를 적어 주세요.'); ui.focus(); return; }
+  const ti = f.querySelector('input'), ui = f.querySelector('textarea');
   const key = f.dataset.unadd, sem = UN.sem || curSem();
-  try { await S.db.collection('links').add({title:title || url, url, subj:S.linkSubj, unit:key ? sem + '|' + key : '', createdBy:S.uid, createdAt:Date.now()}); toast('자료를 넣었어요.'); }
-  catch (er){ wErr(er, true); }
+  if (await lkAddText(ti, ui, S.linkSubj, key ? sem + '|' + key : '')) toast('자료를 넣었어요.');
 });
 $('#links').addEventListener('change', async e => {
   const sel = e.target.closest('[data-unmove]'); if (!sel) return;
   const sem = UN.sem || curSem();
   try { await S.db.doc('links/' + sel.dataset.unmove).update({unit:sel.value ? sem + '|' + sel.value : ''}); } catch (er){ wErr(er, true); }
+});
+/* ---------- 수업자료: 링크·글·사진·파일 ---------- */
+const lkKind = l => (l.files || []).length ? 'file' : (l.imgs || []).length ? 'img' : (!l.url && l.body) ? 'text' : 'link';
+const LK_LBL = {link:'', text:'글', img:'사진', file:'파일'};
+function lkSub(l){ const k = lkKind(l); return k === 'link' ? (l.url || '').replace(/^https?:\/\//, '') : k === 'text' ? (l.body || '').replace(/\s+/g, ' ') : k === 'img' ? `사진 ${(l.imgs || []).length}장` : (l.files || []).map(f => f.name).join(', '); }
+function lkChip(l){
+  const k = lkKind(l), ok = /^https?:\/\//i.test(l.url || ''), inner = `<i></i>${LK_LBL[k] ? `<em class="lk-k">${LK_LBL[k]}</em>` : ''}${esc(l.title || l.url || LK_LBL[k])}`;
+  return k === 'link' && ok ? `<a class="un-chip" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-lk="${esc(l.id)}" title="${esc(l.url)}">${inner}</a>` : `<button type="button" class="un-chip k-${k}" data-lk="${esc(l.id)}">${inner}</button>`;
+}
+const lkFdoc = (fid, i) => S.db.doc(`opsfiles/${fid}_${i}`);
+async function lkDropFile(f){ for (let i = 0; i < (f.parts || 1); i++){ try { await lkFdoc(f.fid, i).delete(); } catch (e){} } }
+/* 둘째 칸이 주소처럼 생겼으면 링크, 아니면 줄글로 넣어요 */
+async function lkAddText(ti, ui, subj, unit){
+  if (!S.canWrite){ toast('학년 공간을 고칠 권한이 없어요.'); return false; }
+  const v = ui.value.trim(), title = ti.value.trim();
+  if (!v){ toast('주소나 글을 적어 주세요. 사진·파일은 옆 버튼으로 올려요.'); ui.focus(); return false; }
+  const isUrl = !/\s/.test(v) && (/^https?:\/\//i.test(v) || /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v));
+  const data = isUrl ? {url:/^https?:\/\//i.test(v) ? v : 'https://' + v} : {url:'', body:v.slice(0, 5000)};
+  data.title = (title || (isUrl ? data.url : v.split('\n')[0].slice(0, 30))).slice(0, 120);
+  try { await S.db.collection('links').add(Object.assign(data, {subj, unit:unit || '', createdBy:S.uid, createdAt:Date.now()})); }
+  catch (er){ wErr(er, true); return false; }
+  ti.value = ''; ui.value = ''; ui.rows = ui.id === 'l-url' ? 2 : 1; return true;
+}
+let LKADD = null;
+function lkTargetOf(btn){
+  const f = btn.closest('form');
+  if (f && f.dataset.unadd != null){ const sem = UN.sem || curSem(); return {ti:f.querySelector('input'), subj:S.linkSubj, unit:f.dataset.unadd ? sem + '|' + f.dataset.unadd : ''}; }
+  return {ti:$('#l-title'), subj:$('#l-subj').value || 'etc', unit:''};
+}
+document.addEventListener('click', e => {
+  const pic = e.target.closest('[data-lkpic]'), fil = e.target.closest('[data-lkfile]');
+  if (!pic && !fil) return;
+  if (!S.canWrite){ toast('학년 공간을 고칠 권한이 없어요.'); return; }
+  LKADD = lkTargetOf(pic || fil);
+  if (pic){ const p = $('#img-picker'); pickTarget = 'lkadd'; p.value = ''; p.click(); }
+  else { $('#lk-file').value = ''; $('#lk-file').click(); }
+});
+async function lkAddImgs(files){
+  const t = LKADD; if (!t) return;
+  const refs = await uploadAll(files, 'shared'); if (!refs.length) return;
+  try { await S.db.collection('links').add({title:(t.ti.value.trim() || `사진 ${refs.length}장`).slice(0, 120), url:'', imgs:refs, subj:t.subj, unit:t.unit, createdBy:S.uid, createdAt:Date.now()}); t.ti.value = ''; }
+  catch (er){ wErr(er, true); refs.forEach(dropImage); }
+}
+$('#lk-file').addEventListener('change', async e => {
+  const t = LKADD, fs = [...(e.target.files || [])]; if (!t || !fs.length) return;
+  const ok = fs.filter(f => { if (f.size > FILE_MAX){ toast(`${f.name}은(는) 3MB가 넘어서 올릴 수 없어요. 큰 파일은 구글 드라이브에 두고 링크로 넣어 주세요.`); return false; } return true; });
+  if (!ok.length) return;
+  const out = [];
+  try {
+    for (const f of ok){
+      toast(`${f.name} 올리는 중…`);
+      const b64 = await readB64(f), fid = 'f' + rid(), n = Math.max(1, Math.ceil(b64.length / PART));
+      for (let i = 0; i < n; i++) await lkFdoc(fid, i).set({d:b64.slice(i * PART, (i + 1) * PART), i, n, by:S.uid});
+      out.push({fid, name:f.name, size:f.size, type:f.type || '', parts:n});
+    }
+    await S.db.collection('links').add({title:(t.ti.value.trim() || out[0].name).slice(0, 120), url:'', files:out, subj:t.subj, unit:t.unit, createdBy:S.uid, createdAt:Date.now()});
+    t.ti.value = ''; toast(`파일 ${out.length}개를 올렸어요.`);
+  } catch (er){ wErr(er, true); out.forEach(lkDropFile); }
+});
+/* 자료를 누르면: 바로 열기 / 주소 복사 / 글 보기·복사 / 사진 보기 / 파일 받기 */
+const LKP = {id:null};
+function closeLkPop(){ $('#lk-pop').hidden = true; LKP.id = null; }
+function openLkPop(id, el){
+  const l = S.links.find(x => x.id === id); if (!l) return;
+  const ok = /^https?:\/\//i.test(l.url || ''), p = $('#lk-pop');
+  LKP.id = id;
+  p.innerHTML = `<h4>${esc(l.title || l.url || '자료')}</h4><button type="button" class="x" data-lkx aria-label="닫기">×</button>
+    ${ok ? `<input class="lk-url" readonly value="${esc(l.url)}" aria-label="주소"><div class="row"><a class="btn primary small" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-lkgo>바로 열기</a><button type="button" class="btn small" data-lkcopy="url">주소 복사</button></div>` : ''}
+    ${l.body ? `<pre class="lk-body">${esc(l.body)}</pre><div class="row"><button type="button" class="btn small" data-lkcopy="body">글 복사</button></div>` : ''}
+    ${(l.imgs || []).length ? `<div class="lk-imgs">${thumbsHtml(l.imgs, '')}</div><p class="hint" style="margin:0">사진을 누르면 크게 보여요.</p>` : ''}
+    ${(l.files || []).length ? `<div class="oc-files">${l.files.map(f => `<button type="button" class="ofile" data-lkget="${esc(f.fid)}"><span class="ico">${esc((f.name.split('.').pop() || '').slice(0, 4).toUpperCase())}</span><span class="nm">${esc(f.name)}</span><span class="sz">${fmtSize(f.size || 0)}</span></button>`).join('')}</div>` : ''}`;
+  p.hidden = false;
+  const r = el.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
+  const left = Math.max(16, Math.min(r.left, innerWidth - w - 16));
+  const top = r.bottom + 6 + h < innerHeight - 8 ? r.bottom + 6 : Math.max(8, r.top - h - 6);
+  p.style.left = left + 'px'; p.style.top = top + 'px';
+  hydrateImgs();
+  const f = p.querySelector('[data-lkgo], [data-lkcopy], [data-lkget]'); if (f) f.focus();
+}
+async function lkCopy(v, el){
+  try { await navigator.clipboard.writeText(v); toast('복사했어요.'); }
+  catch (e){ if (el && el.select){ el.focus(); el.select(); } else if (el){ const sel = getSelection(); sel.removeAllRanges(); const rg = document.createRange(); rg.selectNodeContents(el); sel.addRange(rg); } toast('골라 두었어요. Ctrl+C로 복사해 주세요.'); }
+}
+document.addEventListener('click', async e => {
+  const c = e.target.closest('[data-lk]');
+  if (c && c.closest('#links, #unit-bar, .page')){
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+    e.preventDefault(); e.stopPropagation();
+    if (LKP.id === c.dataset.lk && !$('#lk-pop').hidden){ closeLkPop(); return; }
+    openLkPop(c.dataset.lk, c); return;
+  }
+  const p = $('#lk-pop'); if (p.hidden) return;
+  if (!e.target.closest('#lk-pop')){ if (!e.target.closest('#big, .overlay')) closeLkPop(); return; }
+  const l = S.links.find(x => x.id === LKP.id); if (!l){ closeLkPop(); return; }
+  if (e.target.closest('[data-lkx]')){ closeLkPop(); return; }
+  if (e.target.closest('[data-lkgo]')){ setTimeout(closeLkPop, 50); return; }
+  const cp = e.target.closest('[data-lkcopy]');
+  if (cp){ cp.dataset.lkcopy === 'url' ? lkCopy(l.url, p.querySelector('.lk-url')) : lkCopy(l.body, p.querySelector('.lk-body')); return; }
+  const g = e.target.closest('[data-lkget]');
+  if (g){
+    const f = (l.files || []).find(x => x.fid === g.dataset.lkget); if (!f) return;
+    g.disabled = true; toast(`${f.name} 받는 중…`);
+    try {
+      let b64 = ''; for (let i = 0; i < (f.parts || 1); i++){ const sn = await lkFdoc(f.fid, i).get(); if (!sn.exists) throw {code:'missing'}; b64 += sn.data().d || ''; }
+      const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      await save(f.name, new Blob([u8], {type:f.type || 'application/octet-stream'}));
+    } catch (er){ toast(er && er.code === 'missing' ? '파일 일부를 찾지 못했어요. 다시 올려 주세요.' : '파일을 받지 못했어요.'); }
+    g.disabled = false;
+  }
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#lk-pop').hidden){ const id = LKP.id; closeLkPop(); const b = document.querySelector(`[data-lk="${CSS.escape(id || '')}"]`); if (b) b.focus(); } });
+/* 주소·글 칸: 글이 길어지면 늘어나고, 주소 한 줄이면 엔터로 바로 넣어요 */
+document.addEventListener('input', e => { const t = e.target; if (t.matches && t.matches('.un-add textarea, #l-url')) t.rows = Math.min(6, Math.max(t.id === 'l-url' ? 2 : 1, t.value.split('\n').length)); });
+document.addEventListener('keydown', e => {
+  const t = e.target; if (!(t.matches && t.matches('.un-add textarea, #l-url')) || e.key !== 'Enter' || e.isComposing) return;
+  const v = t.value.trim();
+  if (e.ctrlKey || e.metaKey || (!e.shiftKey && v && !/\s/.test(v) && /^(https?:\/\/|[\w-]+\.)/i.test(v))){ e.preventDefault(); t.form.requestSubmit(); }
 });
 function renderDay(){
   const dp = document.querySelector('.daypanel'); if (dp) dp.classList.toggle('is-today', S.selDate === ymd(today()));
@@ -2120,7 +2234,7 @@ document.addEventListener('click', async ev => {
     const n = S.notices.find(x => x.id === id); if (!n) return;
     try { await S.db.doc('notices/' + id).update({pinned:!n.pinned}); } catch (e){ wErr(e, true); }
   } else if (act === 'link-del'){
-    if (arm('link:' + id)){ S.armed = null; try { await S.db.doc('links/' + id).delete(); } catch (e){ wErr(e, true); } }
+    if (arm('link:' + id)){ S.armed = null; const gone = S.links.find(x => x.id === id); try { await S.db.doc('links/' + id).delete(); if (gone){ (gone.imgs || []).forEach(dropImage); (gone.files || []).forEach(lkDropFile); } closeLkPop(); } catch (e){ wErr(e, true); } }
   } else if (act === 'entry-toggle'){
     const e = S.journal.find(x => x.id === id); if (!e) return;
     try { await S.db.doc(PROFILE()).collection('journal').doc(id).update({done:!e.done}); if (!e.done) spawnNext('entry', e); } catch (er){ wErr(er, false); }
@@ -2308,13 +2422,8 @@ $('#n-form').addEventListener('submit', async ev => {
 });
 $('#l-form').addEventListener('submit', async ev => {
   ev.preventDefault();
-  let url = $('#l-url').value.trim(); const title = $('#l-title').value.trim();
-  if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
-  if (!url){ toast('주소를 적어 주세요.'); return; }
-  const subj = $('#l-subj').value || guessSubj(title + ' ' + url);
-  try { await S.db.collection('links').add({title:title || url, url, subj, createdBy:S.uid, createdAt:Date.now()}); }
-  catch (e){ wErr(e, true); return; }
-  $('#l-url').value = ''; $('#l-title').value = ''; toast('링크를 넣었어요.');
+  const subj = $('#l-subj').value || guessSubj($('#l-title').value + ' ' + $('#l-url').value);
+  if (await lkAddText($('#l-title'), $('#l-url'), subj, '')) toast('자료를 넣었어요.');
 });
 
 $('#t-form').addEventListener('submit', async ev => {
@@ -4128,8 +4237,12 @@ if (window.__gasNoGrade) gradePickSoon();
 
 
 /* ---------- 버전 · 바뀐 것 알림 ---------- */
-const APP_VERSION = '2.15';
+const APP_VERSION = '2.16';
 const CHANGELOG = [
+  ['2.16', '11월 20일', [
+    '수업자료에서 자료를 누르면 작은 창이 떠요. "바로 열기"와 "주소 복사" 중에 골라요.',
+    '수업자료에 링크 말고도 줄글, 사진, 파일(3MB까지)을 넣을 수 있어요. 주소 칸에 그냥 글을 적으면 글로 들어가고, 옆 "사진"·"파일" 버튼으로 올려요.'
+  ]],
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
