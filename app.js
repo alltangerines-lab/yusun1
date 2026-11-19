@@ -3829,6 +3829,7 @@ const CHANGELOG = [
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
+    '알림장 제목 날짜를 내일이 아니라 쓰는 날(오늘)로 바꿨어요. 1번 시간표와 준비물은 그대로 다음 등교일 것이에요.',
     '할 일을 매주·매월 반복할 수 있어요. "매주 금요일 주간학습 안내 올리기", "매월 말일 출석부 마감"처럼 적거나, 학년 할 일 "고치기"에서 반복을 고르면 돼요. 끝내면 다음 차례가 저절로 생겨요.',
     '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 한글 파일(.hwpx)을 올리면 과목·시기·단원·평가 요소가 원래 문서 순서대로 간단한 표로 정리되고, 줄을 누르면 성취기준과 성취수준이 펼쳐져요. 끝낸 평가는 체크하면 목록에서 빠지고, 이번 달 평가만 골라 보거나 직접 넣고 고칠 수도 있어요. 사진으로 올리기도 그대로 돼요.',
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
@@ -5540,8 +5541,10 @@ function ntApplyPick(){
 }
 async function renderNoteTool(){
   ntLoad();
-  const k = ntTarget(), d = fromYmd(k);
-  $('#nt-for').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일 알림장`;
+  const k = ntTarget(), d = fromYmd(k), t0 = today();
+  /* 알림장 날짜는 쓰는 날(오늘), 내용은 다음 등교일 준비 */
+  NT.title = `${t0.getMonth() + 1}월 ${t0.getDate()}일 ${WD[t0.getDay()]}요일 알림장`;
+  $('#nt-for').innerHTML = `${esc(NT.title)} <small style="font-weight:400;color:var(--muted)">· ${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]}) 준비</small>`;
   if (!S.uid){ $('#nt-text').value = ''; $('#nt-text').placeholder = '로그인한 상태로 열어야 쓸 수 있어요.'; return; }
   if (!NT.loaded) for (let i = 0; i < 80 && !NT.loaded; i++) await new Promise(r => setTimeout(r, 100));
   if (!NT.loaded){ $('#nt-text').placeholder = '쓰던 알림장을 불러오는 중이에요…'; return; }
@@ -5580,7 +5583,7 @@ $('#big-body').addEventListener('input', () => {
   const k = ntTarget(); NT.draft[k] = v; $('#nt-text').value = v; ntKeepDraft(k, v);
 });
 $('#nt-big').onclick = async () => {
-  $('#big-title').textContent = $('#nt-for').textContent;
+  $('#big-title').textContent = NT.title || $('#nt-for').textContent;
   $('#big-body').textContent = $('#nt-text').value || '아직 알림장이 비어 있어요.';
   $('#big-imgs').innerHTML = '';
   $('#big').hidden = false;
