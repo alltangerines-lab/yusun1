@@ -672,18 +672,54 @@ function applyRoute(r){
   else { renderCal(); renderDay(); if (page === 'tab') renderTabPage(); if (page === 'ops') renderOps(); if (page === 'lessons') renderLessons(); if (page === 'links' || page === 'main') renderLinks(); if (page === 'notices' || page === 'main'){ renderNotices(); resolveNames(); } if (page === 'budget' && BUD.g) BUD.g.render(); if (page === 'roster' && ROS.g) ROS.g.render(); }
   if (changed) window.scrollTo(0, 0);
 }
+/* 탭 숨기기·순서: 선생님마다 따로 기억해요 (다른 선생님 화면은 그대로) */
+const tabPrefKey = () => S.space === 'grade' ? 'grade' : (isJD() ? 'jd' : 'me');
+function tabItems(space){
+  let items;
+  if (space === 'grade') items = GPAGES.map(([r, n]) => ({key:r, href:r, name:pgName('grade', r, n), base:true})).concat(sortedTabs().map(t => ({key:'t:' + t.id, href:'t-' + t.id, name:t.name || '이름 없는 탭', base:false})));
+  else items = curMP().map(([r, n]) => ({key:r, href:r, name:pgName('me', r, n), base:true}));
+  const pf = ((S.profile || {}).tabPrefs || {})[space === 'grade' ? 'grade' : (isJD() ? 'jd' : 'me')] || {};
+  const ord = pf.order || [], hid = new Set(pf.hidden || []);
+  const pos = k => { const i = ord.indexOf(k); return i < 0 ? 1e4 : i; };
+  items.forEach((x, i) => { x.i = i; x.hidden = hid.has(x.key) && i > 0; });
+  if (ord.length) items.sort((a, b) => (pos(a.key) - pos(b.key)) || (a.i - b.i));
+  return {items, custom:!!(ord.length || hid.size)};
+}
+function saveTabPrefs(items){
+  const k = tabPrefKey(), tp = Object.assign({}, S.profile.tabPrefs || {});
+  tp[k] = {order:items.map(x => x.key), hidden:items.filter(x => x.hidden).map(x => x.key)};
+  S.profile.tabPrefs = tp; saveProfile(); renderStrip(); renderTabArrange();
+}
+function renderTabArrange(){
+  const box = $('#ta-list'); if (!box || $('#dlg-tabs').hidden) return;
+  const {items} = tabItems(S.space);
+  box.innerHTML = items.map((x, i) => `<div class="ta-row ${x.hidden ? 'off' : ''}">
+    <label class="ta-name"><input type="checkbox" data-tah="${esc(x.key)}" ${x.hidden ? '' : 'checked'} ${x.i === 0 ? 'disabled title="첫 탭은 숨길 수 없어요"' : ''}> ${esc(x.name)}${x.base ? '' : ' <small class="hint">학년 탭</small>'}</label>
+    <button type="button" class="btn small" data-tamv="${esc(x.key)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="${esc(x.name)} 앞으로">↑</button><button type="button" class="btn small" data-tamv="${esc(x.key)}" data-d="1" ${i === items.length - 1 ? 'disabled' : ''} aria-label="${esc(x.name)} 뒤로">↓</button></div>`).join('');
+}
+$('#dlg-tabs').addEventListener('change', e => {
+  const c = e.target.closest('[data-tah]'); if (!c) return;
+  const {items} = tabItems(S.space), x = items.find(y => y.key === c.dataset.tah); if (!x) return;
+  x.hidden = !c.checked; saveTabPrefs(items);
+});
+$('#dlg-tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-tamv]');
+  if (b){ const {items} = tabItems(S.space), i = items.findIndex(y => y.key === b.dataset.tamv), j = i + +b.dataset.d; if (i < 0 || j < 0 || j >= items.length) return; [items[i], items[j]] = [items[j], items[i]]; saveTabPrefs(items); const nb = $(`#ta-list [data-tamv="${CSS.escape(b.dataset.tamv)}"][data-d="${b.dataset.d}"]`); if (nb && !nb.disabled) nb.focus(); return; }
+  if (e.target.id === 'ta-reset'){ const tp = Object.assign({}, S.profile.tabPrefs || {}); delete tp[tabPrefKey()]; S.profile.tabPrefs = tp; saveProfile(); renderStrip(); renderTabArrange(); toast('탭을 처음 순서로 돌렸어요.'); }
+});
 function renderStrip(){
   const cur = S.route;
-  let h;
-  if (S.space === 'grade'){
-    h = GPAGES.map(([r, n]) => `<a class="stab" href="#${r}" data-ren="${r}" title="두 번 누르거나 오른쪽 클릭하면 이름을 바꿔요" ${cur === r || (r === 'links' && /^links-/.test(cur)) ? 'aria-current="page"' : ''}>${esc(pgName('grade', r, n))}</a>`).join('');
-    const tabs = sortedTabs();
-    if (tabs.length || S.canWrite) h += '<span class="stab-sep"></span>';
-    h += tabs.map(t => `<a class="stab" href="#t-${esc(t.id)}" data-ren="t:${esc(t.id)}" title="두 번 누르거나 오른쪽 클릭하면 이름을 바꿔요" ${cur === 't-' + t.id ? 'aria-current="page"' : ''}>${esc(t.name || '이름 없는 탭')}</a>`).join('');
-    if (S.canWrite) h += '<button type="button" class="stab add" data-act="newtab">+ 새 탭</button>';
-  } else {
-    h = curMP().map(([r, n]) => `<a class="stab" href="#${r}" data-ren="${r}" title="두 번 누르거나 오른쪽 클릭하면 이름을 바꿔요" ${cur === r ? 'aria-current="page"' : ''}>${esc(pgName('me', r, n))}</a>`).join('');
-  }
+  const {items, custom} = tabItems(S.space);
+  const isCur = x => cur === x.href || (x.href === 'links' && /^links-/.test(cur));
+  const sp = S.space === 'grade' ? 'grade' : 'me';
+  let h = '', prevBase = true;
+  items.filter(x => !x.hidden || isCur(x)).forEach(x => {
+    if (sp === 'grade' && !custom && prevBase && !x.base) h += '<span class="stab-sep"></span>';
+    prevBase = x.base;
+    h += `<a class="stab" href="#${esc(x.href)}" data-ren="${esc(x.key)}" title="두 번 누르거나 오른쪽 클릭하면 이름을 바꿔요" ${isCur(x) ? 'aria-current="page"' : ''}>${esc(x.name)}</a>`;
+  });
+  if (sp === 'grade' && S.canWrite) h += '<button type="button" class="stab add" data-act="newtab">+ 새 탭</button>';
+  if (S.uid) h += '<button type="button" class="stab add ta-open" data-act="tabarrange" title="탭 숨기기·순서 바꾸기">탭 정리</button>';
   if (S.renaming) return;
   $('#sheetbar').innerHTML = h;
   const c = $('#sheetbar [aria-current]');
@@ -1007,7 +1043,7 @@ function renderUnits(subj, list){
   $('#unit-bar').innerHTML = `<div class="un-bar">
     <div class="seg" role="group" aria-label="학기">${['1', '2'].map(x => `<button type="button" data-unsem="${x}" aria-pressed="${sem === x}">${gradeNum()}-${x}</button>`).join('')}</div>
     <label class="row" style="gap:6px">출판사 <select id="un-pub" ${can ? '' : 'disabled'} style="width:auto"><option value="">${pubs.length ? '고르기' : '직접 만든 목차'}</option>${pubs.map(p => `<option ${c.pub === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}<option value="__own" ${(c.pub && !pubs.includes(c.pub)) || UN.own ? 'selected' : ''}>${c.pub && !pubs.includes(c.pub) ? esc(c.pub) + ' (직접)' : '목록에 없어요'}</option></select></label>${UN.own ? `<input id="un-pubname" placeholder="출판사 이름 (예: 천재교과서)" style="width:180px" value="${esc(c.pub && !pubs.includes(c.pub) ? c.pub : '')}">` : ''}
-    <span class="grow"></span>${can ? `<button type="button" class="btn small" id="un-edit">${units.length ? '목차 고치기' : '목차 넣기'}</button>` : ''}</div>
+    <span class="grow"></span>${can ? `<button type="button" class="btn small" id="un-jdo" title="학년 진도표(한글 파일)에서 모든 과목 단원을 한 번에 가져와요">진도표 올리기</button><button type="button" class="btn small" id="un-edit">${units.length ? '목차 고치기' : '목차 넣기'}</button>` : ''}</div>
     ${UN.edit ? `<div class="un-edit"><p class="hint" style="margin:0 0 4px">${esc(subjName(subj))} ${gradeNum()}-${sem} 단원을 한 줄에 하나씩 적거나 붙여 넣어요. 교과서 차례에서 단원 이름만 복사해 와도 돼요. 동학년 모두에게 같이 보여요.</p>
       <textarea id="un-text" rows="7" placeholder="1. 물체와 물질&#10;2. 지구와 바다&#10;3. 소리의 성질">${esc(units.join('\n'))}</textarea>
       <div class="row" style="margin-top:6px"><span class="grow"></span><button type="button" class="btn small" id="un-cancel">취소</button><button type="button" class="btn small primary" id="un-save">저장</button></div></div>` : ''}`;
@@ -1026,7 +1062,7 @@ function renderUnits(subj, list){
   }).join('');
   const other = list.filter(l => keyOf(l) === '__other');
   if (other.length) h += `<p class="hint" style="margin:8px 0 0">다른 학기 단원에 넣은 자료 ${other.length}개는 ${gradeNum()}-${sem === '1' ? '2' : '1'}을 누르면 보여요.</p>`;
-  if (!units.length && !UN.edit) h = `<div class="jd-empty" style="margin-bottom:8px">${esc(subjName(subj))} ${gradeNum()}-${sem} 목차가 아직 없어요.${can ? ' 위 "목차 넣기"로 단원 이름을 한 번 붙여 넣으면, 동학년 모두에게 단원별 칸이 생겨요.' : ''}</div>` + h;
+  if (!units.length && !UN.edit) h = `<div class="jd-empty" style="margin-bottom:8px">${esc(subjName(subj))} ${gradeNum()}-${sem} 목차가 아직 없어요.${can ? ' 위 "진도표 올리기"로 학년 진도표(한글 파일)를 올리면 모든 과목 단원이 한 번에 들어가요. "목차 넣기"로 단원 이름을 직접 붙여 넣어도 돼요. 동학년 모두에게 같이 보여요.' : ''}</div>` + h;
   $('#links').innerHTML = `<div class="un-list">${h}</div>`;
 }
 $('#unit-bar').addEventListener('click', async e => {
@@ -1034,6 +1070,7 @@ $('#unit-bar').addEventListener('click', async e => {
   const subj = S.linkSubj;
   if (e.target.id === 'un-edit'){ UN.edit = !UN.edit; renderLinks(); if (UN.edit) $('#un-text').focus(); return; }
   if (e.target.id === 'un-cancel'){ UN.edit = false; renderLinks(); return; }
+  if (e.target.id === 'un-jdo'){ $('#un-file').value = ''; $('#un-file').click(); return; }
   if (e.target.id === 'un-save'){
     const sem = UN.sem || curSem(), lines = $('#un-text').value.split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 40);
     const c = unitCfg(subj), custom = Object.assign({}, c.custom, {[sem]:lines});
@@ -1047,6 +1084,126 @@ $('#unit-bar').addEventListener('change', async e => {
   if (e.target.id === 'un-pubname'){ await unitSave(S.linkSubj, {pub:e.target.value.trim()}); UN.own = false; renderLinks(); return; }
   if (v === '__own'){ UN.own = true; renderLinks(); const i = $('#un-pubname'); if (i) i.focus(); return; }
   UN.own = false; await unitSave(S.linkSubj, {pub:v}); renderLinks();
+});
+/* 진도표(.hwp/.hwpx)에서 과목별 "단원명" 칸을 모아 목차로 넣어요 */
+function cfbStreams(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), END = 0xFFFFFFFA;
+  if (dv.getUint32(0, true) !== 0xE011CFD0) throw new Error('cfb');
+  const ss = 1 << dv.getUint16(30, true), mss = 1 << dv.getUint16(32, true), q = ss / 4;
+  const nfat = dv.getUint32(44, true), dirStart = dv.getUint32(48, true), cutoff = dv.getUint32(56, true), miniStart = dv.getUint32(60, true);
+  let x = dv.getUint32(68, true), nd = dv.getUint32(72, true);
+  const off = i => 512 + i * ss, fatSecs = [];
+  for (let k = 0; k < 109; k++) fatSecs.push(dv.getUint32(76 + k * 4, true));
+  while (x < END && nd-- > 0){ for (let k = 0; k < q - 1; k++) fatSecs.push(dv.getUint32(off(x) + k * 4, true)); x = dv.getUint32(off(x) + ss - 4, true); }
+  const fat = new Uint32Array(nfat * q);
+  fatSecs.slice(0, nfat).forEach((f, j) => { for (let k = 0; k < q; k++) fat[j * q + k] = dv.getUint32(off(f) + k * 4, true); });
+  const cat = parts => { const o = new Uint8Array(parts.reduce((a, p) => a + p.length, 0)); let p = 0; parts.forEach(s => { o.set(s, p); p += s.length; }); return o; };
+  const chain = st => { const ps = []; let g = 0; while (st < END && g++ < 1e6){ ps.push(u8.subarray(off(st), off(st) + ss)); st = fat[st]; } return cat(ps); };
+  const dirs = chain(dirStart), dd = new DataView(dirs.buffer, dirs.byteOffset, dirs.byteLength), ents = [];
+  for (let i = 0; i < dirs.length / 128; i++){
+    const b = i * 128, nl = dd.getUint16(b + 64, true);
+    let name = ''; for (let j = 0; j + 2 < nl; j += 2) name += String.fromCharCode(dd.getUint16(b + j, true));
+    ents.push({name, typ:dirs[b + 66], l:dd.getUint32(b + 68, true), r:dd.getUint32(b + 72, true), c:dd.getUint32(b + 76, true), st:dd.getUint32(b + 116, true), sz:dd.getUint32(b + 120, true)});
+  }
+  const ministream = chain(ents[0].st), mf = miniStart < END ? chain(miniStart) : new Uint8Array(0), mdv = new DataView(mf.buffer, mf.byteOffset, mf.byteLength);
+  const read = e => {
+    if (e.sz < cutoff){ const ps = []; let st = e.st, g = 0; while (st < END && g++ < 1e6){ ps.push(ministream.subarray(st * mss, (st + 1) * mss)); st = mdv.getUint32(st * 4, true); } return cat(ps).subarray(0, e.sz); }
+    return chain(e.st).subarray(0, e.sz);
+  };
+  const out = {}, seen = new Set();
+  const walk = (i, pre) => { if (i >= END || seen.has(i) || !ents[i]) return; seen.add(i); const e = ents[i]; walk(e.l, pre); walk(e.r, pre); const p = pre + '/' + e.name; if (e.typ === 2) out[p] = () => read(e); if (e.typ === 1) walk(e.c, p); };
+  walk(ents[0].c, '');
+  return out;
+}
+/* 뒤에 남는 바이트가 있어도 풀린 데까지는 써요 (크롬은 이때 오류를 내요) */
+async function inflateLoose(u8){
+  const rd = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), ps = [];
+  try { for (;;){ const {done, value} = await rd.read(); if (done) break; ps.push(value); } } catch (e){ if (!ps.length) throw e; }
+  const o = new Uint8Array(ps.reduce((a, p) => a + p.length, 0)); let p = 0; ps.forEach(x => { o.set(x, p); p += x.length; }); return o;
+}
+async function hwp5Tables(buf){
+  const fs = cfbStreams(buf); if (!fs['/FileHeader']) throw new Error('hwp');
+  const comp = fs['/FileHeader']()[36] & 1;
+  const secs = Object.keys(fs).filter(p => /^\/BodyText\/Section\d+$/.test(p)).sort((a, b) => +a.split('Section')[1] - +b.split('Section')[1]);
+  const tables = [];
+  for (const p of secs){
+    let b = fs[p]();
+    if (comp) b = await inflateLoose(b);
+    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength), stack = [];
+    let cell = null, i = 0;
+    while (i + 4 <= b.length){
+      const h = dv.getUint32(i, true), tag = h & 0x3FF, lv = (h >>> 10) & 0x3FF; let sz = h >>> 20; i += 4;
+      if (sz === 0xFFF){ sz = dv.getUint32(i, true); i += 4; }
+      while (stack.length && lv < stack[stack.length - 1].lv) stack.pop();
+      const tb = stack[stack.length - 1];
+      if (tag === 77){ const t = {lv, cells:[]}; tables.push(t); stack.push(t); cell = null; }
+      else if (tag === 72 && tb && lv === tb.lv && sz >= 16){ cell = {c:dv.getUint16(i + 8, true), r:dv.getUint16(i + 10, true), t:''}; tb.cells.push(cell); }
+      else if (tag === 67 && cell){
+        let s = '', j = i; const e = i + sz;
+        while (j + 1 < e){ const c = dv.getUint16(j, true); if ((c >= 1 && c <= 8) || c === 11 || c === 12 || (c >= 14 && c <= 23)) j += 16; else if (c === 9){ s += ' '; j += 16; } else if (c === 10 || c === 13){ s += ' '; j += 2; } else { if (c >= 32) s += String.fromCharCode(c); j += 2; } }
+        cell.t = (cell.t + ' ' + s).replace(/\s+/g, ' ').trim();
+      }
+      i += sz;
+    }
+  }
+  return tables.map(t => t.cells);
+}
+function hwpxTables(xmls){
+  const tables = [], lname = el => el.localName, kids = (el, n) => [...el.children].filter(c => lname(c) === n);
+  const cellText = tc => [...tc.getElementsByTagNameNS('*', 'p')].map(p => [...p.getElementsByTagNameNS('*', 't')].map(t => t.textContent).join('')).join(' ').replace(/\s+/g, ' ').trim();
+  xmls.forEach(xml => {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    [...doc.getElementsByTagNameNS('*', 'tbl')].forEach(tbl => {
+      tables.push(kids(tbl, 'tr').flatMap((tr, ri) => kids(tr, 'tc').map(tc => { const a = kids(tc, 'cellAddr')[0]; return {c:+(a && a.getAttribute('colAddr') || 0), r:+(a && a.getAttribute('rowAddr') || ri), t:cellText(tc)}; })));
+    });
+  });
+  return tables;
+}
+const JDO_SUBJ = {'국어':'kor', '수학':'math', '사회':'soc', '과학':'sci', '영어':'eng', '음악':'mus', '미술':'art', '체육':'pe', '도덕':'eth'};
+const JDO_SKIP = /^(준비|실천|다가가기|이해하기\s*\d*|실천하기|돌아보기|단원\s*도입|단원\s*마무리|학습\s*내용\s*정리|단원명|단원)$/;
+function jdoParse(tables){
+  const res = {}; let subj = null, col = null, sem = '', grade = '';
+  tables.forEach(cells => {
+    const head = cells.find(x => /^단원(명)?$/.test(x.t.replace(/\s/g, '')));
+    cells.forEach(x => {
+      if (head && x.r >= head.r) return;
+      const m = x.t.match(/^\s*([가-힣]+)\s*(?:\(.*?\))?\s*(?:교육과정|연간\s*지도\s*계획|진도표)/); if (m) subj = JDO_SUBJ[m[1]] || '';
+      const s = x.t.match(/(\d)\s*학기/); if (s) sem = s[1];
+      const g = x.t.match(/(\d)\s*학년/); if (g) grade = g[1];
+    });
+    if (head) col = head.c;
+    if (!subj || col == null) return;
+    const list = res[subj] = res[subj] || [];
+    cells.filter(x => x.c === col && (!head || x.r > head.r)).sort((a, b) => a.r - b.r).forEach(x => {
+      const t = x.t.replace(/\s+/g, ' ').trim();
+      if (!t || /^[◆※]/.test(t) || JDO_SKIP.test(t) || list.includes(t)) return;
+      list.push(t);
+    });
+  });
+  Object.keys(res).forEach(k => { res[k] = res[k].slice(0, 40); if (!res[k].length) delete res[k]; });
+  return {units:res, sem, grade};
+}
+$('#un-file').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f || !S.canWrite) return;
+  try {
+    const buf = await f.arrayBuffer();
+    let tables;
+    if (new DataView(buf).getUint32(0, true) === 0xE011CFD0) tables = await hwp5Tables(buf);
+    else { const xs = await unzipText(buf, n => /^Contents\/section\d+\.xml$/.test(n)); tables = hwpxTables(Object.keys(xs).sort((a, b) => a.localeCompare(b, 'en', {numeric:true})).map(k => xs[k])); }
+    const {units, sem:fs, grade} = jdoParse(tables), keys = Object.keys(units);
+    if (!keys.length){ toast('진도표에서 "단원명" 칸을 찾지 못했어요. 과목 이름과 "단원명" 칸이 있는 한글 표인지 확인해 주세요.'); return; }
+    const sem = fs || UN.sem || curSem(), done = [], kept = [];
+    S.gunits = S.gunits || {};
+    keys.forEach(k => {
+      const c = unitCfg(k), lib = (((UNIT_LIB[gradeNum()] || {})[k] || {})[c.pub] || {})[sem];
+      if (lib && lib.length){ kept.push(subjName(k)); return; }
+      S.gunits[k] = Object.assign({}, S.gunits[k] || {}, {custom:Object.assign({}, c.custom, {[sem]:units[k]})});
+      done.push(subjName(k));
+    });
+    if (done.length){ try { await S.db.doc('grade/units').set(JSON.parse(JSON.stringify(S.gunits))); } catch (er){ wErr(er, true); } }
+    UN.sem = sem; UN.open.clear(); renderLinks();
+    toast(`${gradeNum()}-${sem} ${done.length ? done.join('·') + ' 단원을 넣었어요.' : '새로 넣은 과목이 없어요.'}${kept.length ? ` ${kept.join('·')}은(는) 고른 출판사 목차가 있어서 그대로 뒀어요.` : ''}${grade && grade !== gradeNum() ? ` (파일은 ${grade}학년 진도표예요)` : ''}`);
+  } catch (er){ console.error(er); toast('파일을 읽지 못했어요. 한글 파일(.hwp, .hwpx)인지 확인해 주세요.'); }
 });
 $('#links').addEventListener('click', e => {
   const tg = e.target.closest('[data-untg]'); if (!tg || e.target.closest('a')) return;
@@ -1868,7 +2025,7 @@ function arm(key){
   clearTimeout(arm.t); arm.t = setTimeout(() => { S.armed = null; renderAll(); renderTabPage(); }, 4000);
   return false;
 }
-function saveProfile(){ queueSet(PROFILE(), () => ({motto:S.profile.motto || '', myClass:S.profile.myClass || '', roster:S.profile.roster || [], rosterExtra:S.profile.rosterExtra || [], rosterSync:!!S.profile.rosterSync, seenVersion:S.profile.seenVersion || '', timetable:S.profile.timetable || {}, pageNames:S.profile.pageNames || {}, role:S.profile.role || '', updatedAt:Date.now()}), false); }
+function saveProfile(){ queueSet(PROFILE(), () => ({motto:S.profile.motto || '', myClass:S.profile.myClass || '', roster:S.profile.roster || [], rosterExtra:S.profile.rosterExtra || [], rosterSync:!!S.profile.rosterSync, tabPrefs:S.profile.tabPrefs || {}, seenVersion:S.profile.seenVersion || '', timetable:S.profile.timetable || {}, pageNames:S.profile.pageNames || {}, role:S.profile.role || '', updatedAt:Date.now()}), false); }
 function saveNotes(){ queueSet(NOTES(), () => ({items:S.notes.items, done:S.notes.done || []}), false); }
 function saveSheet(){ queueSet(SHEET(), () => S.sheet, false); }
 function openDlg(id){ $(id).hidden = false; const f = $(id).querySelector('input,select,textarea'); if (f) f.focus(); }
@@ -2000,6 +2157,8 @@ document.addEventListener('click', async ev => {
     printAbsenceForm(a.dataset.id, +a.dataset.no);
   } else if (act === 'newtab'){
     openNewTab();
+  } else if (act === 'tabarrange'){
+    $('#dlg-tabs').hidden = false; renderTabArrange();
   } else if (act === 'cell-tick'){
     const r = S.rows.find(x => x.id === a.dataset.row); if (!r) return;
     const cur = (r.cells || {})[a.dataset.col];
@@ -3954,7 +4113,9 @@ const CHANGELOG = [
     '할 일을 매주·매월 반복할 수 있어요. "매주 금요일 주간학습 안내 올리기", "매월 말일 출석부 마감"처럼 적거나, 학년 할 일 "고치기"에서 반복을 고르면 돼요. 끝내면 다음 차례가 저절로 생겨요.',
     '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 한글 파일(.hwpx)을 올리면 과목·시기·단원·평가 요소가 원래 문서 순서대로 간단한 표로 정리되고, 줄을 누르면 성취기준과 성취수준이 펼쳐져요. 끝낸 평가는 체크하면 목록에서 빠지고, 이번 달 평가만 골라 보거나 직접 넣고 고칠 수도 있어요. 사진으로 올리기도 그대로 돼요.',
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
-    '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.'
+    '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.',
+    '수업자료 단원: 학년 진도표(한글 .hwp·.hwpx)를 "진도표 올리기"로 올리면 과목마다 "단원명" 칸을 읽어 단원 목차가 한 번에 들어가요. 3학년 출판사 목차(영어 천재 함순애, 미술 동아출판 포함)는 목록에서 고르기만 하면 돼요.',
+    '위쪽 탭 줄 끝 "탭 정리"에서 안 쓰는 탭을 숨기고 ↑↓로 순서를 바꿀 수 있어요. 내 화면에만 적용돼요.'
   ]],
   ['2.12', '11월 18일 오후', [
     '큰 모니터에서 나의 공간 다른 탭을 눌러도 내용이 안 보이던 것, 학년 공간 다른 탭에서 입력 칸이 오른쪽에 붙던 것을 고쳤어요. 세 줄 배치는 학년 "오늘"과 나의 공간 "학급일지"에서만 써요.'
