@@ -2768,23 +2768,27 @@ function makeBudget(key){
   }
   function renderTable(){
     const ae = document.activeElement;
-    if (ae && $('.bud-table', root).contains(ae) && ae.matches('input, select')) return;
+    if (ae && $('.bud-table', root).contains(ae) && ae.matches('input, select, textarea')) return;
     const ls = list().filter(match);
+    /* 비어 있는 에듀파인 칸(세부사업·원가통계비목)은 숨겨요 */
+    const showBiz = st.showAll || list().some(l => l.biz), showStat = st.showAll || list().some(l => l.stat);
+    const nCol = 9 + (showBiz ? 1 : 0) + (showStat ? 1 : 0);
     const dis = can() ? '' : 'disabled';
     if (!ls.length){ $('.bud-table', root).innerHTML = `<p class="empty">${list().length ? '이 구분에 들어간 예산이 없어요.' : '아직 예산 줄이 없어요. "+ 예산 줄 추가"를 누르거나 에듀파인 표를 붙여 넣어 주세요.'}</p>`; return; }
     const tot = {cur:0, rest:0, req:0, spent:0};
     const body = ls.map(l => {
       const c = budCalc(l); tot.cur += c.cur; tot.rest += c.rest; tot.req += c.req; tot.spent += c.spent;
-      const t = f => `<td><input type="text" id="bf-${key}-${l.id}-${f}" data-id="${esc(l.id)}" data-f="${f}" value="${esc(l[f] || '')}" aria-label="${{act:'주요활동', biz:'세부사업', item:'세부항목', stat:'원가통계비목'}[f]}" ${dis}></td>`;
+      const t = f => `<td ${f === 'memo' ? 'class="memo"' : ''}><input type="text" id="bf-${key}-${l.id}-${f}" data-id="${esc(l.id)}" data-f="${f}" value="${esc(l[f] || '')}" aria-label="${{act:'주요활동', biz:'세부사업', item:'세부항목', stat:'원가통계비목', memo:'메모'}[f]}" ${f === 'memo' ? 'placeholder="메모"' : ''} ${dis}></td>`;
+      const canSplit = g && can() && l.scope === '학급' && !l.cls;
       const open = st.open.has(l.id);
-      return `<tr class="${open ? 'opened' : ''}"><td><select id="bf-${key}-${l.id}-scope" data-id="${esc(l.id)}" data-f="scope" aria-label="구분" ${dis}>${scopeOpts(l)}</select></td>${t('act')}${t('biz')}${t('item')}${t('stat')}
+      return `<tr class="${open ? 'opened' : ''}"><td><select id="bf-${key}-${l.id}-scope" data-id="${esc(l.id)}" data-f="scope" aria-label="구분" ${dis}>${scopeOpts(l)}</select></td>${t('act')}${showBiz ? t('biz') : ''}${t('item')}${showStat ? t('stat') : ''}${t('memo')}
         <td class="n"><input type="text" inputmode="numeric" class="amt" id="bf-${key}-${l.id}-amount" data-id="${esc(l.id)}" data-f="amount" value="${wonS(c.base)}" aria-label="처음 예산" ${dis}>${c.adj ? `<small class="adj">${c.adj > 0 ? '+' : '−'}${wonS(Math.abs(c.adj))} → ${wonS(c.cur)}</small>` : ''}</td>
         <td class="n rest ${c.rest < 0 ? 'neg' : ''}">${wonS(c.rest)}</td><td class="n">${wonS(c.req)}</td><td class="n">${wonS(c.spent)}</td>
-        <td class="act"><button type="button" class="btn small ${open ? 'on' : ''}" data-b="open" data-id="${esc(l.id)}" aria-expanded="${open}">내역 ${(l.logs || []).length}</button>${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(l.id)}" aria-label="이 줄 지우기">×</button>` : ''}</td></tr>
-        ${open ? `<tr class="logrow"><td colspan="10">${logsHTML(l, c)}</td></tr>` : ''}`;
+        <td class="act"><button type="button" class="btn small ${open ? 'on' : ''}" data-b="open" data-id="${esc(l.id)}" aria-expanded="${open}">내역 ${(l.logs || []).length}${l.calc ? ' · 산출' : ''}</button>${canSplit ? `<button type="button" class="btn small" data-b="split" data-id="${esc(l.id)}" title="반마다 같은 금액으로 한 줄씩 나눠요">반마다</button>` : ''}${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(l.id)}" aria-label="이 줄 지우기">×</button>` : ''}</td></tr>
+        ${open ? `<tr class="logrow"><td colspan="${nCol}"><label class="f bud-calc" for="bf-${key}-${l.id}-calc">산출내역 <span class="hint">예: 기본 강사비 130,000원 × 3회 × 1학급</span><textarea id="bf-${key}-${l.id}-calc" data-id="${esc(l.id)}" data-f="calc" rows="2" ${dis}>${esc(l.calc || '')}</textarea></label>${logsHTML(l, c)}</td></tr>` : ''}`;
     }).join('');
-    $('.bud-table', root).innerHTML = `<div class="tablewrap"><table class="bud"><thead><tr><th>구분</th><th>주요활동</th><th>세부사업</th><th>세부항목</th><th>원가통계비목</th><th>예산현액</th><th>예산잔액</th><th>요구금액</th><th>집행액</th><th></th></tr></thead>
-      <tbody>${body}</tbody><tfoot><tr><td colspan="5">합계 (${ls.length}줄)</td><td class="n">${wonS(tot.cur)}</td><td class="n rest ${tot.rest < 0 ? 'neg' : ''}">${wonS(tot.rest)}</td><td class="n">${wonS(tot.req)}</td><td class="n">${wonS(tot.spent)}</td><td></td></tr></tfoot></table></div>`;
+    $('.bud-table', root).innerHTML = `<div class="tablewrap"><table class="bud"><thead><tr><th>구분</th><th>주요활동</th>${showBiz ? '<th>세부사업</th>' : ''}<th>세부항목</th>${showStat ? '<th>원가통계비목</th>' : ''}<th>메모</th><th>예산현액</th><th>예산잔액</th><th>요구금액</th><th>집행액</th><th></th></tr></thead>
+      <tbody>${body}</tbody><tfoot><tr><td colspan="${nCol - 5}">합계 (${ls.length}줄)${!st.showAll && (!showBiz || !showStat) ? ` <button type="button" class="btn small" data-b="showall" style="margin-left:6px">에듀파인 칸 보이기</button>` : ''}</td><td class="n">${wonS(tot.cur)}</td><td class="n rest ${tot.rest < 0 ? 'neg' : ''}">${wonS(tot.rest)}</td><td class="n">${wonS(tot.req)}</td><td class="n">${wonS(tot.spent)}</td><td></td></tr></tfoot></table></div>`;
   }
   const wpath = () => g ? 'budgetwish/list' : `data/users/${S.uid}/budgetwish`;
   function listenWish(){
@@ -2828,10 +2832,11 @@ function makeBudget(key){
     const b = e.target.closest('[data-b]'); if (!b) return;
     const act = b.dataset.b, id = b.dataset.id;
     if (act === 'open'){ st.open.has(id) ? st.open.delete(id) : st.open.add(id); renderTable(); return; }
+    if (act === 'showall'){ st.showAll = true; renderTable(); return; }
     if (act === 'csv'){
-      const rows = [['구분', '주요활동', '세부사업', '세부항목', '원가통계비목', '예산현액', '예산잔액', '요구금액', '집행액']];
+      const rows = [['구분', '주요활동', '세부사업', '세부항목', '원가통계비목', '메모', '예산현액', '예산잔액', '요구금액', '집행액', '산출내역']];
       const ls = list().filter(match);
-      ls.forEach(l => { const c = budCalc(l); rows.push([sVal(l), l.act || '', l.biz || '', l.item || '', l.stat || '', c.cur, c.rest, c.req, c.spent]); });
+      ls.forEach(l => { const c = budCalc(l); rows.push([sVal(l), l.act || '', l.biz || '', l.item || '', l.stat || '', l.memo || '', c.cur, c.rest, c.req, c.spent, l.calc || '']); });
       rows.push([]); rows.push(['내역', '세부항목', '날짜', '종류', '내용', '금액']);
       ls.forEach(l => (l.logs || []).forEach(x => rows.push(['', l.item || l.act || '', x.date || '', x.kind, x.text || '', (x.kind === '증액' ? 1 : -1) * numIn(x.amt)])));
       save(`${g ? '학년' : '우리반'}_예산_${ymd(today())}.csv`, csv(rows)); return;
@@ -2841,6 +2846,15 @@ function makeBudget(key){
       const n = $(`#wi-${key}-n`).value.trim(); if (!n){ toast('살 것을 적어 주세요.'); return; }
       putWish((st.wish || []).concat([{id:rid(), name:n.slice(0, 60), price:numIn($(`#wi-${key}-p`).value), line:$(`#wi-${key}-l`).value, at:Date.now(), by:S.uid}]));
       $(`#wi-${key}-n`).value = ''; $(`#wi-${key}-p`).value = ''; return;
+    }
+    if (act === 'split'){
+      const l = lineOf(id); if (!l) return;
+      if (!twoStep(b, `${nCls()}개 반으로 나눌까요?`)) return;
+      try {
+        for (let i = 1; i <= nCls(); i++){ const c = Object.assign({}, l); delete c.id; c.cls = i + '반'; c.logs = []; c.order = (l.order || l.createdAt || 0) + i / 100; c.createdAt = Date.now() + i; await col().add(c); }
+        await col().doc(id).delete(); toast(`${l.item || l.act || '이 줄'}을(를) ${nCls()}개 반으로 나눴어요. 반마다 쓴 돈을 따로 적을 수 있어요.`);
+      } catch (er){ err(er); }
+      return;
     }
     if (act === 'wish-del'){ if (!twoStep(b, '빼기?')) return; putWish((st.wish || []).filter(x => x.id !== id)); return; }
     if (act === 'wish-buy'){
@@ -3830,6 +3844,7 @@ const CHANGELOG = [
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
+    '예산: 줄마다 메모 칸과 산출내역 칸이 생기고, 비어 있는 에듀파인 칸(세부사업·원가통계비목)은 숨겨요. 학급 줄은 "반마다"를 누르면 반별 줄로 나눠져요.',
     '나의 공간 학생별: 왼쪽에 학생 이름이 두 줄로 쭉 있고, 누르면 오른쪽에 그 학생 카드와 누가기록이 한눈에 보이는 폭으로 나와요.',
     '알림장 제목 날짜를 내일이 아니라 쓰는 날(오늘)로 바꿨어요. 1번 시간표와 준비물은 그대로 다음 등교일 것이에요.',
     '할 일을 매주·매월 반복할 수 있어요. "매주 금요일 주간학습 안내 올리기", "매월 말일 출석부 마감"처럼 적거나, 학년 할 일 "고치기"에서 반복을 고르면 돼요. 끝내면 다음 차례가 저절로 생겨요.',
