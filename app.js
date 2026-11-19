@@ -626,6 +626,7 @@ function applyRoute(r){
   S.route = r; S.space = space; S.page = page;
   document.body.dataset.space = space;
   document.body.dataset.page = space === 'me' ? 'me' : page;
+  try { placeGmemo(); } catch (e){}
   $('#v-grade').hidden = space !== 'grade'; $('#v-me').hidden = space !== 'me';
   $('#sw-grade').setAttribute('aria-pressed', space === 'grade'); $('#sw-me').setAttribute('aria-pressed', space === 'me');
   $$('#v-grade .pg').forEach(el => { el.hidden = !el.classList.contains('pg-' + page); });
@@ -933,6 +934,7 @@ function renderLinks(){
 }
 $('#links').addEventListener('change', async e => { const sel = e.target.closest('[data-link-subj]'); if (!sel) return; try { await S.db.doc('links/' + sel.dataset.linkSubj).update({subj:sel.value}); } catch (er){ wErr(er, true); } });
 function renderDay(){
+  const dp = document.querySelector('.daypanel'); if (dp) dp.classList.toggle('is-today', S.selDate === ymd(today()));
   const k = S.selDate;
   $('#day-title').textContent = fmtLong(k);
   $('#day-hol').textContent = HOLIDAYS[k] || '';
@@ -1040,7 +1042,15 @@ function renderWeekTasks(){
   $('#th-wk').innerHTML = r.html; $('#th-wk').classList.toggle('row1', wide); $('#th-wk').style.setProperty('--n', r.cols || 1);
   if (S.space === 'me') renderMeGrade();
 }
-try { WIDE_MQ.addEventListener('change', () => renderWeekTasks()); } catch (e){}
+/* 큰 모니터 학년 첫 화면: 학년 참고사항을 입력 칸 아래로 옮겨요 */
+function placeGmemo(){
+  const card = document.querySelector('.gmemo-card'), add = document.querySelector('#v-grade .addcard'); if (!card || !add) return;
+  if (!placeGmemo.home) placeGmemo.home = {parent:card.parentElement, next:card.nextElementSibling};
+  const wide = WIDE_MQ.matches && document.body.dataset.page === 'main';
+  if (wide && card.previousElementSibling !== add) add.after(card);
+  else if (!wide && card.parentElement !== placeGmemo.home.parent) placeGmemo.home.parent.insertBefore(card, placeGmemo.home.next);
+}
+try { WIDE_MQ.addEventListener('change', () => { renderWeekTasks(); placeGmemo(); }); } catch (e){}
 function renderMeGrade(){
   const el = $('#me-grade'); if (!el) return;
   const my = S.profile.myClass;
@@ -3774,8 +3784,11 @@ if (window.__gasNoGrade) gradePickSoon();
 
 
 /* ---------- 버전 · 바뀐 것 알림 ---------- */
-const APP_VERSION = '2.14';
+const APP_VERSION = '2.15';
 const CHANGELOG = [
+  ['2.15', '11월 19일', [
+    '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 이미 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 그날 일정이 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.'
+  ]],
   ['2.14', '11월 19일', [
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.'
   ]],
