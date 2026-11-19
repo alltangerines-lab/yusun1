@@ -524,6 +524,7 @@ function imageTarget(name){
   if (name === 'j' || name === 'cns' || name === 'stu') return {scope:'private', add:refs => { S.stage[name].push(...refs); renderStage(name); }};
   if (name === 'ops') return {scope:'shared', add:refs => { S.stage.ops = (S.stage.ops || []).concat(refs); renderStage('ops'); }};
   if (name === 'mo') return {scope:'private', add:refs => { const r = rt(), k = ymd(today()); const cap = $('#mo-new').value.trim().slice(0, 200); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:cap, imgs:refs}])}); $('#mo-new').value = ''; saveRoutine(); renderMorning(false); toast('사진을 오늘 할 일에 붙였어요.'); }};
+  if (name === 'eval') return {scope:'private', add:refs => { S.ev.imgs = (S.ev.imgs || []).concat(refs); evSave(); renderEval(); toast(`평가 계획 사진 ${refs.length}장을 올렸어요.`); }};
   if (name === 'mops') return {scope:'private', add:refs => { S.stage.mops = (S.stage.mops || []).concat(refs); renderStage('mops'); }};
   if (name === 'gmemo') return {scope:'shared', add:async refs => { const cur = (S.gmemo && S.gmemo.imgs) || []; try { await S.db.doc('grade/memo').set(Object.assign({}, S.gmemo || {}, {imgs:cur.concat(refs), updatedAt:Date.now(), updatedBy:S.uid})); } catch (e){ wErr(e, true); } }};
   if (name === 'daily') return {scope:'shared', add:refs => { S.dailyImgs.push(...refs); markDailyDirty(); renderDailyThumbs(); }};
@@ -546,6 +547,7 @@ function pasteTargetOf(el){
   if (el.closest('#gm-edit')) return 'gmemo';
   if (el.closest('#ops-form')) return 'ops';
   if (el.closest('#mops-form')) return 'mops';
+  if (el.closest('#p-eval')) return 'eval';
   if (el.closest('#mo-add')) return 'mo';
   if (el.id === 'd-plan' || el.id === 'd-notice') return 'daily';
   if (el.id === 'j-input') return 'j';
@@ -583,7 +585,7 @@ function openLightbox(src){ if (!src) return; $('#lb-img').src = src; $('#lightb
 
 /* ---------- pages (tabs) ---------- */
 const GPAGES = [['grade','오늘','main'],['calendar','달력','calendar'],['lessons','특별수업','lessons'],['tasks','할 일','tasks'],['notices','협의·공지','notices'],['links','수업자료','links'],['ops','운영자료','ops'],['budget','예산','budget'],['roster','명부','roster']];
-const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출결','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-roster','명부','roster'],['me-ops','자료','mops']];
+const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출결','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-roster','명부','roster'],['me-ops','자료','mops']];
 const JPAGES = [['me','오늘 수업','jday'],['me-jles','수업일지','jles'],['me-jprog','진도표','jprog'],['me-jcls','반별 명렬','jcls'],['me-jtt','시간표·시수','jtt'],['me-todo','할 일','todo'],['me-cns','상담일지','cns'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const isJD = () => !!(S.profile && S.profile.role === 'jd');
 const curMP = () => isJD() ? JPAGES : MPAGES;
@@ -1521,11 +1523,11 @@ function renderMe(){
   $('#me-on').hidden = !S.privateOk && !!S.privateOffMsg;
   if (S.privateOffMsg) $('#me-off-text').textContent = S.privateOffMsg;
   $$('#me-tabs button').forEach(b => { b.setAttribute('aria-selected', b.dataset.tab === S.meTab); const m = MPAGES.find(x => x[2] === b.dataset.tab); if (m){ if (!b.dataset.def) b.dataset.def = b.textContent; b.textContent = (S.profile.pageNames || {})[m[0]] || b.dataset.def; } });
-  ['day', 'plan', 'todo', 'stu', 'cns', 'att', 'sheet', 'tt', 'budget', 'roster', 'mops', 'jday', 'jtt', 'jles', 'jprog', 'jcls'].forEach(t => { $('#p-' + t).hidden = S.meTab !== t; });
+  ['day', 'plan', 'todo', 'stu', 'cns', 'att', 'sheet', 'tt', 'budget', 'roster', 'mops', 'jday', 'jtt', 'jles', 'jprog', 'jcls', 'eval'].forEach(t => { $('#p-' + t).hidden = S.meTab !== t; });
   placeStuCol();
   $('#me-top').hidden = S.meTab !== 'day';
   renderToday(); renderNotes(); renderCats(); renderJPreview(); renderStage('j'); renderStage('cns'); renderStage('stu');
-  ({day:renderDayBoard, plan:renderPlanPage, todo:renderTodo, stu:renderStu, cns:renderCns, att:renderAtt, sheet:renderSheet, tt:renderTT, budget:() => BUD.m && BUD.m.render(), roster:renderRoster, mops:() => renderOps(OPM), jday:renderJDay, jtt:renderJTT, jles:renderJLes, jprog:renderJProg, jcls:renderJCls})[S.meTab]();
+  ({day:renderDayBoard, plan:renderPlanPage, todo:renderTodo, stu:renderStu, cns:renderCns, att:renderAtt, sheet:renderSheet, tt:renderTT, budget:() => BUD.m && BUD.m.render(), roster:renderRoster, mops:() => renderOps(OPM), jday:renderJDay, jtt:renderJTT, jles:renderJLes, jprog:renderJProg, jcls:renderJCls, eval:renderEval})[S.meTab]();
 }
 function renderAll(){ renderGrade(); if (S.space === 'me') renderMe(); }
 
@@ -1632,6 +1634,11 @@ function startPrivate(){
       S.stuNotes = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {hb:{}};
       if (!S.stuNotes.hb) S.stuNotes.hb = {};
       if (S.space === 'me' && S.meTab === 'stu' && !(document.activeElement && document.activeElement.id === 'stu-hb')) renderStu();
+    });
+    listen(db.doc(EVP()), 'evalplan', snap => {
+      if (busy(EVP())) return;
+      S.ev = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {imgs:[]}; if (!Array.isArray(S.ev.imgs)) S.ev.imgs = [];
+      if (S.space === 'me' && S.meTab === 'eval') renderEval();
     });
     listen(db.doc(JDP()), 'jd', snap => {
       if (busy(JDP())) return;
@@ -3789,6 +3796,7 @@ const CHANGELOG = [
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
     '큰 모니터 학년 첫 화면: 오늘 일정은 맨 위에 보여서 가운데 "그날 일정" 칸은 숨겼어요. 달력에서 다른 날을 누르면 다시 나와요. "학년 참고사항"은 입력 칸 아래로 옮겼어요.',
+    '나의 공간에 "평가" 탭이 생겼어요. 평가 계획 사진(jpg)을 여러 장 올려 두면 원래 크기로 쭉 보여요.',
     '아침 안내 오늘 할 일에 긴 글(200자까지)을 쓰면 두세 줄로 넘어가요.',
     '위쪽에 "사용 안내" 버튼이 생겼어요. 누르면 화면 사진으로 된 안내서가 새 창으로 열려요. 동학년 선생님께 처음 쓰는 법을 알려 줄 때 써 보세요.'
   ]],
@@ -3939,6 +3947,27 @@ $('#pp-next').onclick = () => ppGo(ymd(addDays(fromYmd(S.jDate), 1)));
 $('#pp-today').onclick = () => ppGo(ymd(today()));
 $('#pp-date').addEventListener('change', e => { if (e.target.value) ppGo(e.target.value); });
 
+
+/* ---------- 나의 공간: 평가 (평가 계획 사진) ---------- */
+const EVP = () => `data/users/${S.uid}/evalplan`;
+S.ev = {imgs:[]};
+const evSave = () => { if (!S.uid) return; queueSet(EVP(), () => ({imgs:(S.ev.imgs || []).slice(), updatedAt:Date.now()}), false); };
+function renderEval(){
+  if (S.meTab !== 'eval') return;
+  const im = S.ev.imgs || [];
+  $('#ev-list').innerHTML = im.length ? im.map((r, i) => `<figure class="ev-item"><div class="ev-bar"><b>${i + 1}</b><span class="grow"></span><button type="button" class="btn small" data-evmv="-1" data-i="${i}" ${i ? '' : 'disabled'} aria-label="${i + 1}번째 사진 위로">위로</button><button type="button" class="btn small" data-evmv="1" data-i="${i}" ${i < im.length - 1 ? '' : 'disabled'} aria-label="${i + 1}번째 사진 아래로">아래로</button><button type="button" class="btn small" data-evdel="${i}" aria-label="${i + 1}번째 사진 지우기">지우기</button></div><div class="ev-img">${thumbsHtml([r], '')}</div></figure>`).join('')
+    : '<div class="jd-empty">아직 올린 사진이 없어요. 위 "사진 올리기"로 평가 계획 jpg를 골라 주세요. 여러 장을 한 번에 골라도 돼요.</div>';
+  hydrateImgs();
+}
+$('#ev-list').addEventListener('click', async e => {
+  if (!S.uid) return;
+  const mv = e.target.closest('[data-evmv]'), del = e.target.closest('[data-evdel]');
+  const im = S.ev.imgs || [];
+  if (mv){ const i = +mv.dataset.i, j = i + +mv.dataset.evmv; if (j < 0 || j >= im.length) return; [im[i], im[j]] = [im[j], im[i]]; evSave(); renderEval(); return; }
+  if (del){ if (!twoStep(del, '정말 지울까요?')) return; const r = im.splice(+del.dataset.evdel, 1)[0]; evSave(); renderEval(); if (r) dropImage(r); }
+});
+$('#p-eval').addEventListener('dragover', e => { if ([...(e.dataTransfer.types || [])].includes('Files')){ e.preventDefault(); } });
+$('#p-eval').addEventListener('drop', e => { const f = [...(e.dataTransfer.files || [])].filter(x => /^image\//.test(x.type)); if (!f.length) return; e.preventDefault(); attach('eval', f); });
 
 /* ================= 교과 전담: 시간표·시수, 오늘 수업 ================= */
 const JDP = () => `data/users/${S.uid}/jd`;
