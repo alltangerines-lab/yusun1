@@ -270,6 +270,7 @@ button{cursor:pointer}
 .switch button{border:0;background:transparent;color:var(--accent-ink);padding:6px 14px;border-radius:999px;font-weight:600;font-size:13px;opacity:.85}
 .switch button[aria-pressed="true"]{background:var(--accent-ink);color:var(--accent);opacity:1}
 .iconbtn{border:1px solid color-mix(in srgb,var(--accent-ink) 35%,transparent);background:transparent;color:var(--accent-ink);border-radius:8px;padding:6px 10px;font-size:13px}
+a.iconbtn{text-decoration:none;display:inline-block;line-height:normal}
 .banner{background:var(--surface-2);border-bottom:1px solid var(--line);font-size:13px}
 .banner .wrap{padding-block:8px}
 
@@ -1342,6 +1343,7 @@ body.ro .w-only{display:none!important}
     <button type="button" class="iconbtn gas-only acct-chip" data-act="acct" id="acct-chip" title="지금 열린 구글 계정 · 눌러서 바꾸기"></button>
     <button type="button" class="iconbtn" id="open-search" title="통합 검색 (Ctrl+K)">검색</button>
     <button type="button" class="iconbtn" id="open-tools">교실 도구</button>
+    <a class="iconbtn" id="open-guide" href="https://claude.ai/artifact/4FmAnZ24PCbawfhm2A573k" target="_blank" rel="noopener noreferrer" title="처음 쓰는 선생님을 위한 사진 안내서 (새 창)">사용 안내</a>
     <button type="button" class="iconbtn" id="open-settings">설정</button>
   </div>
   <nav class="sheetbar" aria-label="페이지 고르기"><div class="wrap" id="sheetbar"></div></nav>
@@ -2476,8 +2478,8 @@ body.ro .w-only{display:none!important}
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- APP_VERSION 2.13 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3efebf521997c69043e44239dc2551b88e0113ac/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<!-- APP_VERSION 2.14 -->
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3765077a67bb2f2f8c92dcc308f15d21ff5cdce0/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
