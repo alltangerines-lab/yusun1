@@ -1166,6 +1166,25 @@ table.jc-t{border-collapse:collapse;font-size:13px}
 .jc-note .dt{font-family:var(--mono);color:var(--muted);font-size:12px}
 .jc-note .tx{overflow-wrap:anywhere}
 @media (max-width:640px){.jl-head{grid-template-columns:48px minmax(0,1fr)}.jl-chips{grid-column:1/-1;justify-content:flex-start}.jc-note{grid-template-columns:64px minmax(0,1fr) auto}.jc-note .who{grid-column:2}}
+.un-bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:4px 0 10px}
+.un-edit{margin:0 0 10px}
+.un-list{display:grid;gap:8px}
+.un-row{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.un-row.open{border-color:var(--accent)}
+.un-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;flex-wrap:wrap}
+.un-head b{font-size:15px}
+.un-n{font-family:var(--mono);font-weight:700;color:var(--accent);font-size:16px;min-width:22px}
+.un-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin:0 6px}
+.un-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;flex:1;min-width:0}
+.un-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:3px 9px 3px 4px;font-size:12.5px;color:var(--fg);text-decoration:none;background:var(--surface);max-width:220px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.un-chip i{width:5px;align-self:stretch;border-radius:3px;background:var(--accent);flex-shrink:0}
+.un-chip:hover{border-color:var(--accent)}
+.un-plus{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--muted);background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;flex-shrink:0}
+.un-body{border-top:1px solid var(--line);padding:10px 14px 12px;display:grid;gap:6px;background:var(--surface-2);border-radius:0 0 12px 12px}
+.un-li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface);border-radius:8px;padding:6px 8px}
+.un-url{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.un-add{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.un-add input{flex:1;min-width:140px}
 .jt-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:6px 0}
 .jt-legend i{display:inline-block;width:14px;height:12px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
 .pp-t th,.pp-t td{border-bottom:1px solid var(--line);padding:3px 4px;text-align:left;vertical-align:top}
@@ -1562,8 +1581,9 @@ body.ro .w-only{display:none!important}
           <div class="card-h"><h2>수업자료</h2><span class="count" id="link-count"></span><a class="openlink" href="#links">따로 보기</a></div>
           <div class="card-b">
             <nav class="subj-tabs" id="link-subj" aria-label="과목"></nav>
+            <div id="unit-bar" hidden></div>
             <div class="list" id="links"></div>
-            <details class="addform w-only">
+            <details class="addform w-only" id="l-addbox">
               <summary>+ 링크 추가</summary>
               <form class="inner" id="l-form">
                 <input type="text" id="l-title" placeholder="이름 (예: 문해력 교과보충 자료)" autocomplete="off">
@@ -2553,7 +2573,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.15 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@810dae119f7acdc0e68e22b12538cc79de638064/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@0bdf2534a80c2ec5df44273f542b88b8a2de30c6/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
