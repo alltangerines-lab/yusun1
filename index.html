@@ -1039,6 +1039,7 @@ table.pp-t{border-collapse:collapse;width:100%;font-size:13px;min-width:760px}
 .ev-row.now td.n{color:var(--me);font-weight:700}
 .ev-row.now{box-shadow:inset 3px 0 0 var(--me)}
 .ev-row.on{background:var(--me-soft)}
+.ev-row.grp td{border-top:2px solid var(--line)}
 .ev-t td.sj{white-space:nowrap;font-weight:700;width:1%}
 .ev-t td.u{color:var(--muted);font-size:13px;min-width:160px}
 .ev-t td.el{min-width:220px}
@@ -1788,6 +1789,7 @@ body.ro .w-only{display:none!important}
           <div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:8px">
             <nav class="jg-tabs" id="ev-subj" aria-label="과목" style="margin:0"></nav>
             <span class="grow"></span>
+            <div class="seg" role="group" aria-label="정렬" id="ev-sort"><button type="button" data-v="subj" aria-pressed="true">문서 순서</button><button type="button" data-v="when" aria-pressed="false">시기순</button></div>
             <div class="seg" role="group" aria-label="시기" id="ev-when"><button type="button" data-v="all" aria-pressed="true">전체</button><button type="button" data-v="now" aria-pressed="false">이번 달</button><button type="button" data-v="next" aria-pressed="false">다음 달까지</button></div>
           </div>
           <div id="ev-table"></div>
@@ -2531,7 +2533,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.15 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@12e1a1738be46edf254b9090ae264068acee6837/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@e61271d76bbb79f70682bf2de07f21f1c56ba30c/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
