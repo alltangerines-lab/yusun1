@@ -335,6 +335,10 @@ label.f{display:grid;gap:4px;font-size:12.5px;color:var(--muted);font-weight:500
 .cell .hol{font-size:10.5px;color:var(--holiday);font-weight:600;line-height:1.2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .cell .it{display:block;font-size:11px;line-height:1.35;padding:1px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cell .it.ev{background:var(--accent-soft);color:var(--accent)}
+.cell .it.ev.span{margin-left:-6px;margin-right:-6px;border-radius:0;padding-left:10px}
+.cell .it.ev.span.ss{margin-left:0;border-top-left-radius:4px;border-bottom-left-radius:4px;padding-left:4px}
+.cell .it.ev.span.se{margin-right:0;border-top-right-radius:4px;border-bottom-right-radius:4px}
+.cell .it.ev.span:not(.ss){border-left:0 !important}
 .cell .it.ev.off{background:color-mix(in srgb,var(--holiday) 12%,transparent);color:var(--holiday)}
 .cell .it.tk{color:var(--fg)} .cell .it.tk.done{color:var(--muted);text-decoration:line-through}
 .cell .more{font-size:10.5px;color:var(--muted);padding-left:4px}
@@ -2176,6 +2180,7 @@ body.ro .w-only{display:none!important}
       <label class="f" for="g-date">날짜<input type="date" id="g-date"></label>
       <label class="f" for="g-time">시각 <span class="hint">비우면 종일</span><input type="time" id="g-time"></label>
     </div>
+    <label class="f" for="g-end">끝나는 날 <span class="hint">방학·체험학습처럼 여러 날일 때만</span><input type="date" id="g-end"></label>
     <div class="two">
       <label class="f" for="g-who">대상<select id="g-who"></select></label>
       <label class="f" for="g-kind">색<select id="g-kind"></select></label>
@@ -2643,7 +2648,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.16 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3c4ccd6708484850141e0bc714d32070aa4d2875/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@096fec5f3c6976b2aa07d17693556c009236880b/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
