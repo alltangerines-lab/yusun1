@@ -538,6 +538,16 @@ table.plan{border-collapse:collapse;width:100%;font-size:13px}
 .ta-row.off .ta-name{color:var(--muted);font-weight:400;text-decoration:line-through}
 body:not([data-page="main"]) #v-grade .grid2{grid-template-columns:minmax(0,1fr)}
 body[data-page="calendar"] .cell{min-height:124px}
+/* 달력 따로 보기: 주말 칸은 좁게, 오른쪽에 넣기 칸과 고른 날 일정 */
+body[data-page="calendar"] .cal-body .it{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:clip}
+body[data-page="calendar"] .cal-head,body[data-page="calendar"] .cal-body{grid-template-columns:minmax(0,.55fr) repeat(5,minmax(0,1fr)) minmax(0,.55fr)}
+@media (min-width:1000px){
+  body[data-page="calendar"] #v-grade .grid2 > .col:first-child{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);grid-template-rows:min-content 1fr;gap:16px;align-items:start}
+  body[data-page="calendar"] #v-grade .grid2 > .col:first-child > .pg-calendar:not(.pg-daily):not(.addcard){grid-column:1;grid-row:1 / span 2}
+  body[data-page="calendar"] #v-grade .grid2 > .col:first-child > .addcard{grid-column:2;grid-row:1;margin:0}
+  body[data-page="calendar"] #v-grade .grid2 > .col:first-child > .pg-daily{grid-column:2;grid-row:2;margin:0;position:sticky;top:12px}
+  body[data-page="calendar"] .addcard .addbar > .row .hint.grow{flex-basis:100%;order:5}
+}
 .openlink{font-size:12px;color:var(--accent);text-decoration:none;font-weight:600;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:999px;padding:2px 9px;white-space:nowrap}
 .openlink:hover{background:var(--accent-soft)}
 body:not([data-page="main"]) .openlink:not(.golink){display:none}
@@ -2633,7 +2643,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.16 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@f3fb6f2c5d1847124ad15af864bdabf0a40aa260/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3c4ccd6708484850141e0bc714d32070aa4d2875/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
