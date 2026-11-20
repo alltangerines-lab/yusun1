@@ -1368,9 +1368,9 @@ function renderDay(){
   const rows = evs.map(e => {
     const armed = S.armed === 'event:' + e.id;
     const kd = evKind(e);
-    return `<div class="li ${e.done ? 'done' : ''}"><span class="time">${e.time || '종일'}</span><div class="main"><div class="title"><span class="kdot k-${kd}"></span>${esc(e.title)}${kd === 'submit' ? ` <button type="button" class="btn small" data-act="event-done" data-id="${e.id}" ${S.canWrite ? '' : 'disabled'}>${e.done ? '제출함 ✓' : '제출 끝냄'}</button>` : ''}</div>
+    return `<div class="li ${e.done ? 'done' : ''}"><span class="time">${e.time || '종일'}</span><div class="main"><div class="title">${S.canWrite ? `<button type="button" class="linkbtn" data-act="event-edit" data-id="${e.id}" title="눌러서 고치기"><span class="kdot k-${kd}"></span>${esc(e.title)}</button>` : `<span class="kdot k-${kd}"></span>${esc(e.title)}`}${kd === 'submit' ? ` <button type="button" class="btn small" data-act="event-done" data-id="${e.id}" ${S.canWrite ? '' : 'disabled'}>${e.done ? '제출함 ✓' : '제출 끝냄'}</button>` : ''}</div>
       <div class="meta"><span class="chip acc">${esc(clsLabel(e.who || '전체'))}</span>${S.canWrite ? `<select class="ksel" data-ev-kind="${e.id}" aria-label="일정 색 바꾸기">${EV_KINDS.map(([k, n]) => `<option value="${k}" ${kd === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : `<span class="chip">${kindName(kd)}</span>`}</div></div>
-      <div class="acts">${calBtn('ev:' + e.id)}${S.canWrite ? `<button type="button" class="btn small ${armed ? 'armed' : 'danger'}" data-act="event-del" data-id="${e.id}">${armed ? '정말 삭제' : '삭제'}</button>` : ''}</div></div>`;
+      <div class="acts">${calBtn('ev:' + e.id)}${S.canWrite ? `<button type="button" class="btn small" data-act="event-edit" data-id="${e.id}">고치기</button><button type="button" class="btn small ${armed ? 'armed' : 'danger'}" data-act="event-del" data-id="${e.id}">${armed ? '정말 삭제' : '삭제'}</button>` : ''}</div></div>`;
   }).concat(tks.map(taskRow));
   $('#day-items').innerHTML = rows.length ? rows.join('') : `<p class="empty">이 날 학년 일정이 없어요.${S.canWrite ? ' 위 칸에 날짜 없이 적으면 이 날에 들어가요.' : ''}</p>`;
   const d = S.daily;
@@ -1411,7 +1411,7 @@ function renderGradeToday(){
   const evs = S.events.filter(e => e.date === k).sort(byTime);
   const dueToday = S.tasks.filter(t => !t.done && t.due === k);
   const late = S.tasks.filter(t => !t.done && t.due && t.due < k);
-  let h = evs.map(e => `<div class="th-ev"><span class="th-time">${e.time || '종일'}</span><span class="th-title">${esc(e.title)}</span>${e.who && e.who !== '전체' ? `<span class="chip acc">${esc(clsLabel(e.who))}</span>` : ''}</div>`).join('');
+  let h = evs.map(e => `<div class="th-ev"><span class="th-time">${e.time || '종일'}</span><span class="th-title">${S.canWrite ? `<button type="button" class="linkbtn" data-act="event-edit" data-id="${e.id}" title="눌러서 고치기" style="font-weight:inherit;color:inherit">${esc(e.title)}</button>` : esc(e.title)}</span>${e.who && e.who !== '전체' ? `<span class="chip acc">${esc(clsLabel(e.who))}</span>` : ''}</div>`).join('');
   /* 오늘 마감인 학년 할 일은 오른쪽 '이번 주까지 끝낼 일'에 보여요 */
   if (!h){
     const next = S.events.filter(e => e.date > k).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : byTime(a, b))[0];
@@ -2226,6 +2226,14 @@ document.addEventListener('click', async ev => {
     $('#t-del').textContent = '삭제'; $('#t-del').classList.remove('armed');
     $$('#t-form input,#t-form select,#t-form textarea').forEach(el => { el.disabled = !S.canWrite; });
     openDlg('#dlg-task');
+  } else if (act === 'event-edit'){
+    const e = S.events.find(x => x.id === id); if (!e || !S.canWrite) return;
+    S.editEvent = id;
+    $('#g-title').value = e.title || ''; $('#g-date').value = e.date || ''; $('#g-time').value = e.time || '';
+    $('#g-who').innerHTML = classOptions(e.who || '전체');
+    $('#g-kind').innerHTML = EV_KINDS.map(([k, n]) => `<option value="${k}" ${evKind(e) === k ? 'selected' : ''}>${n}</option>`).join('');
+    $('#g-del').textContent = '삭제'; $('#g-del').classList.remove('armed');
+    openDlg('#dlg-event'); setTimeout(() => $('#g-title').focus(), 30);
   } else if (act === 'event-del'){
     if (arm('event:' + id)){ S.armed = null; try { await S.db.doc('events/' + id).delete(); toast('일정을 지웠어요.'); } catch (e){ wErr(e, true); } }
   } else if (act === 'notice-del'){
@@ -2469,6 +2477,21 @@ $('#j-export').onclick = () => {
   save(`학급일지_${ymd(today())}.csv`, csv(rows));
 };
 
+$('#g-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const id = S.editEvent, title = $('#g-title').value.trim(), date = $('#g-date').value;
+  if (!id) return; if (!title){ toast('내용을 적어 주세요.'); $('#g-title').focus(); return; }
+  if (!date){ toast('날짜를 골라 주세요.'); $('#g-date').focus(); return; }
+  try {
+    await S.db.doc('events/' + id).update({title, date, time:$('#g-time').value || null, who:$('#g-who').value || '전체', kind:$('#g-kind').value, updatedAt:Date.now(), updatedBy:S.uid});
+    closeDlgs(); S.editEvent = null; toast(date !== S.selDate ? `${fmtMD(date)}로 옮겼어요.` : '일정을 고쳤어요.');
+  } catch (er){ wErr(er, true); }
+});
+$('#g-del').addEventListener('click', async () => {
+  const id = S.editEvent; if (!id) return;
+  const b = $('#g-del'); if (!b.classList.contains('armed')){ b.classList.add('armed'); b.textContent = '정말 삭제'; return; }
+  try { await S.db.doc('events/' + id).delete(); closeDlgs(); S.editEvent = null; toast('일정을 지웠어요.'); } catch (er){ wErr(er, true); }
+});
 $('#e-form').addEventListener('submit', async ev => {
   ev.preventDefault();
   const id = S.editEntry; if (!id) return;
@@ -4241,7 +4264,8 @@ const APP_VERSION = '2.16';
 const CHANGELOG = [
   ['2.16', '11월 20일', [
     '수업자료에서 자료를 누르면 작은 창이 떠요. "바로 열기"와 "주소 복사" 중에 골라요.',
-    '수업자료에 링크 말고도 줄글, 사진, 파일(3MB까지)을 넣을 수 있어요. 주소 칸에 그냥 글을 적으면 글로 들어가고, 옆 "사진"·"파일" 버튼으로 올려요.'
+    '수업자료에 링크 말고도 줄글, 사진, 파일(3MB까지)을 넣을 수 있어요. 주소 칸에 그냥 글을 적으면 글로 들어가고, 옆 "사진"·"파일" 버튼으로 올려요.',
+    '학년 달력에 넣은 일정을 고칠 수 있어요. 날짜를 누르고 아래 일정 이름이나 "고치기"를 누르면 내용·날짜·시각·대상·색을 바꿔요. 날짜를 바꾸면 그날로 옮겨져요.'
   ]],
   ['2.15', '11월 19일', [
     '큰 모니터에서 학년 첫 화면 맨 위 칸이 얇아졌어요. "끝낼 일"이 오늘 학년 일정 아래 한 줄로 붙고, 가까운 3개만 보여요. 나머지는 "+n개 더"를 누르면 할 일 탭에서 봐요.',
