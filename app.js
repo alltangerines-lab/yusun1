@@ -912,17 +912,19 @@ function renderCal(){
   let h = '<div class="cal-head">' + [...WD].map((w, i) => `<div class="${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('') + '</div><div class="cal-body">';
   for (let i = 0; i < weeks * 7; i++){
     const d = addDays(start, i), k = ymd(d), hol = HOLIDAYS[k];
-    const evs = S.events.filter(e => e.date === k).sort(byTime);
+    const evAll = evOn(k), multi = evAll.filter(e => e.end && e.end > e.date).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.id < b.id ? -1 : 1));
+    const evs = evAll.filter(e => !(e.end && e.end > e.date)).sort(byTime);
     const tks = S.tasks.filter(t => t.due === k);
     const items = [
+      ...multi.map(e => { const st = k === e.date || d.getDay() === 0, en = k === e.end || d.getDay() === 6; return `<span class="it ev span k-${evKind(e)} ${st ? 'ss' : ''} ${en ? 'se' : ''} ${e.done ? 'done' : ''}" title="${esc(evSpan(e) + ' ' + e.title)}">${st ? esc(e.title) : '&nbsp;'}</span>`; }),
       ...evs.map(e => wk ? `<span class="it ev k-${evKind(e)} ${e.done ? 'done' : ''}">${e.time ? `<small>${e.time}</small> ` : ''}${esc(e.title)}</span>` : `<span class="it ev k-${evKind(e)} ${e.done ? 'done' : ''}" title="${esc((e.time ? e.time + ' ' : '') + e.title)}">${esc(e.title)}${e.time ? `<small> ${e.time}</small>` : ''}</span>`),
       ...tks.map(t => `<span class="it tk k-${tkKind(t)} ${t.done ? 'done' : ''}" title="${esc(kindName(tkKind(t)) + ' · ' + t.title)}">${t.done ? '☑' : '☐'} ${esc(t.title)}</span>`),
       ...Object.entries(lsOn(k).reduce((m, l) => { (m[l.prog] = m[l.prog] || []).push(l); return m; }, {})).map(([p, ls]) => `<span class="it ls" title="${esc(p + ' · ' + ls.map(l => clsLabel(l.cls) + ' ' + lsPerLabel(l.pers)).join(', '))}">${esc(p)} ${wk ? ls.map(l => esc(clsLabel(l.cls)) + ' ' + l.pers.join(',')).join(' · ') : ls.length + '반'}</span>`)
     ];
     const cls = ['cell', !wk && d.getMonth() !== m.getMonth() ? 'out' : '', k === tdy ? 'today' : '', k === S.selDate ? 'sel' : '',
       (d.getDay() === 0 || hol) ? 'red' : d.getDay() === 6 ? 'blue' : ''].join(' ');
-    const label = `${d.getMonth()+1}월 ${d.getDate()}일${hol ? ' ' + hol : ''}, 일정 ${evs.length}개, 할 일 ${tks.length}개`;
-    h += `<button type="button" class="${cls}" data-date="${k}" aria-label="${esc(label)}"><span class="dnum">${d.getDate()}</span>${hol ? `<span class="hol">${hol}</span>` : ''}${wk ? items.join('') : items.slice(0, 3).join('')}${!wk && items.length > 3 ? `<span class="more">+${items.length - 3}</span>` : ''}<span class="dots">${evs.slice(0,3).map(() => '<i></i>').join('')}${tks.slice(0,2).map(() => '<i class="t"></i>').join('')}</span></button>`;
+    const label = `${d.getMonth()+1}월 ${d.getDate()}일${hol ? ' ' + hol : ''}, 일정 ${evAll.length}개, 할 일 ${tks.length}개`;
+    h += `<button type="button" class="${cls}" data-date="${k}" aria-label="${esc(label)}"><span class="dnum">${d.getDate()}</span>${hol ? `<span class="hol">${hol}</span>` : ''}${wk ? items.join('') : items.slice(0, 3).join('')}${!wk && items.length > 3 ? `<span class="more">+${items.length - 3}</span>` : ''}<span class="dots">${evAll.slice(0,3).map(() => '<i></i>').join('')}${tks.slice(0,2).map(() => '<i class="t"></i>').join('')}</span></button>`;
   }
   $('#cal').innerHTML = h + '</div>';
 }
@@ -1358,17 +1360,20 @@ document.addEventListener('keydown', e => {
   const v = t.value.trim();
   if (e.ctrlKey || e.metaKey || (!e.shiftKey && v && !/\s/.test(v) && /^(https?:\/\/|[\w-]+\.)/i.test(v))){ e.preventDefault(); t.form.requestSubmit(); }
 });
+/* 여러 날 일정(시작~끝)도 그 사이 날짜마다 보여요 */
+const evOn = k => S.events.filter(e => e.date === k || (e.end && e.date < k && k <= e.end));
+const evSpan = e => e.end && e.end > e.date ? `${mdShort(e.date)}~${mdShort(e.end)}` : '';
 function renderDay(){
   const dp = document.querySelector('.daypanel'); if (dp) dp.classList.toggle('is-today', S.selDate === ymd(today()));
   const k = S.selDate;
   $('#day-title').textContent = fmtLong(k);
   $('#day-hol').textContent = HOLIDAYS[k] || '';
-  const evs = S.events.filter(e => e.date === k).sort(byTime);
+  const evs = evOn(k).sort(byTime);
   const tks = S.tasks.filter(t => t.due === k);
   const rows = evs.map(e => {
     const armed = S.armed === 'event:' + e.id;
     const kd = evKind(e);
-    return `<div class="li ${e.done ? 'done' : ''}"><span class="time">${e.time || '종일'}</span><div class="main"><div class="title">${S.canWrite ? `<button type="button" class="linkbtn" data-act="event-edit" data-id="${e.id}" title="눌러서 고치기"><span class="kdot k-${kd}"></span>${esc(e.title)}</button>` : `<span class="kdot k-${kd}"></span>${esc(e.title)}`}${kd === 'submit' ? ` <button type="button" class="btn small" data-act="event-done" data-id="${e.id}" ${S.canWrite ? '' : 'disabled'}>${e.done ? '제출함 ✓' : '제출 끝냄'}</button>` : ''}</div>
+    return `<div class="li ${e.done ? 'done' : ''}"><span class="time">${evSpan(e) || e.time || '종일'}</span><div class="main"><div class="title">${S.canWrite ? `<button type="button" class="linkbtn" data-act="event-edit" data-id="${e.id}" title="눌러서 고치기"><span class="kdot k-${kd}"></span>${esc(e.title)}</button>` : `<span class="kdot k-${kd}"></span>${esc(e.title)}`}${kd === 'submit' ? ` <button type="button" class="btn small" data-act="event-done" data-id="${e.id}" ${S.canWrite ? '' : 'disabled'}>${e.done ? '제출함 ✓' : '제출 끝냄'}</button>` : ''}</div>
       <div class="meta"><span class="chip acc">${esc(clsLabel(e.who || '전체'))}</span>${S.canWrite ? `<select class="ksel" data-ev-kind="${e.id}" aria-label="일정 색 바꾸기">${EV_KINDS.map(([k, n]) => `<option value="${k}" ${kd === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : `<span class="chip">${kindName(kd)}</span>`}</div></div>
       <div class="acts">${calBtn('ev:' + e.id)}${S.canWrite ? `<button type="button" class="btn small" data-act="event-edit" data-id="${e.id}">고치기</button><button type="button" class="btn small ${armed ? 'armed' : 'danger'}" data-act="event-del" data-id="${e.id}">${armed ? '정말 삭제' : '삭제'}</button>` : ''}</div></div>`;
   }).concat(tks.map(taskRow));
@@ -1388,12 +1393,12 @@ function renderGaPreview(){
   const p = parseLine(v);
   const chips = [];
   if (S.gaType === 'event'){
-    chips.push(`<span class="chip acc">날짜 <b>${fmtMD(p.date || S.selDate)}</b>${p.date ? '' : ' (고른 날)'}</span>`);
+    chips.push(`<span class="chip acc">날짜 <b>${fmtMD(p.date || S.selDate)}${p.end ? ' ~ ' + fmtMD(p.end) : ''}</b>${p.date ? '' : ' (고른 날)'}</span>`);
     chips.push(`<span class="chip">시각 <b>${p.time || '종일'}</b></span>`);
     const kk = S.gaKind && S.gaKind !== 'auto' ? S.gaKind : guessKind(p.text);
     chips.push(`<span class="chip kchip k-${kk}"><i></i>${kindName(kk)}${S.gaKind && S.gaKind !== 'auto' ? '' : ' (자동)'}</span>`);
   } else {
-    chips.push(`<span class="chip acc">마감 <b>${p.date ? fmtMD(p.date) : '없음'}</b></span>`);
+    chips.push(`<span class="chip acc">마감 <b>${p.end ? fmtMD(p.end) : p.date ? fmtMD(p.date) : '없음'}</b></span>`);
     if (p.repeat) chips.push('<span class="chip">매년</span>');
     if (p.every) chips.push(`<span class="chip">↻ ${EVERY_NAME[p.every]}${p.eom ? ' 말일' : ''}</span>`);
     const kk = S.gaKind && S.gaKind !== 'auto' ? S.gaKind : guessKind(p.text);
@@ -1408,10 +1413,10 @@ function renderGradeToday(){
   $('#th-m').textContent = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
   $('#th-day').textContent = d.getDate();
   $('#th-wd').textContent = WD[d.getDay()] + '요일' + (HOLIDAYS[k] ? ' · ' + HOLIDAYS[k] : '');
-  const evs = S.events.filter(e => e.date === k).sort(byTime);
+  const evs = evOn(k).sort(byTime);
   const dueToday = S.tasks.filter(t => !t.done && t.due === k);
   const late = S.tasks.filter(t => !t.done && t.due && t.due < k);
-  let h = evs.map(e => `<div class="th-ev"><span class="th-time">${e.time || '종일'}</span><span class="th-title">${S.canWrite ? `<button type="button" class="linkbtn" data-act="event-edit" data-id="${e.id}" title="눌러서 고치기" style="font-weight:inherit;color:inherit">${esc(e.title)}</button>` : esc(e.title)}</span>${e.who && e.who !== '전체' ? `<span class="chip acc">${esc(clsLabel(e.who))}</span>` : ''}</div>`).join('');
+  let h = evs.map(e => `<div class="th-ev"><span class="th-time">${evSpan(e) || e.time || '종일'}</span><span class="th-title">${S.canWrite ? `<button type="button" class="linkbtn" data-act="event-edit" data-id="${e.id}" title="눌러서 고치기" style="font-weight:inherit;color:inherit">${esc(e.title)}</button>` : esc(e.title)}</span>${e.who && e.who !== '전체' ? `<span class="chip acc">${esc(clsLabel(e.who))}</span>` : ''}</div>`).join('');
   /* 오늘 마감인 학년 할 일은 오른쪽 '이번 주까지 끝낼 일'에 보여요 */
   if (!h){
     const next = S.events.filter(e => e.date > k).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : byTime(a, b))[0];
@@ -1517,7 +1522,7 @@ function myTodos(){
 }
 function renderToday(){
   const k = ymd(today());
-  const evs = S.events.filter(e => e.date === k).sort(byTime);
+  const evs = evOn(k).sort(byTime);
   const sf = subjFor(k), sev = schoolEvents(k);
   $('#s-ev-n').textContent = evs.length + sev.length;
   const ttLine = sf.off ? `<li class="late"><span class="d">수업</span><span class="t">${esc(sf.off)}</span></li>`
@@ -2144,13 +2149,13 @@ async function boot(){
 
 /* ---------- actions ---------- */
 async function addEvent(p){
-  try { const ref = await S.db.collection('events').add({date:p.date || S.selDate, time:p.time || null, title:p.text, who:p.who || '전체', kind:S.gaKind && S.gaKind !== 'auto' ? S.gaKind : guessKind(p.text), createdBy:S.uid, createdAt:Date.now()}); if (ref && ref.id) setTimeout(() => addAfter('ev:' + ref.id, '#cal-also-g'), 300); }
+  try { const d0 = p.date || S.selDate; const ref = await S.db.collection('events').add({date:d0, end:p.end && p.end > d0 ? p.end : null, time:p.time || null, title:p.text, who:p.who || '전체', kind:S.gaKind && S.gaKind !== 'auto' ? S.gaKind : guessKind(p.text), createdBy:S.uid, createdAt:Date.now()}); if (ref && ref.id) setTimeout(() => addAfter('ev:' + ref.id, '#cal-also-g'), 300); }
   catch (e){ wErr(e, true); return false; }
   return true;
 }
 async function addTask(p){
   const kind = p.kind || guessKind(p.text);
-  try { await S.db.collection('tasks').add({title:p.text, due:p.date, who:p.who || '전체', repeat:p.repeat, every:p.every || null, eom:!!p.eom, prio:p.prio || '보통', kind, done:false, note:'', createdBy:S.uid, createdAt:Date.now()}); }
+  try { await S.db.collection('tasks').add({title:p.text, due:p.end || p.date, who:p.who || '전체', repeat:p.repeat, every:p.every || null, eom:!!p.eom, prio:p.prio || '보통', kind, done:false, note:'', createdBy:S.uid, createdAt:Date.now()}); }
   catch (e){ wErr(e, true); return false; }
   return true;
 }
@@ -2229,7 +2234,7 @@ document.addEventListener('click', async ev => {
   } else if (act === 'event-edit'){
     const e = S.events.find(x => x.id === id); if (!e || !S.canWrite) return;
     S.editEvent = id;
-    $('#g-title').value = e.title || ''; $('#g-date').value = e.date || ''; $('#g-time').value = e.time || '';
+    $('#g-title').value = e.title || ''; $('#g-date').value = e.date || ''; $('#g-time').value = e.time || ''; $('#g-end').value = e.end || '';
     $('#g-who').innerHTML = classOptions(e.who || '전체');
     $('#g-kind').innerHTML = EV_KINDS.map(([k, n]) => `<option value="${k}" ${evKind(e) === k ? 'selected' : ''}>${n}</option>`).join('');
     $('#g-del').textContent = '삭제'; $('#g-del').classList.remove('armed');
@@ -2358,7 +2363,7 @@ $('#ga-form').addEventListener('submit', async ev => {
   if (ok){
     $('#ga-input').value = ''; renderGaPreview();
     const d = p.date || (S.gaType === 'event' ? S.selDate : null);
-    toast(S.gaType === 'event' ? `${fmtMD(d)} 일정에 넣었어요.` : '할 일에 넣었어요.');
+    toast(S.gaType === 'event' ? `${fmtMD(d)}${p.end ? ' ~ ' + fmtMD(p.end) : ''} 일정에 넣었어요.` : '할 일에 넣었어요.');
     if (d){ const dd = fromYmd(d); if (dd.getMonth() !== S.month.getMonth() || dd.getFullYear() !== S.month.getFullYear()){ S.month = new Date(dd.getFullYear(), dd.getMonth(), 1); renderCal(); } }
   }
 });
@@ -2483,7 +2488,8 @@ $('#g-form').addEventListener('submit', async ev => {
   if (!id) return; if (!title){ toast('내용을 적어 주세요.'); $('#g-title').focus(); return; }
   if (!date){ toast('날짜를 골라 주세요.'); $('#g-date').focus(); return; }
   try {
-    await S.db.doc('events/' + id).update({title, date, time:$('#g-time').value || null, who:$('#g-who').value || '전체', kind:$('#g-kind').value, updatedAt:Date.now(), updatedBy:S.uid});
+    const end = $('#g-end').value; if (end && end < date){ toast('끝나는 날이 시작 날보다 앞이에요.'); $('#g-end').focus(); return; }
+    await S.db.doc('events/' + id).update({title, date, end:end && end > date ? end : null, time:$('#g-time').value || null, who:$('#g-who').value || '전체', kind:$('#g-kind').value, updatedAt:Date.now(), updatedBy:S.uid});
     closeDlgs(); S.editEvent = null; toast(date !== S.selDate ? `${fmtMD(date)}로 옮겼어요.` : '일정을 고쳤어요.');
   } catch (er){ wErr(er, true); }
 });
@@ -4266,6 +4272,7 @@ const CHANGELOG = [
     '수업자료에서 자료를 누르면 작은 창이 떠요. "바로 열기"와 "주소 복사" 중에 골라요.',
     '수업자료에 링크 말고도 줄글, 사진, 파일(3MB까지)을 넣을 수 있어요. 주소 칸에 그냥 글을 적으면 글로 들어가고, 옆 "사진"·"파일" 버튼으로 올려요.',
     '달력 탭에서 토·일 칸을 좁히고, 오른쪽에 일정 넣기 칸과 고른 날 일정이 나란히 떠요.',
+    '"1월 7일~3월 1일 겨울방학"처럼 기간을 적으면 그 사이 날짜에 색 띠가 쭉 이어져요. 고치기 창의 "끝나는 날"로도 바꿀 수 있어요.',
     '학년 달력에 넣은 일정을 고칠 수 있어요. 날짜를 누르고 아래 일정 이름이나 "고치기"를 누르면 내용·날짜·시각·대상·색을 바꿔요. 날짜를 바꾸면 그날로 옮겨져요.'
   ]],
   ['2.15', '11월 19일', [
