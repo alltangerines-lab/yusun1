@@ -2300,9 +2300,12 @@ document.addEventListener('click', async ev => {
     openAttCell(+a.dataset.no, a.dataset.date);
   } else if (act === 'led-csv'){
     const m = attMonthStart(), all = $('#led-all').checked;
-    save(`${a.dataset.led === 'abs' ? '결석계관리대장' : '교외체험학습대장'}_${all ? schoolYearOf(m).label : m.getFullYear() + '-' + pad(m.getMonth() + 1)}.csv`, csv(ledgerCsv(a.dataset.led)));
+    save(`${a.dataset.led === 'abs' ? '결석신고서관리대장' : '교외체험학습대장'}_${all ? schoolYearOf(m).label : m.getFullYear() + '-' + pad(m.getMonth() + 1)}.csv`, csv(ledgerCsv(a.dataset.led)));
   } else if (act === 'led-print'){
     printLedger(a.dataset.led);
+  } else if (act === 'led-move'){
+    const trip = a.dataset.trip === '1';
+    try { await S.db.doc(PROFILE()).collection('journal').doc(id).update({doc:{trip}}); toast(trip ? '교외체험학습 대장으로 옮겼어요.' : '결석신고서 대장으로 옮겼어요.'); } catch (er){ wErr(er, false); }
   } else if (act === 'led-form'){
     printAbsenceForm(a.dataset.id, +a.dataset.no);
   } else if (act === 'newtab'){
@@ -2920,12 +2923,19 @@ function renderAtt(){
   renderLedgers();
 }
 function prevSchoolDay(k){ let d = fromYmd(k); for (let i = 0; i < 20; i++){ d = addDays(d, -1); const x = ymd(d); const w = d.getDay(); if (w !== 0 && w !== 6 && !HOLIDAYS[x]) return x; } return ymd(addDays(fromYmd(k), -1)); }
+/* 출석인정결석 중 교외체험학습만 체험학습 대장으로 (감염병·경조사 등은 결석신고서 대장). 글에 체험학습·여행 등이 있으면 체험학습으로 보고, 대장에서 직접 옮길 수도 있어요 */
+function isTrip(e){
+  if (!e.att || e.att.reason !== '출석인정') return false;
+  const d = e.doc || {};
+  if (typeof d.trip === 'boolean') return d.trip;
+  return /체험\s*학습|여행|견학|현장\s*학습|교외/.test(e.text || '');
+}
 function ledgerRows(type){
   const all = $('#led-all').checked;
   const {first, last} = monthDays();
   const sy = schoolYearOf(attMonthStart());
   const [lo, hi] = all ? [sy.from, sy.to] : [first, last];
-  return attEntries().filter(e => e.att.kind === '결석' && (type === 'trip' ? e.att.reason === '출석인정' : e.att.reason !== '출석인정'))
+  return attEntries().filter(e => e.att.kind === '결석' && (type === 'trip' ? isTrip(e) : !isTrip(e)))
     .filter(e => e.date <= hi && (e.end || e.date) >= lo)
     .flatMap(e => e.students.map(no => ({e, no})))
     .sort((a, b) => a.e.date < b.e.date ? -1 : a.e.date > b.e.date ? 1 : a.no - b.no);
@@ -2933,19 +2943,19 @@ function ledgerRows(type){
 const stuNm = no => { const r = (S.profile.roster || []).find(x => x.no === no); return r ? r.name || '' : ''; };
 const entryDays = e => e.end ? schoolDaysBetween(e.date, e.end).length : 1;
 function renderLedgers(){
-  if (document.activeElement && document.activeElement.closest('.ledger')) return;
+  const ae0 = document.activeElement; if (ae0 && ae0.closest('.ledger') && ae0.matches('input[type="text"], textarea')) return;
   const f = (e, k, ph) => `<input type="text" id="lf-${e.id}-${k}" data-led-e="${e.id}" data-led-f="${k}" value="${esc((e.doc || {})[k] ?? (k === 'reason' || k === 'title' ? e.text || '' : ''))}" placeholder="${ph}" aria-label="${ph}">`;
   const ck = (e, k = 'done', l = '서류 완결') => `<input type="checkbox" id="lf-${e.id}-${k}" data-led-e="${e.id}" data-led-f="${k}" ${(e.doc || {})[k] ? 'checked' : ''} aria-label="${l}">`;
   const abs = ledgerRows('abs');
-  $('#led-abs').innerHTML = abs.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>기간</th><th>일수</th><th>종류</th><th>사유(질병명)</th><th>증빙서류</th><th>완결</th><th>나이스</th><th class="gas-only">신고서</th></tr></thead><tbody>${abs.map(({e, no}) => `<tr>
+  $('#led-abs').innerHTML = abs.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>기간</th><th>일수</th><th>종류</th><th>사유(질병명)</th><th>증빙서류</th><th>완결</th><th>나이스</th><th>신고서</th></tr></thead><tbody>${abs.map(({e, no}) => `<tr>
     <td class="n">${no}</td><td>${esc(stuNm(no))}</td><td class="n">${mdShort(e.date)}${e.end ? '~' + mdShort(e.end) : ''}</td><td class="n">${entryDays(e)}</td><td>${esc(e.att.reason)}결석</td>
     <td>${f(e, 'reason', '사유')}</td><td>${f(e, 'proof', '진단서·처방전·학부모 의견서')}</td><td class="ck">${ck(e)}</td><td class="ck">${ck(e, 'neis', '나이스 입력')}</td>
-    <td class="n gas-only"><button type="button" class="btn small" data-act="led-form" data-id="${e.id}" data-no="${no}">인쇄</button></td></tr>`).join('')}</tbody></table></div>`
-    : '<p class="empty">이 기간에 질병·기타·미인정 결석이 없어요.</p>';
+    <td class="n"><button type="button" class="btn small gas-only" data-act="led-form" data-id="${e.id}" data-no="${no}">인쇄</button>${e.att.reason === '출석인정' ? `<button type="button" class="btn small" data-act="led-move" data-id="${e.id}" data-trip="1" title="교외체험학습이면 체험학습 대장으로 옮겨요">체험학습으로</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="empty">이 기간에 결석신고서가 필요한 결석이 없어요.</p>';
   const trip = ledgerRows('trip');
-  $('#led-trip').innerHTML = trip.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>시작일</th><th>종료일</th><th>일수</th><th title="체험 시작 하루 전까지 (주말·공휴일 빼고)">신청 기한</th><th>체험활동명</th><th>장소(기관)</th><th>활동내용</th><th>완결</th><th>나이스</th></tr></thead><tbody>${trip.map(({e, no}) => `<tr>
+  $('#led-trip').innerHTML = trip.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>시작일</th><th>종료일</th><th>일수</th><th title="체험 시작 하루 전까지 (주말·공휴일 빼고)">신청 기한</th><th>체험활동명</th><th>장소(기관)</th><th>활동내용</th><th>완결</th><th>나이스</th><th></th></tr></thead><tbody>${trip.map(({e, no}) => `<tr>
     <td class="n">${no}</td><td>${esc(stuNm(no))}</td><td class="n">${mdShort(e.date)}</td><td class="n">${mdShort(e.end || e.date)}</td><td class="n">${entryDays(e)}</td><td class="n">${(() => { const dl = prevSchoolDay(e.date); return `<span class="${dl < ymd(today()) && !(e.doc || {}).done ? 'neg' : ''}">${mdShort(dl)}(${WD[fromYmd(dl).getDay()]})</span>`; })()}</td>
-    <td>${f(e, 'title', '예: 가족여행')}</td><td>${f(e, 'place', '장소')}</td><td>${f(e, 'content', '활동내용')}</td><td class="ck">${ck(e)}</td><td class="ck">${ck(e, 'neis', '나이스 입력')}</td></tr>`).join('')}</tbody></table></div>`
+    <td>${f(e, 'title', '예: 가족여행')}</td><td>${f(e, 'place', '장소')}</td><td>${f(e, 'content', '활동내용')}</td><td class="ck">${ck(e)}</td><td class="ck">${ck(e, 'neis', '나이스 입력')}</td><td class="n"><button type="button" class="btn small" data-act="led-move" data-id="${e.id}" data-trip="0" title="감염병 등 체험학습이 아닌 출석인정결석이면 결석신고서 대장으로 옮겨요">결석신고서로</button></td></tr>`).join('')}</tbody></table></div>`
     : '<p class="empty">이 기간에 체험학습(출석인정결석)이 없어요. 학급일지에 "3번 11/18~20 체험학습 가족여행"처럼 적으면 여기 모여요.</p>';
 }
 $('#p-att').addEventListener('change', async e => {
@@ -3052,7 +3062,7 @@ function classLabel(){ return `${S.settings.gradeName || ''} ${S.profile.myClass
 async function teacherName(){ if (!S.user || !S.uid) return ''; try { const p = await S.user.profiles([S.uid]); return (p[S.uid] && p[S.uid].name) || ''; } catch (e){ return ''; } }
 async function printLedger(type){
   const rows = ledgerCsv(type), sy = schoolYearOf(attMonthStart()), t = await teacherName();
-  const title = type === 'abs' ? '결석계 관리대장' : '교외체험학습 대장';
+  const title = type === 'abs' ? '결석신고서 관리대장' : '교외체험학습 대장';
   printDoc(`<div class="pdoc"><h1 style="font-size:18pt;letter-spacing:.1em">${title}</h1><div class="meta"><span>${sy.label} ${esc(classLabel())}</span><span>담임: ${esc(t)}</span></div>
     <table><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${rows[0].length}">기록 없음</td></tr>`}</tbody></table>
     ${type === 'trip' ? '<p style="font-size:9.5pt;margin-top:4mm">비고: 기본 체험학습 일수 초과 시 교감 선생님 확인</p>' : ''}</div>`);
@@ -4308,6 +4318,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '출석부: "결석계"를 "결석신고서"로 바꿨어요. 감염병 같은 출석인정결석은 결석신고서 대장에 모이고, 교외체험학습만 체험학습 대장에 모여요. 잘못 들어간 줄은 대장의 "체험학습으로"·"결석신고서로" 버튼으로 옮겨요.',
     '출석부에서 결석·지각 칸에 마우스를 올리면 몇 번 누구인지, 날짜, 종류, 사유가 바로 떠요.',
     '나의 공간 "출결" 탭 이름을 "출석부"로 바꿨어요. 출석부 표는 이름 칸을 좁히고 짝수 번호 줄에 옅은 색을 넣고, 오른쪽 합계 칸은 굵은 선과 다른 색으로 나눴어요.',
     '출결 합계에서 "질결·인결" 같은 줄임말 대신 질병결석·미인정결석·기타결석·출석인정결석처럼 원래 낱말로 보여요.',
