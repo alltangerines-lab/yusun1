@@ -4569,6 +4569,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '전담 "오늘 수업"도 한 주 보기로 열려요. 요일 × 교시 칸에 들어가는 반이 나와 있고, 대충의 차시만 짧게 적으면 돼요. 아래에는 고른 날 메모를 적어요.',
     '나의 공간 "수업 계획"이 한 주 보기로 열려요. 요일 × 교시 칸에 과목이 들어가 있고, 단원·주제만 짧게 적으면 돼요. 요일 이름을 누르면 그날을 자세히 써요.',
     '명부 "칸 정리"에서 칸 제목을 바꾸고 순서도 바꿀 수 있어요 (내 화면에만). 바깥을 누르면 닫혀요. 탭 정리·과목 정리·칸 정리 모두 ⤒ 맨 위로, ⤓ 맨 아래로 버튼이 생겼어요.',
     '입력 창들을 요즘 앱처럼 바꿨어요. 오른쪽 위 ×로 닫고, 아래는 "취소 · 저장" (저장하면 바로 닫혀요). 글칸에서 Ctrl+Enter를 눌러도 저장돼요.',
@@ -5197,8 +5198,45 @@ function jdDayClasses(k){
   const mon = mondayOf(k);
   return Array.from({length:6}, (_, p) => jdCell(mon, w, p));
 }
+/* 전담 오늘 수업: 한 주 보기 (요일 × 교시, 반과 차시 한 줄) */
+const JDW = {view:(() => { try { return localStorage.getItem('gyomu.jdView') || 'week'; } catch (e){ return 'week'; } })()};
+async function renderJDayWeek(){
+  const k = S.jDate, mon = mondayOf(k), days = [0, 1, 2, 3, 4].map(i => ymd(addDays(fromYmd(mon), i))), m0 = fromYmd(mon), f0 = fromYmd(days[4]);
+  $('#jd-label').textContent = `${m0.getMonth() + 1}월 ${m0.getDate()}일 ~ ${f0.getMonth() + 1}월 ${f0.getDate()}일`; $('#jd-date').value = k;
+  $('#jd-memo-lab').textContent = `${fmtMD(k)} 메모`;
+  $('#jd-ev').innerHTML = days.map(dk => { const off = jdOff(dk); return (off && off !== '주말' ? `<span class="chip school">${mdShort(dk)} 쉬는 날 · ${esc(off)}</span>` : '') + schoolEvents(dk).map(t => `<span class="chip school">${mdShort(dk)} ${esc(t)}</span>`).join(''); }).join('');
+  if (document.activeElement !== $('#jd-memo')) $('#jd-memo').value = (S.day || {}).memo || '';
+  const noTT = !Object.values(S.jd.base).some(a => a.some(Boolean)) && !Object.keys(S.jd.weeks).length;
+  if (noTT){ $('#jd-week').innerHTML = '<div class="jd-empty">먼저 <a href="#me-jtt">시간표·시수</a>에 전담 시간표를 넣어 주세요. 그러면 한 주에 들어갈 반이 여기 차례로 떠요.</div>'; return; }
+  if (S.db && S.uid){ await jlLoadWeek(false); if (S.meTab !== 'jday' || JDW.view !== 'week') return; }
+  if (document.activeElement && document.activeElement.closest('#jd-week')) return;
+  const L0 = lunchAt(), tk = ymd(today()), cl = days.map(dk => jdOff(dk) ? [] : jdDayClasses(dk));
+  const maxP = Math.max(6, ...cl.map(a => a.length));
+  let h = `<div class="tablewrap"><table class="pp-wk jd-wk"><thead><tr><th class="n">교시</th>${days.map(dk => { const d = fromYmd(dk), off = jdOff(dk); return `<th class="${dk === tk ? 'today' : ''} ${dk === k ? 'sel' : ''}"><button type="button" class="linkbtn" data-jd-day="${dk}" title="이날 메모 쓰기">${WD[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}</button>${off ? `<small>${esc(off)}</small>` : ''}</th>`; }).join('')}</tr></thead><tbody>`;
+  for (let p = 0; p < maxP; p++){
+    if (p === L0) h += `<tr class="lunch"><td colspan="6">점심</td></tr>`;
+    h += `<tr><td class="n">${p + 1}</td>${days.map((dk, di) => {
+      if (jdOff(dk)) return '<td class="off"></td>';
+      const c = cl[di][p]; if (!c) return '<td class="empty"></td>';
+      const L = ((jdDayDoc(dk).jd) || {})[p + 1] || {}, nx = jlNext(c), ph = (L.done || !nx) ? '차시' : jlTitle(nx);
+      return `<td class="${L.done ? 'done' : ''}"><div class="pw-s">${esc(jdLabel(c))}${L.done ? ' <span class="ok">✓</span>' : ''}</div><textarea rows="1" data-k="${dk}" data-jdf="t" data-jdp="${p + 1}" data-jdc="${esc(c)}" placeholder="${esc(ph)}" aria-label="${mdShort(dk)} ${p + 1}교시 ${esc(jdLabel(c))} 차시">${esc(L.t || '')}</textarea></td>`;
+    }).join('')}</tr>`;
+  }
+  $('#jd-week').innerHTML = h + '</tbody></table></div>';
+  $$('#jd-week textarea').forEach(growTa);
+}
+$('#jd-week').addEventListener('input', e => { if (e.target.matches('textarea')) growTa(e.target); });
+$('#jd-week').addEventListener('change', jdLogChange);
+$('#jd-week').addEventListener('click', e => { const b = e.target.closest('[data-jd-day]'); if (!b) return; blurIn('#p-jday'); setJDate(b.dataset.jdDay); renderJDay(); setTimeout(() => $('#jd-memo').focus(), 50); });
+$('#jd-view').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; JDW.view = b.dataset.v; try { localStorage.setItem('gyomu.jdView', JDW.view); } catch (er){} renderJDay(); });
 function renderJDay(){
   if (S.meTab !== 'jday') return;
+  const wk = JDW.view === 'week';
+  $$('#jd-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === JDW.view));
+  $('#jd-week').hidden = !wk; $('#jd-whint').hidden = !wk; $('#jd-cards').hidden = wk;
+  $('#jd-prev').setAttribute('aria-label', wk ? '지난주' : '전날'); $('#jd-next').setAttribute('aria-label', wk ? '다음 주' : '다음 날'); $('#jd-today').textContent = wk ? '이번 주' : '오늘';
+  if (wk){ renderJDayWeek(); return; }
+  $('#jd-memo-lab').textContent = '이 날 메모';
   const k = S.jDate, d = S.day || {}, log = d.jd || {};
   $('#jd-label').textContent = fmtLong(k); $('#jd-date').value = k;
   const off = jdOff(k);
@@ -5253,10 +5291,10 @@ function jdLogChange(e){
 }
 $('#jd-cards').addEventListener('change', jdLogChange);
 $('#jd-memo').addEventListener('change', e => { if (!S.uid) return; S.day.memo = e.target.value; saveDay(); $('#jd-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5); });
-$('#p-jday').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#jd-cards, #jd-memo'))) renderJDay(); }, 0));
+$('#p-jday').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#jd-cards, #jd-memo, #jd-week'))) renderJDay(); }, 0));
 const jdGo = k => { blurIn('#p-jday'); setJDate(k); renderJDay(); };
-$('#jd-prev').onclick = () => jdGo(ymd(addDays(fromYmd(S.jDate), -1)));
-$('#jd-next').onclick = () => jdGo(ymd(addDays(fromYmd(S.jDate), 1)));
+$('#jd-prev').onclick = () => jdGo(ymd(addDays(fromYmd(S.jDate), JDW.view === 'week' ? -7 : -1)));
+$('#jd-next').onclick = () => jdGo(ymd(addDays(fromYmd(S.jDate), JDW.view === 'week' ? 7 : 1)));
 $('#jd-today').onclick = () => jdGo(ymd(today()));
 $('#jd-date').addEventListener('change', e => { if (e.target.value) jdGo(e.target.value); });
 $('#st-role').addEventListener('change', e => { if (!S.uid || (e.target.value === 'jd') === isJD()) return; closeDlgs(); setRole(e.target.value); });
