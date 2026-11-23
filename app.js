@@ -2451,6 +2451,23 @@ $('#t-form').addEventListener('submit', async ev => {
   try { await S.db.doc('tasks/' + id).update({title, due:$('#t-due').value || null, who:$('#t-who').value, repeat:$('#t-repeat').checked, every:({w:'w', m:'m', me:'m'})[$('#t-every').value] || null, eom:$('#t-every').value === 'me', note:$('#t-note').value.trim()}); closeDlgs(); toast('저장했어요.'); }
   catch (e){ wErr(e, true); }
 });
+/* 잘못 들어간 할 일 ↔ 일정 옮기기 (고치던 내용 그대로) */
+$('#t-toev').onclick = async () => {
+  const id = S.editTask, t = S.tasks.find(x => x.id === id); if (!t || !S.canWrite) return;
+  const title = $('#t-title').value.trim() || t.title, date = $('#t-due').value || t.due || S.selDate || ymd(today());
+  try {
+    await S.db.collection('events').add({date, end:null, time:null, title, who:$('#t-who').value || t.who || '전체', kind:t.kind || guessKind(title), createdBy:S.uid, createdAt:Date.now()});
+    await S.db.doc('tasks/' + id).delete(); closeDlgs(); S.editTask = null; toast(`${fmtMD(date)} 일정으로 옮겼어요.`);
+  } catch (er){ wErr(er, true); }
+};
+$('#g-totk').onclick = async () => {
+  const id = S.editEvent, e = S.events.find(x => x.id === id); if (!e || !S.canWrite) return;
+  const title = $('#g-title').value.trim() || e.title, due = $('#g-end').value || $('#g-date').value || e.end || e.date;
+  try {
+    await S.db.collection('tasks').add({title, due, who:$('#g-who').value || e.who || '전체', repeat:false, every:null, eom:false, prio:'보통', kind:$('#g-kind').value || null, done:false, note:'', createdBy:S.uid, createdAt:Date.now()});
+    await S.db.doc('events/' + id).delete(); closeDlgs(); S.editEvent = null; toast(`${fmtMD(due)}까지 할 일로 옮겼어요.`);
+  } catch (er){ wErr(er, true); }
+};
 $('#t-del').onclick = async () => {
   const b = $('#t-del');
   if (!b.classList.contains('armed')){ b.classList.add('armed'); b.textContent = '한 번 더 누르면 삭제'; return; }
@@ -4318,6 +4335,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '할 일로 잘못 들어간 일정은 할 일을 눌러 "일정으로 옮기기", 일정으로 잘못 들어간 할 일은 일정의 "고치기"에서 "할 일로 옮기기"를 누르면 옮겨져요.',
     '출석부: "결석계"를 "결석신고서"로 바꿨어요. 감염병 같은 출석인정결석은 결석신고서 대장에 모이고, 교외체험학습만 체험학습 대장에 모여요. 잘못 들어간 줄은 대장의 "체험학습으로"·"결석신고서로" 버튼으로 옮겨요.',
     '출석부에서 결석·지각 칸에 마우스를 올리면 몇 번 누구인지, 날짜, 종류, 사유가 바로 떠요.',
     '나의 공간 "출결" 탭 이름을 "출석부"로 바꿨어요. 출석부 표는 이름 칸을 좁히고 짝수 번호 줄에 옅은 색을 넣고, 오른쪽 합계 칸은 굵은 선과 다른 색으로 나눴어요.',
