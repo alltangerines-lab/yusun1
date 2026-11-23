@@ -702,6 +702,9 @@ function applyRoute(r){
   else { renderCal(); renderDay(); if (page === 'tab') renderTabPage(); if (page === 'ops') renderOps(); if (page === 'lessons') renderLessons(); if (page === 'links' || page === 'main') renderLinks(); if (page === 'notices' || page === 'main'){ renderNotices(); resolveNames(); } if (page === 'budget' && BUD.g) BUD.g.render(); if (page === 'roster' && ROS.g) ROS.g.render(); }
   if (changed) window.scrollTo(0, 0);
 }
+/* 순서 옮기기: ↑↓ 한 칸, ⤒⤓ 맨 위·맨 아래 */
+function moveIn(arr, i, d){ const a = arr.slice(); if (i < 0) return a; const [x] = a.splice(i, 1); const j = d === 'top' ? 0 : d === 'bottom' ? a.length : Math.max(0, Math.min(a.length, i + +d)); a.splice(j, 0, x); return a; }
+const mvBtns = (attr, k, i, n, name) => `<button type="button" class="btn small mv" ${attr}="${esc(k)}" data-d="top" ${i === 0 ? 'disabled' : ''} aria-label="${esc(name)} 맨 위로" title="맨 위로">⤒</button><button type="button" class="btn small mv" ${attr}="${esc(k)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="${esc(name)} 앞으로" title="한 칸 위로">↑</button><button type="button" class="btn small mv" ${attr}="${esc(k)}" data-d="1" ${i === n - 1 ? 'disabled' : ''} aria-label="${esc(name)} 뒤로" title="한 칸 아래로">↓</button><button type="button" class="btn small mv" ${attr}="${esc(k)}" data-d="bottom" ${i === n - 1 ? 'disabled' : ''} aria-label="${esc(name)} 맨 아래로" title="맨 아래로">⤓</button>`;
 /* 탭 숨기기·순서: 선생님마다 따로 기억해요 (다른 선생님 화면은 그대로) */
 const tabPrefKey = () => S.space === 'grade' ? 'grade' : (isJD() ? 'jd' : 'me');
 function tabItems(space){
@@ -726,7 +729,7 @@ function subjOrdered(){ const ord = subjPref().order || [], pos = k => { const i
 function saveSubjPref(order, hidden){ const tp = Object.assign({}, S.profile.tabPrefs || {}); tp.subj = {order, hidden}; S.profile.tabPrefs = tp; saveProfile(); renderSubjArrange(); renderLinks(); }
 function renderSubjArrange(){
   const hid = new Set(subjPref().hidden || []), list = subjOrdered();
-  $('#sa-list').innerHTML = list.map(([k, n], i) => `<div class="ta-row ${hid.has(k) ? 'off' : ''}"><label class="ta-name"><input type="checkbox" data-sah="${k}" ${hid.has(k) ? '' : 'checked'}> ${esc(n)}</label><button type="button" class="btn small" data-samv="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="${esc(n)} 앞으로">↑</button><button type="button" class="btn small" data-samv="${k}" data-d="1" ${i === list.length - 1 ? 'disabled' : ''} aria-label="${esc(n)} 뒤로">↓</button></div>`).join('');
+  $('#sa-list').innerHTML = list.map(([k, n], i) => `<div class="ta-row ${hid.has(k) ? 'off' : ''}"><label class="ta-name"><input type="checkbox" data-sah="${k}" ${hid.has(k) ? '' : 'checked'}> ${esc(n)}</label>${mvBtns('data-samv', k, i, list.length, n)}</div>`).join('');
 }
 $('#link-subj').addEventListener('click', e => { if (e.target.id !== 'subj-arr') return; $('#dlg-subj').hidden = false; renderSubjArrange(); });
 $('#dlg-subj').addEventListener('change', e => {
@@ -737,7 +740,7 @@ $('#dlg-subj').addEventListener('change', e => {
 });
 $('#dlg-subj').addEventListener('click', e => {
   const bt = e.target.closest('[data-samv]');
-  if (bt){ const o = subjOrdered().map(x => x[0]), i = o.indexOf(bt.dataset.samv), j = i + +bt.dataset.d; if (i < 0 || j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; saveSubjPref(o, subjPref().hidden || []); const nb = $(`#sa-list [data-samv="${bt.dataset.samv}"][data-d="${bt.dataset.d}"]`); if (nb && !nb.disabled) nb.focus(); return; }
+  if (bt){ const o0 = subjOrdered().map(x => x[0]), i = o0.indexOf(bt.dataset.samv); if (i < 0) return; saveSubjPref(moveIn(o0, i, bt.dataset.d), subjPref().hidden || []); const nb = $(`#sa-list [data-samv="${bt.dataset.samv}"][data-d="${bt.dataset.d}"]`); if (nb && !nb.disabled) nb.focus(); return; }
   if (e.target.id === 'sa-reset'){ const tp = Object.assign({}, S.profile.tabPrefs || {}); delete tp.subj; S.profile.tabPrefs = tp; saveProfile(); renderSubjArrange(); renderLinks(); toast('과목을 처음대로 돌렸어요.'); }
 });
 function renderTabArrange(){
@@ -745,7 +748,7 @@ function renderTabArrange(){
   const {items} = tabItems(S.space);
   box.innerHTML = items.map((x, i) => `<div class="ta-row ${x.hidden ? 'off' : ''}">
     <label class="ta-name"><input type="checkbox" data-tah="${esc(x.key)}" ${x.hidden ? '' : 'checked'} ${x.i === 0 ? 'disabled title="첫 탭은 숨길 수 없어요"' : ''}> ${esc(x.name)}${x.base ? '' : ' <small class="hint">학년 탭</small>'}</label>
-    <button type="button" class="btn small" data-tamv="${esc(x.key)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="${esc(x.name)} 앞으로">↑</button><button type="button" class="btn small" data-tamv="${esc(x.key)}" data-d="1" ${i === items.length - 1 ? 'disabled' : ''} aria-label="${esc(x.name)} 뒤로">↓</button></div>`).join('');
+    ${mvBtns('data-tamv', x.key, i, items.length, x.name)}</div>`).join('');
 }
 $('#dlg-tabs').addEventListener('change', e => {
   const c = e.target.closest('[data-tah]'); if (!c) return;
@@ -754,7 +757,7 @@ $('#dlg-tabs').addEventListener('change', e => {
 });
 $('#dlg-tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tamv]');
-  if (b){ const {items} = tabItems(S.space), i = items.findIndex(y => y.key === b.dataset.tamv), j = i + +b.dataset.d; if (i < 0 || j < 0 || j >= items.length) return; [items[i], items[j]] = [items[j], items[i]]; saveTabPrefs(items); const nb = $(`#ta-list [data-tamv="${CSS.escape(b.dataset.tamv)}"][data-d="${b.dataset.d}"]`); if (nb && !nb.disabled) nb.focus(); return; }
+  if (b){ const {items} = tabItems(S.space), i = items.findIndex(y => y.key === b.dataset.tamv); if (i < 0) return; saveTabPrefs(moveIn(items, i, b.dataset.d)); const nb = $(`#ta-list [data-tamv="${CSS.escape(b.dataset.tamv)}"][data-d="${b.dataset.d}"]`); if (nb && !nb.disabled) nb.focus(); return; }
   if (e.target.id === 'ta-reset'){ const tp = Object.assign({}, S.profile.tabPrefs || {}); delete tp[tabPrefKey()]; S.profile.tabPrefs = tp; saveProfile(); renderStrip(); renderTabArrange(); toast('탭을 처음 순서로 돌렸어요.'); }
 });
 function renderStrip(){
@@ -3746,7 +3749,7 @@ function makeRoster(key){
       const ae1 = document.activeElement;
       if (!(ae1 && $('.ros-colpick', root).contains(ae1) && ae1.matches('input[type="text"]'))){
         const ac = allCols(ex0);
-        $('.ros-colpick', root).innerHTML = `<p class="hint" style="margin:0 0 6px">체크를 풀면 숨겨지고, 이름 칸을 고치면 제목이 바뀌고, ↑↓로 순서를 바꿔요. 내 화면에만 적용되고 기록은 그대로예요.</p>` + ac.map((c, i) => `<div class="rc-row"><input type="checkbox" data-hidecol="${esc(c.f)}" ${h0.has(c.f) ? '' : 'checked'} ${c.f === 'no' || c.f === 'name' ? 'disabled' : ''} aria-label="${esc(c.n)} 보이기"><input type="text" data-rcname="${esc(c.f)}" value="${esc(c.n)}" placeholder="${esc(c.n0)}" aria-label="${esc(c.n0)} 칸 이름"><button type="button" class="btn small" data-rcmv="${esc(c.f)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="${esc(c.n)} 앞으로">↑</button><button type="button" class="btn small" data-rcmv="${esc(c.f)}" data-d="1" ${i === ac.length - 1 ? 'disabled' : ''} aria-label="${esc(c.n)} 뒤로">↓</button></div>`).join('') + `<button type="button" class="btn small" data-rcreset style="justify-self:start">처음대로</button>`;
+        $('.ros-colpick', root).innerHTML = `<p class="hint" style="margin:0 0 6px">체크를 풀면 숨겨지고, 이름 칸을 고치면 제목이 바뀌고, ↑↓(한 칸)·⤒⤓(맨 위·맨 아래)로 순서를 바꿔요. 내 화면에만 적용되고 기록은 그대로예요.</p>` + ac.map((c, i) => `<div class="rc-row"><input type="checkbox" data-hidecol="${esc(c.f)}" ${h0.has(c.f) ? '' : 'checked'} ${c.f === 'no' || c.f === 'name' ? 'disabled' : ''} aria-label="${esc(c.n)} 보이기"><input type="text" data-rcname="${esc(c.f)}" value="${esc(c.n)}" placeholder="${esc(c.n0)}" aria-label="${esc(c.n0)} 칸 이름">${mvBtns('data-rcmv', c.f, i, ac.length, c.n)}</div>`).join('') + `<button type="button" class="btn small" data-rcreset style="justify-self:start">처음대로</button>`;
       }
       const sm = $('.ros-cols summary', root); sm.textContent = h0.size ? `칸 정리 (숨긴 칸 ${[...h0].filter(f => allCols(ex0).some(c => c.f === f)).length}개)` : '칸 정리'; }
     if (g){
@@ -3807,7 +3810,7 @@ function makeRoster(key){
   root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-rcname]')){ e.preventDefault(); e.target.blur(); } });
   root.addEventListener('click', async e => {
     const mv = e.target.closest('[data-rcmv]');
-    if (mv){ const o = allCols(get().extra).map(c => c.f), i = o.indexOf(mv.dataset.rcmv), j = i + +mv.dataset.d; if (i < 0 || j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; saveColPref({order:o}); const nb = $(`.ros-colpick [data-rcmv="${CSS.escape(mv.dataset.rcmv)}"][data-d="${mv.dataset.d}"]`, root); if (nb && !nb.disabled) nb.focus(); return; }
+    if (mv){ const o0 = allCols(get().extra).map(c => c.f), i = o0.indexOf(mv.dataset.rcmv); if (i < 0) return; saveColPref({order:moveIn(o0, i, mv.dataset.d)}); const nb = $(`.ros-colpick [data-rcmv="${CSS.escape(mv.dataset.rcmv)}"][data-d="${mv.dataset.d}"]`, root); if (nb && !nb.disabled) nb.focus(); return; }
     if (e.target.closest('[data-rcreset]')){ const tp = Object.assign({}, S.profile.tabPrefs || {}); delete tp['rosc-' + key]; S.profile.tabPrefs = tp; saveProfile(); render(); toast('칸 이름과 순서를 처음대로 돌렸어요.'); return; }
     const cb = e.target.closest('[data-cls]'); if (cb){ st.cls = +cb.dataset.cls; render(); return; }
     const b = e.target.closest('[data-b]'); if (!b) return;
@@ -4566,7 +4569,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
-    '명부 "칸 정리"에서 칸 제목을 바꾸고 ↑↓로 순서도 바꿀 수 있어요 (내 화면에만).',
+    '명부 "칸 정리"에서 칸 제목을 바꾸고 순서도 바꿀 수 있어요 (내 화면에만). 바깥을 누르면 닫혀요. 탭 정리·과목 정리·칸 정리 모두 ⤒ 맨 위로, ⤓ 맨 아래로 버튼이 생겼어요.',
     '입력 창들을 요즘 앱처럼 바꿨어요. 오른쪽 위 ×로 닫고, 아래는 "취소 · 저장" (저장하면 바로 닫혀요). 글칸에서 Ctrl+Enter를 눌러도 저장돼요.',
     '아침 안내 "오늘 할 일"에서 안 끝난 오늘만 할 일 옆 "내일도"를 누르면 다음 등교일에도 들어가요. "안 끝난 일 내일도"로 한 번에 넘길 수도 있어요.',
     '아침 안내 날짜 왼쪽에 그날 결석한 학생 이름이 "결석 ○○○"으로 떠요. 출석부나 학급일지에 결석으로 적으면 저절로 나와요. 사유는 안 보여요.',
@@ -6087,6 +6090,9 @@ $('#tools-full').onclick = () => { const on = $('#tools').classList.toggle('focu
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if (!$('#big').hidden) $('#big-close').click(); else if (!$('#tools').hidden && $$('.overlay').every(o => o.hidden)) $('#tools-close').click(); else closeDlgs(); } });
 $$('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeDlgs(); }));
+/* 떠 있는 작은 창(명부 칸 정리 등)은 바깥을 누르거나 Esc를 누르면 닫혀요 */
+document.addEventListener('click', e => { if (!e.target.isConnected) return; $$('details.ros-cols[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $$('details.ros-cols[open]').forEach(d => { d.open = false; const sm = d.querySelector('summary'); if (sm) sm.focus(); }); });
 /* 요즘 앱처럼: 오른쪽 위 ×로 닫기, 글칸에서 Ctrl+Enter면 저장하고 닫기 */
 $$('.overlay > .dlg').forEach(d => { if (d.querySelector(':scope > .dlg-x')) return; const x = document.createElement('button'); x.type = 'button'; x.className = 'dlg-x'; x.setAttribute('data-close', ''); x.setAttribute('aria-label', '닫기'); x.textContent = '×'; d.prepend(x); });
 document.addEventListener('keydown', e => { if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return; const f = e.target.closest && e.target.closest('form.dlg'); if (f){ e.preventDefault(); f.requestSubmit(); } });
