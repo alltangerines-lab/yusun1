@@ -716,9 +716,10 @@ div.bud,div.ros{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-wi
 .neg{color:var(--danger)!important}
 .bud-bar,.ros-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .ros-cols{position:relative}.ros-cols > summary{list-style:none;cursor:pointer}.ros-cols > summary::-webkit-details-marker{display:none}
-.rc-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px;align-items:center}
+.rc-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto auto;gap:3px;align-items:center}
+.btn.mv{padding:2px 7px;min-width:28px}
 .rc-row input[type="text"]{padding:4px 6px;font-size:13px}
-.ros-colpick{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:320px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:10px 12px;display:grid;gap:4px}
+.ros-colpick{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:380px;max-width:calc(100vw - 32px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:10px 12px;display:grid;gap:4px}
 .ros td input{max-width:none}
 table.ros{width:auto !important;min-width:0}
 .bud-bar .seg,.ros-cls.seg{flex-wrap:wrap}
@@ -2711,7 +2712,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@9b60a5336eb56041a3a589b77226ab44a5957931/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@fb2422a6f69d447d0b5fec0b62f9cf8c608f7bb9/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
