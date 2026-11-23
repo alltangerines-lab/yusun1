@@ -4271,6 +4271,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '교실 도구 타이머: 시간 위에 무엇을 하는 시간인지 적을 수 있어요. 시간이 끝나면 숫자가 빨개지며 흔들리고 "○○ 시간 끝!"과 함께 소리가 나요. 끝 소리는 딩동댕·삐삐삐·종소리·소리 없음 중에 골라요.',
     '처음 켤 때 학년 이름을 불러오기 전 잠깐 "3학년"으로 보이던 것을 고쳤어요. 이제 "교무수첩"으로 보이다가 우리 학년 이름으로 바뀌고, 두 번째부터는 바로 우리 학년으로 떠요.',
     '특별수업 같은 탭에서 새로고침하거나 다시 열 때 "화면을 불러오다 문제가 생겼어요"가 뜨던 것을 고쳤어요.'
   ]],
@@ -5503,28 +5504,42 @@ function timerDraw(){
   $('#timer-face').textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
   $('#timer-go').textContent = T.running ? '잠깐 멈춤' : (T.remain < T.total && T.remain > 0 ? '이어서' : '시작');
 }
-function timerSet(sec){ clearInterval(T.iv); T.running = false; T.total = T.remain = sec; $('#timer-face').classList.remove('ring'); timerDraw(); }
-function beep(){
-  try {
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
-    [0, .35, .7].forEach(t => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ac.destination);
-      g.gain.setValueAtTime(.0001, ac.currentTime + t); g.gain.exponentialRampToValueAtTime(.3, ac.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + t + .28);
-      o.start(ac.currentTime + t); o.stop(ac.currentTime + t + .3); });
-  } catch (e) {}
+function timerSet(sec){ clearInterval(T.iv); T.running = false; T.total = T.remain = sec; $('#timer-face').classList.remove('ring'); $('#timer-done').textContent = ''; timerDraw(); }
+/* 끝 소리: 시작 버튼을 누를 때 소리 장치를 깨워 두고, 끝나면 그걸로 울려요 (브라우저가 저절로 나는 소리를 막아서) */
+let tAC = null;
+function tAudio(){ try { tAC = tAC || new (window.AudioContext || window.webkitAudioContext)(); if (tAC.state === 'suspended') tAC.resume(); } catch (e){ tAC = null; } return tAC; }
+const TSND = (() => { try { return localStorage.getItem('gyomu.timerSnd') || 'chime'; } catch (e){ return 'chime'; } })();
+function tone(ac, f, t, dur, vol, type){
+  const o = ac.createOscillator(), g = ac.createGain(); o.type = type || 'sine'; o.frequency.value = f; o.connect(g); g.connect(ac.destination);
+  const t0 = ac.currentTime + t; g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  o.start(t0); o.stop(t0 + dur + .05);
+}
+function beep(kind){
+  kind = kind || ($('#timer-snd') ? $('#timer-snd').value : 'chime'); if (kind === 'off') return;
+  const ac = tAudio(); if (!ac) return;
+  if (kind === 'beep') [0, .35, .7].forEach(t => tone(ac, 880, t, .28, .3, 'square'));
+  else if (kind === 'bell') [0, 1.2].forEach(t => { tone(ac, 1318, t, 1.1, .35); tone(ac, 1976, t, .8, .12); tone(ac, 659, t, 1.1, .15); });
+  else [0, 1.6].forEach(r => [[784, 0], [659, .38], [523, .76]].forEach(([f, t]) => tone(ac, f, r + t, .7, .32, 'triangle')));
 }
 $('#timer-go').onclick = () => {
   if (T.running){ clearInterval(T.iv); T.running = false; timerDraw(); return; }
   if (T.remain <= 0) T.remain = T.total;
-  $('#timer-face').classList.remove('ring');
+  $('#timer-face').classList.remove('ring'); $('#timer-done').textContent = ''; tAudio();
   T.running = true; T.end = Date.now() + T.remain * 1000;
   T.iv = setInterval(() => {
     T.remain = (T.end - Date.now()) / 1000;
-    if (T.remain <= 0){ T.remain = 0; clearInterval(T.iv); T.running = false; $('#timer-face').classList.add('ring'); beep(); }
+    if (T.remain <= 0){ T.remain = 0; clearInterval(T.iv); T.running = false; $('#timer-face').classList.add('ring'); const lb = $('#timer-label').value.trim(); $('#timer-done').textContent = lb ? `${lb} 시간 끝!` : '시간 끝!'; beep(); }
     timerDraw();
   }, 200);
   timerDraw();
 };
 $('#timer-reset').onclick = () => timerSet(T.total);
+$('#timer-snd').value = TSND;
+$('#timer-snd').onchange = () => { try { localStorage.setItem('gyomu.timerSnd', $('#timer-snd').value); } catch (e){} beep(); };
+$('#timer-try').onclick = () => beep();
+try { $('#timer-label').value = localStorage.getItem('gyomu.timerLabel') || ''; } catch (e){}
+$('#timer-label').addEventListener('input', () => { try { localStorage.setItem('gyomu.timerLabel', $('#timer-label').value); } catch (e){} });
+$('#timer-label').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); $('#timer-label').blur(); } });
 $('#timer-set').onclick = () => { const m = parseInt($('#timer-min').value, 10); if (m > 0 && m <= 120) timerSet(m * 60); else toast('1분에서 120분 사이로 적어 주세요.'); };
 const sxOf = id => (($(`#${id} [aria-pressed="true"]`) || {}).dataset || {}).sx || 'all';
 ['pick-sx', 'order-sx'].forEach(id => $('#' + id).addEventListener('click', e => { const b = e.target.closest('[data-sx]'); if (!b) return; $$(`#${id} button`).forEach(x => x.setAttribute('aria-pressed', x === b)); if (id === 'pick-sx'){ T.pool = null; pickInfo(); } }));
