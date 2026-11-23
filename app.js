@@ -4266,8 +4266,11 @@ if (window.__gasNoGrade) gradePickSoon();
 
 
 /* ---------- 버전 · 바뀐 것 알림 ---------- */
-const APP_VERSION = '2.16';
+const APP_VERSION = '2.17';
 const CHANGELOG = [
+  ['2.17', '11월 23일', [
+    '특별수업 같은 탭에서 새로고침하거나 다시 열 때 "화면을 불러오다 문제가 생겼어요"가 뜨던 것을 고쳤어요.'
+  ]],
   ['2.16', '11월 20일', [
     '수업자료에서 자료를 누르면 작은 창이 떠요. "바로 열기"와 "주소 복사" 중에 골라요.',
     '수업자료에 링크 말고도 줄글, 사진, 파일(3MB까지)을 넣을 수 있어요. 주소 칸에 그냥 글을 적으면 글로 들어가고, 옆 "사진"·"파일" 버튼으로 올려요.',
@@ -5730,11 +5733,6 @@ $$('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === 
 window.addEventListener('hashchange', () => applyRoute(routeOf(location.hash)));
 
 window.__parse = parseLine; window.__cat = inferCat; window.__att = inferAtt;
-(() => {
-  let r0 = routeOf(location.hash);
-  if (!location.hash || location.hash === '#'){ try { const v = localStorage.getItem('gyomu.lastRoute'); if (v && /^[A-Za-z0-9_-]+$/.test(v)){ r0 = v; history.replaceState(null, '', '#' + v); } } catch (e){} }
-  applyRoute(r0);
-})();
 $('#note-done-btn').onclick = () => { S.notesDoneOpen = !S.notesDoneOpen; renderNotesDone(); };
 
 $('#me-class').onclick = () => { if (!S.uid || S.arc) return; S.clsAsk = !S.clsAsk || (!S.profile.myClass && !isJD()); renderHeader(); if (S.clsAsk) $('#cls-ask-sel').focus(); };
@@ -6631,5 +6629,11 @@ $('#ny-form').addEventListener('submit', async ev => {
   }
 });
 
+/* 첫 화면 길 찾기는 모든 상태가 준비된 뒤에 (특별수업 등에서 새로고침할 때 오류 나지 않게) */
+(() => {
+  let r0 = routeOf(location.hash);
+  if (!location.hash || location.hash === '#'){ try { const v = localStorage.getItem('gyomu.lastRoute'); if (v && /^[A-Za-z0-9_-]+$/.test(v)){ r0 = v; history.replaceState(null, '', '#' + v); } } catch (e){} }
+  applyRoute(r0);
+})();
 boot();
 })();
