@@ -617,7 +617,7 @@ function openLightbox(src){ if (!src) return; $('#lb-img').src = src; $('#lightb
 
 /* ---------- pages (tabs) ---------- */
 const GPAGES = [['grade','오늘','main'],['calendar','달력','calendar'],['lessons','특별수업','lessons'],['tasks','할 일','tasks'],['notices','협의·공지','notices'],['links','수업자료','links'],['ops','운영자료','ops'],['budget','예산','budget'],['roster','명부','roster']];
-const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출결','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-roster','명부','roster'],['me-ops','자료','mops']];
+const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출석부','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-roster','명부','roster'],['me-ops','자료','mops']];
 const JPAGES = [['me','오늘 수업','jday'],['me-jles','수업일지','jles'],['me-jprog','진도표','jprog'],['me-jcls','반별 명렬','jcls'],['me-jtt','시간표·시수','jtt'],['me-todo','할 일','todo'],['me-cns','상담일지','cns'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const isJD = () => !!(S.profile && S.profile.role === 'jd');
 const curMP = () => isJD() ? JPAGES : MPAGES;
@@ -2903,7 +2903,7 @@ function renderAtt(){
   else {
     const ix = attIndex();
     const dayCount = {};
-    let h = `<div class="tablewrap"><table class="attg"><thead><tr><th>학생</th>${sch.map(k => { const d = fromYmd(k); return `<th class="${k === tk ? 'today' : ''}">${d.getDate()}<small>${WD[d.getDay()]}</small></th>`; }).join('')}${ATT_COLS.map(c => `<th>${c[2]}</th>`).join('')}</tr></thead><tbody>`;
+    let h = `<div class="tablewrap"><table class="attg"><thead><tr><th>학생</th>${sch.map(k => { const d = fromYmd(k); return `<th class="${k === tk ? 'today' : ''}">${d.getDate()}<small>${WD[d.getDay()]}</small></th>`; }).join('')}${ATT_COLS.map((c, i) => `<th class="st ${i === 0 ? 'st0' : ''}" title="${c[2]}">${c[1] ? c[1] + '<br>' + c[0] : c[0]}</th>`).join('')}</tr></thead><tbody>`;
     roster.forEach(r => {
       const tot = ATT_COLS.map(() => 0);
       h += `<tr><td class="nm"><span class="mono">${r.no}</span>${esc(r.name || '')}</td>`;
@@ -2912,7 +2912,7 @@ function renderAtt(){
         if (a){ const ci = ATT_COLS.findIndex(c => c[0] === a.kind && (c[1] === null || c[1] === a.reason)); if (ci >= 0) tot[ci]++; if (a.kind === '결석') dayCount[k] = (dayCount[k] || 0) + 1; }
         h += `<td><button type="button" data-act="att-cell" data-no="${r.no}" data-date="${k}" class="${a ? 'mk-' + a.reason : ''}" title="${a ? esc(attLabel(a)) + (a.e.text ? ' · ' + esc(a.e.text) : '') : ''}" aria-label="${r.no}번 ${fromYmd(k).getDate()}일 ${a ? esc(attLabel(a)) : '출석'}">${a ? ATT_MARK[a.kind] || '·' : ''}</button></td>`;
       });
-      h += tot.map(n => `<td class="tot ${n ? 'has' : ''}">${n || ''}</td>`).join('') + '</tr>';
+      h += tot.map((n, i) => `<td class="tot ${n ? 'has' : ''} ${i === 0 ? 'st0' : ''}">${n || ''}</td>`).join('') + '</tr>';
     });
     h += `</tbody><tfoot><tr><td class="nm">결석 인원</td>${sch.map(k => `<td>${dayCount[k] || ''}</td>`).join('')}<td colspan="${ATT_COLS.length}"></td></tr></tfoot></table></div>`;
     $('#att-grid').innerHTML = h;
@@ -4292,6 +4292,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '나의 공간 "출결" 탭 이름을 "출석부"로 바꿨어요. 출석부 표는 이름 칸을 좁히고 짝수 번호 줄에 옅은 색을 넣고, 오른쪽 합계 칸은 굵은 선과 다른 색으로 나눴어요.',
     '출결 합계에서 "질결·인결" 같은 줄임말 대신 질병결석·미인정결석·기타결석·출석인정결석처럼 원래 낱말로 보여요.',
     '예산: 학년 예산에서 구분을 우리 반(예: 초록지구반)으로 정한 줄이 나의 공간 예산에도 같이 보여요. 어느 쪽에서 고쳐도 같이 바뀌어요.',
     '예산: 구분에서 "모든 반"을 고르면 그 줄이 반마다 같은 금액으로 한 줄씩 한 번에 들어가요.',
