@@ -751,6 +751,19 @@ button.x.armed,button.rt-del.armed{color:var(--danger)!important;font-size:12px!
 .kind.k-집행{background:color-mix(in srgb,var(--danger) 13%,transparent);color:var(--danger)}
 .kind.k-요구{background:color-mix(in srgb,var(--warn) 15%,transparent);color:var(--warn)}
 .kind.k-증액{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.bud-ocr{margin:8px 0}
+.bud-ocr > summary{cursor:pointer;font-weight:600;font-size:13px}
+.ocr-drop{flex:1;min-width:220px;border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted);cursor:text}
+.ocr-drop:focus{outline:none;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.ocr-wait,.ocr-res{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;margin-top:10px;align-items:start}
+.ocr-wait img,.ocr-res img{max-width:100%;border:1px solid var(--line);border-radius:6px}
+.ocr-form{display:grid;gap:8px}.ocr-form h4{margin:4px 0 0;font-size:13px}
+.ocr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+.ocr-grid label{display:grid;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
+.ocr-it{display:grid;grid-template-columns:auto minmax(0,1.4fr) minmax(0,1fr) 120px;gap:6px;align-items:center}
+.ocr-form .amt{text-align:right}
+.ocr-raw{white-space:pre-wrap;font-size:11.5px;max-height:200px;overflow:auto;background:var(--surface-2);padding:8px;border-radius:6px}
+@media (max-width:740px){.ocr-wait,.ocr-res{grid-template-columns:1fr}.ocr-it{grid-template-columns:auto 1fr}}
 .log-add-box{display:grid;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 .log-add-box h4{margin:0;font-size:13px}
 .log-add{display:grid;grid-template-columns:150px 140px minmax(140px,1fr) minmax(140px,1fr) 150px auto;gap:8px;align-items:end}
@@ -2686,7 +2699,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@89de0c4fcec3fb31fe1b4db1df61b76d38156be7/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@893ba4977cb2de2c7f64bf73ff8b7c97192359d9/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
