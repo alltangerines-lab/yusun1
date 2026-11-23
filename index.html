@@ -1116,6 +1116,17 @@ table.ros td[data-r]{user-select:none}
 table.ros td[data-r] input{user-select:text}
 .pp-rows{display:grid}
 table.pp-t{border-collapse:collapse;width:100%;font-size:13px;min-width:760px}
+table.pp-wk{border-collapse:collapse;width:100%;min-width:720px;table-layout:fixed;font-size:13px}
+.pp-wk th,.pp-wk td{border:1px solid var(--line);padding:4px 5px;vertical-align:top}
+.pp-wk thead th{background:var(--surface-2);font-size:12.5px;text-align:center}
+.pp-wk thead th.today{color:var(--accent)}.pp-wk thead th small{display:block;color:var(--holiday);font-weight:400}
+.pp-wk th.n,.pp-wk td.n{width:44px;text-align:center;font-family:var(--mono);color:var(--muted)}
+.pp-wk td.off{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 6px,transparent 6px,transparent 12px)}
+.pp-wk td.empty{background:var(--surface-2)}
+.pp-wk tr.lunch td{background:var(--surface-2);text-align:center;color:var(--muted);font-size:12px;padding:2px}
+.pp-wk .pw-s{font-weight:700;font-size:13px;margin-bottom:2px}
+.pp-wk textarea{width:100%;border:1px solid transparent;background:transparent;resize:none;font:inherit;font-size:12.5px;padding:3px 4px;border-radius:5px;min-height:28px;overflow:hidden}
+.pp-wk textarea:hover{border-color:var(--line)}.pp-wk textarea:focus{border-color:var(--accent);background:var(--surface);outline:none}
 /* 전담: 오늘 수업 · 시간표와 시수 */
 .ev-t{border-collapse:collapse;width:100%;font-size:14px}
 .ev-t th{background:var(--surface-2);color:var(--muted);font-weight:600;font-size:12.5px;text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);position:sticky;top:0}
@@ -1893,14 +1904,16 @@ body.ro .w-only{display:none!important}
             <button type="button" class="btn small" id="pp-next" aria-label="다음 날">›</button>
             <button type="button" class="btn small" id="pp-today">오늘</button>
             <input type="date" id="pp-date" style="width:auto" aria-label="날짜 고르기">
+            <div class="seg" role="group" aria-label="보기" id="pp-view"><button type="button" data-v="week" aria-pressed="true">한 주</button><button type="button" data-v="day" aria-pressed="false">하루 자세히</button></div>
             <span class="grow"></span>
             <span class="hint" id="pp-save"></span>
           </div>
           <p class="hint" id="pp-src" style="margin:0 0 8px"></p>
           <div class="attline" id="pp-ev"></div>
           <div id="pp-rows" class="pp-rows"></div>
-          <label class="f" for="pp-memo" style="margin-top:12px">이 날 메모 <span class="hint">학급일지의 "업무 메모"와 같은 칸이에요</span></label>
-          <textarea id="pp-memo" rows="3"></textarea>
+          <div id="pp-week" class="pp-week" hidden></div>
+          <label class="f pp-dayonly" for="pp-memo" style="margin-top:12px">이 날 메모 <span class="hint">학급일지의 "업무 메모"와 같은 칸이에요</span></label>
+          <textarea id="pp-memo" class="pp-dayonly" rows="3"></textarea>
         </div>
 
         <div class="panel" id="p-eval" hidden>
@@ -2712,7 +2725,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@fb2422a6f69d447d0b5fec0b62f9cf8c608f7bb9/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@2c9bcb001d53103f3acd541659d091a124a1ae78/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
