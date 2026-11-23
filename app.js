@@ -3463,6 +3463,7 @@ function makeRoster(key){
     <div class="ros-bar"><span class="ros-count hint"></span><span class="grow"></span>
       ${g ? '' : '<button type="button" class="btn small" data-b="from-grade">학년 명부에서 우리 반 가져오기</button>'}
       <button type="button" class="btn small primary" data-b="add">+ 학생 추가</button>
+      <details class="ros-cols"><summary class="btn small">칸 숨기기</summary><div class="ros-colpick"></div></details>
       <button type="button" class="btn small" data-b="csv">${g ? '이 반 CSV' : 'CSV로 받기'}</button>${g ? '<button type="button" class="btn small" data-b="csv-all">학년 전체 CSV</button>' : ''}</div>
     <details class="ros-paste"><summary>스프레드시트에서 붙여넣기</summary>
       <p class="hint">나이스·스프레드시트에서 제목 줄까지 칸째로 복사해 붙이면 번호·이름·성별·생년월일·이전 학년반·보호자·보호자 연락처·주소·비고 칸을 알아서 찾고, 처음 보는 제목은 새 열로 만들어요.${g ? ' <b>"반" 또는 "현재 반" 칸이 있으면 반별로 알아서 나눠 넣어요</b> (최대 6반). 없으면 지금 고른 반에 들어가요.' : ''} 제목 없이 붙여도 번호·이름·성별·날짜·전화번호 모양을 보고 칸을 맞춰요.</p>
@@ -3477,8 +3478,18 @@ function makeRoster(key){
     <p class="hint" style="margin:0">스프레드시트처럼 끌어서 여러 칸을 고르고 Ctrl+C로 복사, 칸에서 Ctrl+V로 여러 줄을 한 번에 붙여요. 제목 칸을 누르면 열 전체, 칸 안에서 Ctrl+A를 두 번 누르면 표 전체를 골라요.</p>
     <div class="row ros-extra-add"><input type="text" id="ros-${key}-newcol" placeholder="열 더하기 (예: 방과후, 알레르기)" style="max-width:240px" aria-label="새 열 이름"><button type="button" class="btn small" data-b="addcol">열 추가</button></div>
     <p class="privacy">${g ? '학년 명부는 학년 공간을 열 수 있는 선생님 모두가 보고 고칠 수 있어요. ' : '나만 보는 기록이에요. '}보호자 연락처·주소 같은 개인정보는 학교의 개인정보 보호 기준에 맞는지 먼저 확인하고 넣어 주세요. 필요 없는 칸은 비워 두면 돼요.</p>`;
+  /* 칸 숨기기(내 화면에만)와 글자 수에 맞춘 칸 폭 */
+  const hidKey = 'ros-' + key;
+  const hidSet = () => new Set((((S.profile || {}).tabPrefs || {})[hidKey]) || []);
+  const allCols = extra => [...ROS_F.map(([f, n]) => ({f, n, ex:-1})), ...extra.map((n, i) => ({f:'x:' + n, n, ex:i}))];
+  const vcols = extra => { const h = hidSet(); return allCols(extra || get().extra).filter(c => !h.has(c.f)); };
+  const textW = v => { let w = 0; for (const ch of String(v ?? '')) w += /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3\u4e00-\u9fff]/.test(ch) ? 1.85 : 1; return w; };
+  const colW = (students, c) => { let m = textW(c.n) * 0.9; students.forEach(s => { m = Math.max(m, textW(c.f.startsWith('x:') ? (s.x || {})[c.f.slice(2)] : s[c.f])); }); return Math.max(3, Math.min(42, Math.ceil(m + 1.6))); };
   function render(){
     if (!root.isConnected) return;
+    { const ex0 = get().extra, h0 = hidSet();
+      $('.ros-colpick', root).innerHTML = `<p class="hint" style="margin:0 0 6px">체크를 풀면 그 칸이 내 화면에서만 숨겨져요. 기록은 그대로 있고 CSV에도 다 들어가요.</p>` + allCols(ex0).map(c => `<label class="row" style="gap:6px"><input type="checkbox" data-hidecol="${esc(c.f)}" ${h0.has(c.f) ? '' : 'checked'} ${c.f === 'no' || c.f === 'name' ? 'disabled' : ''}> ${esc(c.n)}</label>`).join('');
+      const sm = $('.ros-cols summary', root); sm.textContent = h0.size ? `숨긴 칸 ${[...h0].filter(f => allCols(ex0).some(c => c.f === f)).length}개` : '칸 숨기기'; }
     if (g){
       $('.ros-cls', root).innerHTML = Array.from({length:nCls()}, (_, i) => { const n = i + 1, c = (((S.rosG || {})['c' + n] || {}).students || []).length; return `<button type="button" data-cls="${n}" aria-pressed="${curCls() === n}">${esc(clsLabel(n + '반'))} <small>${c}명</small></button>`; }).join('');
     }
@@ -3494,10 +3505,11 @@ function makeRoster(key){
     const ae = document.activeElement;
     if (ae && $('.ros-table', root).contains(ae) && ae.matches('input')) return;
     const dis = can() ? '' : 'disabled';
-    const head = ROS_F.map(([, n], c) => `<th data-col="${c}" title="눌러서 열 전체 고르기">${n}</th>`).join('') + extra.map((n, i) => `<th class="ex" data-col="${ROS_F.length + i}">${esc(n)}${can() ? `<button type="button" class="x" data-b="delcol" data-col="${i}" aria-label="${esc(n)} 열 지우기">×</button>` : ''}</th>`).join('');
-    const cell = (s, f, v, cls, r, c) => `<td class="${cls || ''}" data-r="${r}" data-c="${c}"><input type="text" id="rf-${key}-${s.id}-${f}" data-id="${esc(s.id)}" data-f="${esc(f)}" data-r="${r}" data-c="${c}" value="${esc(v ?? '')}" aria-label="${esc(s.name || s.no || '')} ${esc(f)}" autocomplete="off" ${dis}></td>`;
-    const body = students.map((s, r) => `<tr>${ROS_F.map(([f], c) => cell(s, f, s[f], 'f-' + f, r, c)).join('')}${extra.map((n, j) => cell(s, 'x:' + n, (s.x || {})[n], '', r, ROS_F.length + j)).join('')}<td class="act">${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(s.id)}" aria-label="학생 지우기">×</button>` : ''}</td></tr>`).join('');
-    st.rows = students.length; st.cols = ROS_F.length + extra.length;
+    const vc = vcols(extra), ws = vc.map(c => colW(students, c));
+    const head = vc.map((c, i) => c.ex < 0 ? `<th data-col="${i}" title="눌러서 열 전체 고르기">${c.n}</th>` : `<th class="ex" data-col="${i}">${esc(c.n)}${can() ? `<button type="button" class="x" data-b="delcol" data-ex="${c.ex}" aria-label="${esc(c.n)} 열 지우기">×</button>` : ''}</th>`).join('');
+    const cell = (s, f, v, cls, r, c) => `<td class="${cls || ''}" data-r="${r}" data-c="${c}"><input type="text" id="rf-${key}-${s.id}-${f}" data-id="${esc(s.id)}" data-f="${esc(f)}" data-r="${r}" data-c="${c}" value="${esc(v ?? '')}" aria-label="${esc(s.name || s.no || '')} ${esc(f)}" autocomplete="off" style="width:${ws[c]}ch;min-width:0" ${dis}></td>`;
+    const body = students.map((s, r) => `<tr>${vc.map((c, i) => cell(s, c.f, c.ex < 0 ? s[c.f] : (s.x || {})[c.n], c.ex < 0 ? 'f-' + c.f : '', r, i)).join('')}<td class="act">${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(s.id)}" aria-label="학생 지우기">×</button>` : ''}</td></tr>`).join('');
+    st.rows = students.length; st.cols = vc.length;
     $('.ros-table', root).innerHTML = students.length ? `<div class="tablewrap"><table class="ros"><thead><tr>${head}<th></th></tr></thead><tbody>${body}</tbody></table></div>`
       : `<p class="empty">${g ? clsLabel(curCls() + '반') + ' 명부가 비어 있어요. ' : '아직 명부가 없어요. '}스프레드시트에서 복사해 "붙여넣기"에 넣거나 "+ 학생 추가"를 눌러 주세요.</p>`;
     paint(); renderSyncBar();
@@ -3517,6 +3529,7 @@ function makeRoster(key){
       <label class="hint row" style="gap:4px"><input type="checkbox" data-b="sync-auto" ${auto ? 'checked' : ''} ${S.uid ? '' : 'disabled'}> 한쪽을 고치면 다른 쪽도 저절로 맞추기</label>`;
   }
   root.addEventListener('change', e => {
+    if (e.target.matches('[data-hidecol]')){ const h = hidSet(); e.target.checked ? h.delete(e.target.dataset.hidecol) : h.add(e.target.dataset.hidecol); const tp = Object.assign({}, S.profile.tabPrefs || {}); tp[hidKey] = [...h]; S.profile.tabPrefs = tp; saveProfile(); render(); return; }
     if (e.target.matches('[data-b="sync-auto"]')){ S.profile.rosterSync = e.target.checked; saveProfile(); if (e.target.checked) rosterAutoSync(g ? 'grade' : 'mine'); toast(e.target.checked ? '이제 한쪽을 고치면 다른 쪽도 맞춰져요.' : '자동 맞추기를 껐어요.'); ROS.g.render(); ROS.m.render(); return; }
     const el = e.target.closest('[data-f]'); if (!el || !can()) return;
     const data = get(); const s = data.students.find(x => x.id === el.dataset.id); if (!s) return;
@@ -3559,7 +3572,7 @@ function makeRoster(key){
       d.extra = d.extra.concat([n]); inp.value = ''; put(d); render();
     } else if (act === 'delcol'){
       if (!twoStep(b, '지울까요?')) return;
-      const d = get(); const n = d.extra[+b.dataset.col]; d.extra = d.extra.filter((_, i) => i !== +b.dataset.col);
+      const d = get(), ci = +b.dataset.ex; const n = d.extra[ci]; d.extra = d.extra.filter((_, i) => i !== ci);
       d.students.forEach(s => { if (s.x) { s.x = Object.assign({}, s.x); delete s.x[n]; } }); put(d); render();
     } else if (act === 'sync-pull' || act === 'sync-push'){
       const toMine = g ? act === 'sync-push' : act === 'sync-pull';
@@ -3603,7 +3616,7 @@ function makeRoster(key){
   });
   /* ---- 표처럼 여러 칸 고르기 · 복사 · 붙여넣기 ---- */
   st.sel = null; st.anchor = null; st.drag = false;
-  const fieldAt = c => { const ex = get().extra; return c < ROS_F.length ? ROS_F[c][0] : 'x:' + ex[c - ROS_F.length]; };
+  const fieldAt = c => { const v = vcols(); return (v[c] || v[v.length - 1]).f; };
   const rect = () => { const s0 = st.sel; return s0 ? {r0:Math.min(s0.r0, s0.r1), r1:Math.max(s0.r0, s0.r1), c0:Math.min(s0.c0, s0.c1), c1:Math.max(s0.c0, s0.c1)} : null; };
   const multi = () => { const q = rect(); return q && (q.r0 !== q.r1 || q.c0 !== q.c1); };
   function paint(){
@@ -4271,6 +4284,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '명부(학년·우리 반): "칸 숨기기"로 보호자 연락처 같은 칸을 내 화면에서만 숨겨요. 칸 폭은 들어 있는 글자 수에 맞춰 저절로 줄고 늘어요.',
     '교실 도구 타이머: 시간 위에 무엇을 하는 시간인지 적을 수 있어요. 시간이 끝나면 숫자가 빨개지며 흔들리고 "○○ 시간 끝!"과 함께 소리가 나요. 끝 소리는 딩동댕·삐삐삐·종소리·소리 없음 중에 골라요.',
     '처음 켤 때 학년 이름을 불러오기 전 잠깐 "3학년"으로 보이던 것을 고쳤어요. 이제 "교무수첩"으로 보이다가 우리 학년 이름으로 바뀌고, 두 번째부터는 바로 우리 학년으로 떠요.',
     '특별수업 같은 탭에서 새로고침하거나 다시 열 때 "화면을 불러오다 문제가 생겼어요"가 뜨던 것을 고쳤어요.'
