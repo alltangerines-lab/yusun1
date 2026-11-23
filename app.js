@@ -571,7 +571,7 @@ function imageTarget(name){
   if (name === 'notice') return {scope:'shared', add:refs => { S.stage.notice.push(...refs); renderStage('notice'); }};
   if (name === 'j' || name === 'cns' || name === 'stu') return {scope:'private', add:refs => { S.stage[name].push(...refs); renderStage(name); }};
   if (name === 'ops') return {scope:'shared', add:refs => { S.stage.ops = (S.stage.ops || []).concat(refs); renderStage('ops'); }};
-  if (name === 'mo') return {scope:'private', add:refs => { const r = rt(), k = ymd(today()); const cap = $('#mo-new').value.trim().slice(0, 200); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:cap, imgs:refs}])}); $('#mo-new').value = ''; saveRoutine(); renderMorning(false); toast('사진을 오늘 할 일에 붙였어요.'); }};
+  if (name === 'mo') return {scope:'private', add:refs => { const r = rt(), k = moK(); const cap = $('#mo-new').value.trim().slice(0, 200); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).concat([{id:rid(), name:cap, imgs:refs}])}); $('#mo-new').value = ''; saveRoutine(); renderMorning(false); toast('사진을 오늘 할 일에 붙였어요.'); }};
   if (name === 'eval') return {scope:'private', add:refs => { S.ev.imgs = (S.ev.imgs || []).concat(refs); evSave(); $('#ev-photos').open = true; renderEval(); toast(`평가 계획 사진 ${refs.length}장을 올렸어요.`); }};
   if (name === 'mops') return {scope:'private', add:refs => { S.stage.mops = (S.stage.mops || []).concat(refs); renderStage('mops'); }};
   if (name === 'gmemo') return {scope:'shared', add:async refs => { const cur = (S.gmemo && S.gmemo.imgs) || []; try { await S.db.doc('grade/memo').set(Object.assign({}, S.gmemo || {}, {imgs:cur.concat(refs), updatedAt:Date.now(), updatedBy:S.uid})); } catch (e){ wErr(e, true); } }};
@@ -4187,8 +4187,9 @@ async function renderMorning(fetchDay){
   const all = r.items.map(x => Object.assign({daily:true}, x)).concat(ex);
   const n = all.filter(x => dn[x.id]).length;
   $('#mo-count').textContent = all.length ? `${n}/${all.length}` : '';
+  $('#mo-carry-all').hidden = !ex.some(x => !dn[x.id]);
   const ae = document.activeElement;
-  if (!(MO.editing && $('#mo-list .mo-edf'))) $('#mo-list').innerHTML = all.length ? all.map(x => (x.imgs && x.imgs.length) ? `<li class="mo-img ${dn[x.id] ? 'on' : ''}"><div class="mo-imgs">${thumbsHtml(x.imgs, '')}</div><div class="mo-imgbar"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name || '사진')}</span></button><button type="button" class="mo-ed" data-mo-edit="${esc(x.id)}" aria-label="설명 고치기" title="설명 고치기">✎</button><button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="사진 빼기">×</button></div></li>` : `<li class="${dn[x.id] ? 'on' : ''}"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name)}</span>${x.daily ? '' : '<span class="tag">오늘만</span>'}</button><button type="button" class="mo-ed" data-mo-edit="${esc(x.id)}" data-daily="${x.daily ? 1 : ''}" aria-label="${esc(x.name)} 고치기" title="고치기">✎</button>${x.daily ? '' : `<button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button>`}</li>`).join('')
+  if (!(MO.editing && $('#mo-list .mo-edf'))) $('#mo-list').innerHTML = all.length ? all.map(x => (x.imgs && x.imgs.length) ? `<li class="mo-img ${dn[x.id] ? 'on' : ''}"><div class="mo-imgs">${thumbsHtml(x.imgs, '')}</div><div class="mo-imgbar"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name || '사진')}</span></button><button type="button" class="mo-ed" data-mo-edit="${esc(x.id)}" aria-label="설명 고치기" title="설명 고치기">✎</button><button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="사진 빼기">×</button></div></li>` : `<li class="${dn[x.id] ? 'on' : ''}"><button type="button" class="mo-chk" data-mo="${esc(x.id)}" aria-pressed="${!!dn[x.id]}"><span class="box">${dn[x.id] ? '✓' : ''}</span><span class="t">${esc(x.name)}</span>${x.daily ? '' : `<span class="tag">${x.carried ? '이어서' : '오늘만'}</span>`}</button>${!x.daily && !dn[x.id] ? `<button type="button" class="mo-carry" data-mo-carry="${esc(x.id)}" title="다음 등교일 할 일에도 넣어요">내일도</button>` : ''}<button type="button" class="mo-ed" data-mo-edit="${esc(x.id)}" data-daily="${x.daily ? 1 : ''}" aria-label="${esc(x.name)} 고치기" title="고치기">✎</button>${x.daily ? '' : `<button type="button" class="x" data-mo-del="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button>`}</li>`).join('')
     : '<li class="hint">아래 "매일 할 일 고치기"에서 아침 독서, 숙제 내기처럼 날마다 하는 일을 넣어 주세요.</li>';
   hydrateImgs();
   if (ae !== $('#mo-daily-new')) $('#mo-daily').innerHTML = r.items.length ? r.items.map(x => `<li><span>${esc(x.name)}</span><button type="button" class="x" data-mo-ddel="${esc(x.id)}" aria-label="${esc(x.name)} 빼기">×</button></li>`).join('') : '<li class="hint">아직 없어요.</li>';
@@ -4257,11 +4258,25 @@ $('#tool-morn').addEventListener('click', e => {
     return;
   }
   if (e.target.closest('.mo-edf')) return;
+  const cr = e.target.closest('[data-mo-carry]');
+  if (cr){ const x = (r.extra[k] || []).find(y => y.id === cr.dataset.moCarry); if (x){ const nx = moCarry([x], k); toast(nx ? `${fmtMD(nx)} 할 일에도 넣었어요.` : '다음 날에 이미 있어요.'); } return; }
   const d = e.target.closest('[data-mo-del]');
   if (d){ const gone = (r.extra[k] || []).find(x => x.id === d.dataset.moDel); r.extra = Object.assign({}, r.extra, {[k]:(r.extra[k] || []).filter(x => x.id !== d.dataset.moDel)}); saveRoutine(); renderMorning(false); ((gone && gone.imgs) || []).forEach(dropImage); return; }
   const dd = e.target.closest('[data-mo-ddel]');
   if (dd){ if (!twoStep(dd, '빼기?')) return; r.items = r.items.filter(x => x.id !== dd.dataset.moDdel); saveRoutine(); renderMorning(false); }
 });
+/* 안 끝난 '오늘만' 할 일을 다음 등교일로 이어 가기 (이미 있으면 다시 넣지 않아요) */
+function moCarry(list, k){
+  const r = rt(), nx = nextSchoolDay(k), have = new Set((r.extra[nx] || []).map(y => y.name));
+  const add = list.filter(x => !have.has(x.name)).map(x => Object.assign({id:rid(), name:x.name, carried:(x.carried || 0) + 1}, x.imgs ? {imgs:x.imgs.slice()} : {}));
+  if (!add.length) return null;
+  r.extra = Object.assign({}, r.extra, {[nx]:(r.extra[nx] || []).concat(add)}); saveRoutine(); renderMorning(false); return nx;
+}
+$('#mo-carry-all').onclick = () => {
+  const r = rt(), k = moK(), dn = r.done[k] || {}, left = (r.extra[k] || []).filter(x => !dn[x.id]);
+  if (!left.length){ toast('안 끝난 일이 없어요.'); return; }
+  const nx = moCarry(left, k); toast(nx ? `안 끝난 일 ${left.length}개를 ${fmtMD(nx)} 할 일에도 넣었어요.` : '다음 날에 이미 다 있어요.');
+};
 $('#mo-add').addEventListener('submit', e => {
   e.preventDefault(); if (!S.uid) return;
   const v = $('#mo-new').value.trim(); if (!v) return;
@@ -4538,6 +4553,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '아침 안내 "오늘 할 일"에서 안 끝난 오늘만 할 일 옆 "내일도"를 누르면 다음 등교일에도 들어가요. "안 끝난 일 내일도"로 한 번에 넘길 수도 있어요.',
     '아침 안내 날짜 왼쪽에 그날 결석한 학생 이름이 "결석 ○○○"으로 떠요. 출석부나 학급일지에 결석으로 적으면 저절로 나와요. 사유는 안 보여요.',
     '나의 공간에도 탭 줄 끝 "+ 새 탭"으로 나만 보는 표 탭을 만들 수 있어요. 학년 탭처럼 빈 표·체크리스트·학습준비물 같은 틀로 시작해요.',
     '예산: 학교에서는 품의와 동시에 집행되니까 요구금액·집행액을 나누지 않고 "사용액" 하나로 보여요. 내역 종류도 사용·증액·감액만 남겼어요.',
