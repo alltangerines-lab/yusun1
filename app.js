@@ -2910,7 +2910,7 @@ function renderAtt(){
       sch.forEach(k => {
         const a = ix[r.no + '|' + k];
         if (a){ const ci = ATT_COLS.findIndex(c => c[0] === a.kind && (c[1] === null || c[1] === a.reason)); if (ci >= 0) tot[ci]++; if (a.kind === '결석') dayCount[k] = (dayCount[k] || 0) + 1; }
-        h += `<td><button type="button" data-act="att-cell" data-no="${r.no}" data-date="${k}" class="${a ? 'mk-' + a.reason : ''}" title="${a ? esc(attLabel(a)) + (a.e.text ? ' · ' + esc(a.e.text) : '') : ''}" aria-label="${r.no}번 ${fromYmd(k).getDate()}일 ${a ? esc(attLabel(a)) : '출석'}">${a ? ATT_MARK[a.kind] || '·' : ''}</button></td>`;
+        h += `<td><button type="button" data-act="att-cell" data-no="${r.no}" data-date="${k}" class="${a ? 'mk-' + a.reason : ''}" ${a ? `data-tip="${esc(`${r.no}번 ${r.name || ''} · ${fmtMD(k)}\n${attLabel(a)}${a.e.text ? '\n사유: ' + a.e.text.replace(/\s+/g, ' ').slice(0, 120) : ''}`)}"` : ''} aria-label="${r.no}번 ${fromYmd(k).getDate()}일 ${a ? esc(attLabel(a)) : '출석'}">${a ? ATT_MARK[a.kind] || '·' : ''}</button></td>`;
       });
       h += tot.map((n, i) => `<td class="tot ${n ? 'has' : ''} ${i === 0 ? 'st0' : ''}">${n || ''}</td>`).join('') + '</tr>';
     });
@@ -2968,6 +2968,22 @@ $('#att-csv').onclick = () => {
   });
   save(`출석부_${m.getFullYear()}-${pad(m.getMonth() + 1)}.csv`, csv(rows));
 };
+/* 출석부 칸에 마우스를 올리면 바로 뜨는 설명 (누구·날짜·종류·사유) */
+(() => {
+  let tip = null;
+  const hide = () => { if (tip) tip.hidden = true; };
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest && e.target.closest('[data-tip]');
+    if (!el){ hide(); return; }
+    if (!tip){ tip = document.createElement('div'); tip.className = 'tip-pop'; tip.setAttribute('role', 'tooltip'); document.body.appendChild(tip); }
+    tip.textContent = el.dataset.tip; tip.hidden = false;
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8)) + 'px';
+    tip.style.top = (r.top - h - 8 > 8 ? r.top - h - 8 : r.bottom + 8) + 'px';
+  });
+  document.addEventListener('scroll', hide, true);
+  document.addEventListener('focusin', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (!el) hide(); });
+})();
 function attSelHtml(no, k, ix){
   const a = ix[no + '|' + k], v = a ? `${a.kind}|${a.reason}` : '';
   const opts = $('#at-kind').innerHTML.replace('출석 (기록 지우기)', '출석').replace(' (체험학습 등)', '').replace(/ selected(="[^"]*")?/g, '').replace(`value="${v}"`, `value="${v}" selected`);
@@ -4292,6 +4308,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '출석부에서 결석·지각 칸에 마우스를 올리면 몇 번 누구인지, 날짜, 종류, 사유가 바로 떠요.',
     '나의 공간 "출결" 탭 이름을 "출석부"로 바꿨어요. 출석부 표는 이름 칸을 좁히고 짝수 번호 줄에 옅은 색을 넣고, 오른쪽 합계 칸은 굵은 선과 다른 색으로 나눴어요.',
     '출결 합계에서 "질결·인결" 같은 줄임말 대신 질병결석·미인정결석·기타결석·출석인정결석처럼 원래 낱말로 보여요.',
     '예산: 학년 예산에서 구분을 우리 반(예: 초록지구반)으로 정한 줄이 나의 공간 예산에도 같이 보여요. 어느 쪽에서 고쳐도 같이 바뀌어요.',
