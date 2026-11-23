@@ -4179,6 +4179,9 @@ async function renderMorning(fetchDay){
   $('#mo-date').innerHTML = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일${isT ? '' : `<span class="ahead-tag">${k > ymd(today()) ? '미리 쓰는 중' : '지난 날'}</span>`}`;
   $('#mo-hello').textContent = HOLIDAYS[k] ? HOLIDAYS[k] : isT ? '좋은 아침이에요!' : k > ymd(today()) ? '그날 아침에 이대로 떠요. 오늘 할 일·과목 메모를 미리 넣어 두세요.' : '지난 날 아침 안내예요.';
   $('#mo-today').setAttribute('aria-pressed', isT);
+  /* 그날 결석한 학생 이름만 (사유·종류는 안 보여요) */
+  { let ab = []; try { const ix = attIndex(); ab = rosterForTools().filter(r => { const a = ix[r.no + '|' + k]; return a && a.kind === '결석'; }).map(r => r.name); } catch (e){}
+    $('#mo-abs').hidden = !ab.length; $('#mo-abs').innerHTML = ab.length ? `<b>결석</b> ${ab.map(esc).join(', ')}` : ''; }
   if (!S.uid){ $('#mo-list').innerHTML = '<li class="hint">로그인한 상태로 열어야 쓸 수 있어요.</li>'; return; }
   const r = rt(), dn = r.done[k] || {}, ex = r.extra[k] || [];
   const all = r.items.map(x => Object.assign({daily:true}, x)).concat(ex);
@@ -4535,6 +4538,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '아침 안내 날짜 왼쪽에 그날 결석한 학생 이름이 "결석 ○○○"으로 떠요. 출석부나 학급일지에 결석으로 적으면 저절로 나와요. 사유는 안 보여요.',
     '나의 공간에도 탭 줄 끝 "+ 새 탭"으로 나만 보는 표 탭을 만들 수 있어요. 학년 탭처럼 빈 표·체크리스트·학습준비물 같은 틀로 시작해요.',
     '예산: 학교에서는 품의와 동시에 집행되니까 요구금액·집행액을 나누지 않고 "사용액" 하나로 보여요. 내역 종류도 사용·증액·감액만 남겼어요.',
     '예산: "에듀파인 품의 화면 캡처로 넣기"에 품의 화면을 캡처해 붙이면 글자를 읽어 예산 줄·품의 내용·산출내역·금액을 채워 보여 줘요. 확인하고 "넣기"를 누르면 들어가요.',
