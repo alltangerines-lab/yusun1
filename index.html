@@ -1036,6 +1036,8 @@ table.ls-lt,table.ls-pv,table.ls-jdt{width:100%;border-collapse:collapse}
 .mo-chk .box{width:1.1em;height:1.1em;border:3px solid var(--muted);border-radius:8px;display:grid;place-items:center;font-size:.8em;flex-shrink:0;color:var(--accent-ink);font-weight:800}
 #mo-list li.on .box{background:var(--accent);border-color:var(--accent)}
 #mo-list li.on .t{text-decoration:line-through;color:var(--muted)}
+#mo-list .mo-carry{flex-shrink:0;border:1px solid var(--line);background:var(--surface);border-radius:8px;font:inherit;font-size:13px;padding:4px 8px;color:var(--accent);cursor:pointer;white-space:nowrap}
+#mo-list .mo-carry:hover{border-color:var(--accent)}
 .mo-chk .tag{white-space:nowrap;font-size:.42em;font-weight:500;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted)}
 .mo-add{display:flex;gap:6px;opacity:.75}
 .mo-add:focus-within{opacity:1}
@@ -2589,7 +2591,7 @@ body.ro .w-only{display:none!important}
       <section class="mo-card mo-meal" id="mo-meal-card"><h3>오늘 급식</h3><div id="mo-meal"></div></section></div>
       <section class="mo-card mo-todo"><h3>오늘 할 일 <span id="mo-count"></span></h3>
         <ul id="mo-list"></ul>
-        <form id="mo-add" class="mo-add"><input type="text" id="mo-new" placeholder="오늘만 할 일 더하기 (예: 체육복 챙기기) · 사진은 여기 Ctrl+V" aria-label="오늘만 할 일"><button type="button" class="btn" data-pick="mo">사진</button><button type="submit" class="btn">더하기</button></form>
+        <form id="mo-add" class="mo-add"><input type="text" id="mo-new" placeholder="오늘만 할 일 더하기 (예: 체육복 챙기기) · 사진은 여기 Ctrl+V" aria-label="오늘만 할 일"><button type="button" class="btn" data-pick="mo">사진</button><button type="submit" class="btn">더하기</button><button type="button" class="btn" id="mo-carry-all" hidden title="체크 안 한 '오늘만' 할 일을 다음 등교일에도 넣어요">안 끝난 일 내일도</button></form>
       </section>
     </div>
     <details class="mo-manage"><summary>매일 할 일 고치기 · 지난 기록</summary>
@@ -2705,7 +2707,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@ea486e48f847f2d2741321f3d3355dae0cf8232f/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@32a4660f3901354c89279f98027a7e42d848cd12/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
