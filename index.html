@@ -508,7 +508,13 @@ table.plan{border-collapse:collapse;width:100%;font-size:13px}
 .tool .row.center{justify-content:center}
 .center-text{text-align:center;margin:0}
 .timer-face{font-family:var(--mono);font-size:clamp(72px,20vw,220px);font-weight:500;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
-.timer-face.ring{color:var(--danger);animation:blink 1s steps(2) infinite}
+.timer-face.ring{color:var(--danger);animation:tshake .5s ease-in-out 6,blink 1s steps(2) 3s infinite}
+@keyframes tshake{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-14px) rotate(-2deg)}40%{transform:translateX(12px) rotate(2deg)}60%{transform:translateX(-8px) rotate(-1deg)}80%{transform:translateX(6px) rotate(1deg)}}
+@media (prefers-reduced-motion:reduce){.timer-face.ring{animation:blink 1s steps(2) infinite}}
+.tool input.timer-label{display:block;width:min(900px,100%);margin:0 auto 4px;text-align:center;font-size:clamp(22px,4.2vw,52px);font-weight:700;border:0;border-bottom:2px dashed transparent;background:transparent;color:var(--fg);padding:4px 8px;border-radius:0;box-shadow:none;height:auto}
+.tool input.timer-label:hover{border-bottom-color:var(--line)}.tool input.timer-label:focus{outline:none;border-bottom-color:var(--accent)}
+.tool input.timer-label::placeholder{color:var(--muted);font-weight:500;opacity:.7}
+.timer-done{text-align:center;font-size:clamp(20px,3vw,36px);font-weight:700;color:var(--danger);min-height:1.3em;margin:0}
 @keyframes blink{50%{opacity:.25}}
 .big-btn{font-size:17px;padding:10px 26px}
 .pick-face{font-size:clamp(56px,14vw,160px);font-weight:700;letter-spacing:-.02em;text-align:center;min-height:1.2em;color:var(--accent)}
@@ -2574,10 +2580,13 @@ body.ro .w-only{display:none!important}
     </div>
   </div>
   <div class="tool" id="tool-timer">
-    <div class="timer-face" id="timer-face">05:00</div>
+    <input type="text" class="timer-label" id="timer-label" maxlength="40" placeholder="무엇을 하는 시간인가요? (눌러서 적기)" aria-label="타이머 이름">
+    <div class="timer-face" id="timer-face" role="timer">05:00</div>
+    <p class="timer-done" id="timer-done" aria-live="assertive"></p>
     <div class="row center">
       <button type="button" class="btn" data-min="1">1분</button><button type="button" class="btn" data-min="3">3분</button><button type="button" class="btn" data-min="5">5분</button><button type="button" class="btn" data-min="10">10분</button>
       <input type="number" id="timer-min" min="1" max="120" placeholder="분" style="width:80px"><button type="button" class="btn" id="timer-set">맞추기</button>
+      <label class="hint" for="timer-snd" style="margin-left:8px">끝 소리</label><select id="timer-snd" style="width:auto"><option value="chime">딩동댕</option><option value="beep">삐삐삐</option><option value="bell">종소리</option><option value="off">소리 없음</option></select><button type="button" class="btn small" id="timer-try" aria-label="끝 소리 들어 보기">들어 보기</button>
     </div>
     <div class="row center"><button type="button" class="btn primary big-btn" id="timer-go">시작</button><button type="button" class="btn big-btn" id="timer-reset">처음으로</button></div>
   </div>
@@ -2648,7 +2657,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@8cc36a7aec936cdd800bfe5b23bc6d27d3403c69/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@410d3b0b285d6d2709035d35cf6b95c260382fe4/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
