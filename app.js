@@ -3181,7 +3181,9 @@ function budCalc(l){
 }
 const BUD_HDR = [[/구분|학년.?학급|사용처|사용\s*구분/, 'scope'], [/원가|비목/, 'stat'], [/세부\s*항목/, 'item'], [/세부\s*사업|단위\s*사업/, 'biz'], [/주요\s*활동|활동\s*명|사업\s*명/, 'act'], [/잔액/, 'rest'], [/현액|편성|배정|예산\s*액/, 'amount'], [/요구/, 'req'], [/집행|지출|사용\s*액/, 'spent'], [/^항목$/, 'item']];
 const BUD_POS = ['act', 'biz', 'item', 'stat', 'amount', 'rest', 'req'];
-const BUD_KIND_LABEL = {집행:'집행 (−)', 요구:'요구·품의 (−)', 증액:'증액 (+)', 감액:'감액 (−)'};
+const BUD_KIND_LABEL = {집행:'사용 (−)', 증액:'증액 (+)', 감액:'감액 (−)'};
+/* 학교에서는 품의와 동시에 집행돼서 요구·집행을 나누지 않고 "사용" 하나로 보여요 (예전 요구 기록도 사용으로) */
+const budKindName = k => k === '요구' || k === '집행' ? '사용' : k;
 function makeBudget(key){
   const g = key === 'g';
   const st = {filter:'all', open:new Set()};
@@ -3197,7 +3199,7 @@ function makeBudget(key){
   const sVal = l => l.scope === '학급' ? (g ? (l.cls || '학급') : '학급') : '학년';
   const match = l => { const f = st.filter; if (f === 'all') return true; if (f === '학년') return l.scope !== '학급'; if (f === '학급') return l.scope === '학급'; return l.scope === '학급' && l.cls === f; };
   const scopeOf = v => v === '학년' ? {scope:'학년', cls:null} : v === '학급' ? {scope:'학급', cls:null} : {scope:'학급', cls:v};
-  root.innerHTML = `<div class="bud-sum"></div>
+  root.innerHTML = `${g ? '' : '<div class="relink bud-gnote" hidden></div>'}<div class="bud-sum"></div>
     <div class="bud-bar"><div class="seg bud-filter" role="group" aria-label="구분 고르기"></div><span class="grow"></span>
       <button type="button" class="btn small primary" data-b="add">+ 예산 줄 추가</button><button type="button" class="btn small" data-b="csv">CSV로 받기</button></div>
     <details class="bud-paste"><summary>에듀파인·스프레드시트에서 붙여넣기</summary>
@@ -3214,9 +3216,9 @@ function makeBudget(key){
     <details class="bud-wish" open><summary>사야 할 것 <span class="hint wish-n"></span></summary>
       <div class="wish-list"></div>
       <div class="wish-add"><input type="text" id="wi-${key}-n" placeholder="사야 할 것 (예: 이름 자석)" aria-label="사야 할 것"><input type="text" inputmode="numeric" class="amt" id="wi-${key}-p" placeholder="예상 금액" aria-label="예상 금액"><select id="wi-${key}-l" aria-label="쓸 예산 줄"></select><button type="button" class="btn small" data-b="wish-add">더하기</button></div>
-      <p class="hint" style="margin:0">"샀어요"를 누르면 고른 예산 줄에 집행으로 들어가 잔액에서 빠져요. 금액은 그때 고칠 수 있어요.</p>
+      <p class="hint" style="margin:0">"샀어요"를 누르면 고른 예산 줄에 사용으로 들어가 잔액에서 빠져요. 금액은 그때 고칠 수 있어요.</p>
     </details>
-    <p class="hint">줄 끝의 "내역"을 열고 쓴 돈(집행)·품의 올린 돈(요구)·증액·감액을 적으면 예산현액과 잔액이 저절로 더하고 빠져요. 품의한 돈을 실제로 쓰면 "집행으로"를 눌러 주세요.</p>`;
+    <p class="hint">줄 끝의 "내역"을 열고 쓴 돈(사용)·증액·감액을 적으면 예산현액과 잔액이 저절로 더하고 빠져요.</p>`;
   function renderSum(){
     const all = list();
     const groups = [['all', '전체', all], ['학년', '학년 사용', all.filter(l => l.scope !== '학급')], ['학급', g ? '학급 사용 (모든 반)' : '학급 사용', all.filter(l => l.scope === '학급')]];
@@ -3226,7 +3228,7 @@ function makeBudget(key){
       const t = ls.reduce((a, l) => { const c = budCalc(l); a.cur += c.cur; a.req += c.req; a.spent += c.spent; a.rest += c.rest; return a; }, {cur:0, req:0, spent:0, rest:0});
       const used = t.cur > 0 ? Math.min(100, Math.round((t.req + t.spent) / t.cur * 100)) : 0;
       return `<div class="bud-card ${st.filter === v ? 'on' : ''}"><h3><span>${n}</span><small>${ls.length}줄</small></h3>
-        <dl><dt>예산현액</dt><dd>${wonS(t.cur)}</dd><dt>요구금액</dt><dd>${wonS(t.req)}</dd><dt>집행액</dt><dd>${wonS(t.spent)}</dd><dt>예산잔액</dt><dd class="rest ${t.rest < 0 ? 'neg' : ''}">${wonS(t.rest)}원</dd></dl>
+        <dl><dt>예산현액</dt><dd>${wonS(t.cur)}</dd><dt>사용액</dt><dd>${wonS(t.req + t.spent)}</dd><dt>예산잔액</dt><dd class="rest ${t.rest < 0 ? 'neg' : ''}">${wonS(t.rest)}원</dd></dl>
         <div class="bar ${t.rest < 0 ? 'over' : ''}" title="쓴 비율 ${used}%"><i style="width:${used}%"></i></div></div>`;
     }).join('');
   }
@@ -3242,20 +3244,20 @@ function makeBudget(key){
     const dis = can() ? '' : 'disabled';
     const rows = logs.map(x => {
       const a = numIn(x.amt); bal += x.kind === '증액' ? a : -a;
-      return `<tr><td class="n">${esc(x.date ? mdShort(x.date) : '')}</td><td><span class="kind k-${esc(x.kind)}">${esc(x.kind)}</span></td><td>${esc(x.text || '')}</td><td class="calc">${esc(x.calc || '')}</td>
+      return `<tr><td class="n">${esc(x.date ? mdShort(x.date) : '')}</td><td><span class="kind k-${esc(x.kind === '요구' ? '집행' : x.kind)}">${esc(budKindName(x.kind))}</span></td><td>${esc(x.text || '')}</td><td class="calc">${esc(x.calc || '')}</td>
         <td class="n">${x.kind === '증액' ? '+' : '−'}${wonS(a)}</td><td class="n ${bal < 0 ? 'neg' : ''}">${wonS(bal)}</td>
-        <td class="act">${x.kind === '요구' && can() ? `<button type="button" class="btn small" data-b="settle" data-id="${esc(l.id)}" data-log="${esc(x.id)}">집행으로</button>` : ''}${can() ? `<button type="button" class="x" data-b="log-del" data-id="${esc(l.id)}" data-log="${esc(x.id)}" aria-label="내역 지우기">×</button>` : ''}</td></tr>`;
+        <td class="act">${can() ? `<button type="button" class="x" data-b="log-del" data-id="${esc(l.id)}" data-log="${esc(x.id)}" aria-label="내역 지우기">×</button>` : ''}</td></tr>`;
     }).join('');
     return `<div class="logs"><table><thead><tr><th>날짜</th><th>종류</th><th>내용</th><th>산출내역</th><th>금액</th><th>남은 돈</th><th></th></tr></thead>
       <tbody><tr class="start"><td></td><td><span class="kind">편성</span></td><td>처음 예산</td><td class="calc"><input type="text" id="bf-${key}-${l.id}-calc" data-id="${esc(l.id)}" data-f="calc" value="${esc(l.calc || '')}" placeholder="예: 130,000원 × 3회 × 1학급" aria-label="처음 예산 산출내역" ${dis}></td><td class="n">${wonS(c.base)}</td><td class="n">${wonS(c.base)}</td><td></td></tr>${rows}</tbody></table>
-      ${can() ? `<div class="log-add-box"><h4>돈을 쓰거나 품의를 올렸으면 여기에 한 줄씩 적어요</h4><div class="log-add">
+      ${can() ? `<div class="log-add-box"><h4>돈을 쓰면(품의하면) 여기에 한 줄씩 적어요</h4><div class="log-add">
         <label for="bl-${key}-${l.id}-d">날짜<input type="date" id="bl-${key}-${l.id}-d" value="${ymd(today())}" ${dis}></label>
         <label for="bl-${key}-${l.id}-k">종류<select id="bl-${key}-${l.id}-k">${Object.entries(BUD_KIND_LABEL).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label>
         <label for="bl-${key}-${l.id}-t">어디에 썼나요<input type="text" id="bl-${key}-${l.id}-t" placeholder="예: 학년 티셔츠"></label>
         <label for="bl-${key}-${l.id}-c">산출내역<input type="text" id="bl-${key}-${l.id}-c" placeholder="예: 8,000원 × 120벌"></label>
         <label for="bl-${key}-${l.id}-a">금액 (원)<input type="text" inputmode="numeric" id="bl-${key}-${l.id}-a" class="amt" placeholder="예: 960,000"></label>
         <button type="button" class="btn primary" data-b="log-add" data-id="${esc(l.id)}">넣기</button></div>
-        <p class="hint" style="margin:0"><b>집행</b> 실제로 결제한 돈 · <b>요구·품의</b> 품의만 올리고 아직 결제 전 (결제하면 위 표에서 "집행으로") · <b>증액·감액</b> 예산 자체가 늘거나 줄었을 때. 넣으면 예산잔액에서 저절로 빠져요.</p></div>` : ''}</div>`;
+        <p class="hint" style="margin:0"><b>사용</b> 품의해서 쓴 돈 · <b>증액·감액</b> 예산 자체가 늘거나 줄었을 때. 넣으면 예산잔액에서 저절로 빠져요.</p></div>` : ''}</div>`;
   }
   function renderTable(){
     const ae = document.activeElement;
@@ -3263,7 +3265,7 @@ function makeBudget(key){
     const ls = list().filter(match);
     /* 비어 있는 에듀파인 칸(세부사업·원가통계비목)은 숨겨요 */
     const showBiz = st.showAll || list().some(l => l.biz), showStat = st.showAll || list().some(l => l.stat);
-    const nCol = 9 + (showBiz ? 1 : 0) + (showStat ? 1 : 0);
+    const nCol = 8 + (showBiz ? 1 : 0) + (showStat ? 1 : 0);
     const dis = can() ? '' : 'disabled';
     if (!ls.length){ $('.bud-table', root).innerHTML = `<p class="empty">${list().length ? '이 구분에 들어간 예산이 없어요.' : '아직 예산 줄이 없어요. "+ 예산 줄 추가"를 누르거나 에듀파인 표를 붙여 넣어 주세요.'}</p>`; return; }
     const tot = {cur:0, rest:0, req:0, spent:0};
@@ -3274,12 +3276,12 @@ function makeBudget(key){
       const open = st.open.has(l.id);
       return `<tr class="${open ? 'opened' : ''}"><td>${l._g ? `<span class="chip acc" title="학년 예산에서 우리 반으로 정한 줄이에요. 여기서 고치면 학년 예산에도 같이 바뀌어요.">학년 예산 · ${esc(clsLabel(l.cls))}</span>` : `<select id="bf-${key}-${l.id}-scope" data-id="${esc(l.id)}" data-f="scope" aria-label="구분" ${dis}>${scopeOpts(l)}</select>`}</td>${t('act')}${showBiz ? t('biz') : ''}${t('item')}${showStat ? t('stat') : ''}${t('memo')}
         <td class="n"><input type="text" inputmode="numeric" class="amt" id="bf-${key}-${l.id}-amount" data-id="${esc(l.id)}" data-f="amount" value="${wonS(c.base)}" aria-label="처음 예산" ${dis}>${c.adj ? `<small class="adj">${c.adj > 0 ? '+' : '−'}${wonS(Math.abs(c.adj))} → ${wonS(c.cur)}</small>` : ''}</td>
-        <td class="n rest ${c.rest < 0 ? 'neg' : ''}">${wonS(c.rest)}</td><td class="n">${wonS(c.req)}</td><td class="n">${wonS(c.spent)}</td>
+        <td class="n">${wonS(c.req + c.spent)}</td><td class="n rest ${c.rest < 0 ? 'neg' : ''}">${wonS(c.rest)}</td>
         <td class="act"><button type="button" class="btn small ${open ? 'on' : ''}" data-b="open" data-id="${esc(l.id)}" aria-expanded="${open}">내역 ${(l.logs || []).length}${l.calc ? ' · 산출' : ''}</button>${canSplit ? `<button type="button" class="btn small" data-b="split" data-id="${esc(l.id)}" title="반마다 같은 금액으로 한 줄씩 나눠요">반마다</button>` : ''}${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(l.id)}" aria-label="이 줄 지우기">×</button>` : ''}</td></tr>
         ${open ? `<tr class="logrow"><td colspan="${nCol}">${logsHTML(l, c)}</td></tr>` : ''}`;
     }).join('');
-    $('.bud-table', root).innerHTML = `<div class="tablewrap"><table class="bud"><thead><tr><th>구분</th><th>주요활동</th>${showBiz ? '<th>세부사업</th>' : ''}<th>세부항목</th>${showStat ? '<th>원가통계비목</th>' : ''}<th>메모</th><th>예산현액</th><th>예산잔액</th><th>요구금액</th><th>집행액</th><th></th></tr></thead>
-      <tbody>${body}</tbody><tfoot><tr><td colspan="${nCol - 5}">합계 (${ls.length}줄)${!st.showAll && (!showBiz || !showStat) ? ` <button type="button" class="btn small" data-b="showall" style="margin-left:6px">에듀파인 칸 보이기</button>` : ''}</td><td class="n">${wonS(tot.cur)}</td><td class="n rest ${tot.rest < 0 ? 'neg' : ''}">${wonS(tot.rest)}</td><td class="n">${wonS(tot.req)}</td><td class="n">${wonS(tot.spent)}</td><td></td></tr></tfoot></table></div>`;
+    $('.bud-table', root).innerHTML = `<div class="tablewrap"><table class="bud"><thead><tr><th>구분</th><th>주요활동</th>${showBiz ? '<th>세부사업</th>' : ''}<th>세부항목</th>${showStat ? '<th>원가통계비목</th>' : ''}<th>메모</th><th>예산현액</th><th>사용액</th><th>예산잔액</th><th></th></tr></thead>
+      <tbody>${body}</tbody><tfoot><tr><td colspan="${nCol - 4}">합계 (${ls.length}줄)${!st.showAll && (!showBiz || !showStat) ? ` <button type="button" class="btn small" data-b="showall" style="margin-left:6px">에듀파인 칸 보이기</button>` : ''}</td><td class="n">${wonS(tot.cur)}</td><td class="n">${wonS(tot.req + tot.spent)}</td><td class="n rest ${tot.rest < 0 ? 'neg' : ''}">${wonS(tot.rest)}</td><td></td></tr></tfoot></table></div>`;
   }
   const wpath = () => g ? 'budgetwish/list' : `data/users/${S.uid}/budgetwish`;
   function listenWish(){
@@ -3306,11 +3308,21 @@ function makeBudget(key){
     const items = (st.wish || []).map(x => x.id === el.dataset.wish ? Object.assign({}, x, {[el.dataset.wf]:el.dataset.wf === 'price' ? numIn(el.value) : el.value}) : x);
     putWish(items);
   });
-  function render(){ if (!root.isConnected) return; listenWish(); renderSum(); renderTable(); renderWish(); $$('[data-b="add"], [data-b="import"], [data-b="wish-add"]', root).forEach(b => { b.disabled = !can(); }); }
+  /* 나의 공간: 학년 예산의 학급 줄이 우리 반에 안 보이는 까닭을 알려 주고 바로 고칠 수 있게 */
+  function renderGNote(){
+    const box = $('.bud-gnote', root); if (!box) return;
+    const my = clsNo(S.profile.myClass), loose = (S.budG || []).filter(l => l.scope === '학급' && !l.cls);
+    let h = '';
+    if (!my && (S.budG || []).some(l => l.scope === '학급')) h = '<span>위쪽 "몇 반 선생님인가요?"에서 우리 반을 정하면 학년 예산의 우리 반 줄이 여기에도 보여요.</span>';
+    else if (loose.length) h = `<span>학년 예산에 반을 정하지 않은 학급 줄이 ${loose.length}개 있어요 (${loose.slice(0, 2).map(l => esc(lineName(l)) + ' ' + wonS(numIn(l.amount)) + '원').join(', ')}). 반마다 나누면 우리 반 몫이 여기 보여요.</span>${S.canWrite ? '<button type="button" class="btn small primary" data-b="g-split">반마다 나누기</button>' : ''}`;
+    box.hidden = !h; box.innerHTML = h;
+  }
+  function render(){ if (!root.isConnected) return; listenWish(); renderGNote(); renderSum(); renderTable(); renderWish(); $$('[data-b="add"], [data-b="import"], [data-b="wish-add"]', root).forEach(b => { b.disabled = !can(); }); }
   const lineOf = id => list().find(l => l.id === id);
   /* 한 줄을 모든 반에 같은 금액으로 한 줄씩 (그 줄은 1반 줄이 돼요) */
   async function splitAll(id){
-    const l = lineOf(id); if (!l || !g) return;
+    const l = (S.budG || []).find(x => x.id === id); if (!l || !S.canWrite) return;
+    const col = () => S.db.collection('budget'), nCls = () => Math.max(1, Math.min(20, +S.settings.classCount || 4));
     try {
       for (let i = 2; i <= nCls(); i++){ const c = Object.assign({}, l); delete c.id; c.scope = '학급'; c.cls = i + '반'; c.logs = []; c.order = (l.order || l.createdAt || 0) + i / 100; c.createdAt = Date.now() + i; await col().add(c); }
       await col().doc(id).update({scope:'학급', cls:'1반'});
@@ -3335,11 +3347,11 @@ function makeBudget(key){
     if (act === 'open'){ st.open.has(id) ? st.open.delete(id) : st.open.add(id); renderTable(); return; }
     if (act === 'showall'){ st.showAll = true; renderTable(); return; }
     if (act === 'csv'){
-      const rows = [['구분', '주요활동', '세부사업', '세부항목', '원가통계비목', '메모', '예산현액', '예산잔액', '요구금액', '집행액', '산출내역']];
+      const rows = [['구분', '주요활동', '세부사업', '세부항목', '원가통계비목', '메모', '예산현액', '사용액', '예산잔액', '산출내역']];
       const ls = list().filter(match);
-      ls.forEach(l => { const c = budCalc(l); rows.push([sVal(l), l.act || '', l.biz || '', l.item || '', l.stat || '', l.memo || '', c.cur, c.rest, c.req, c.spent, l.calc || '']); });
+      ls.forEach(l => { const c = budCalc(l); rows.push([sVal(l), l.act || '', l.biz || '', l.item || '', l.stat || '', l.memo || '', c.cur, c.req + c.spent, c.rest, l.calc || '']); });
       rows.push([]); rows.push(['내역', '세부항목', '날짜', '종류', '내용', '산출내역', '금액']);
-      ls.forEach(l => (l.logs || []).forEach(x => rows.push(['', l.item || l.act || '', x.date || '', x.kind, x.text || '', x.calc || '', (x.kind === '증액' ? 1 : -1) * numIn(x.amt)])));
+      ls.forEach(l => (l.logs || []).forEach(x => rows.push(['', l.item || l.act || '', x.date || '', budKindName(x.kind), x.text || '', x.calc || '', (x.kind === '증액' ? 1 : -1) * numIn(x.amt)])));
       save(`${g ? '학년' : '우리반'}_예산_${ymd(today())}.csv`, csv(rows)); return;
     }
     if (!can()){ toast(g ? '학년 공간을 고칠 권한이 없어요.' : '로그인한 상태로 열어야 적을 수 있어요.'); return; }
@@ -3352,6 +3364,11 @@ function makeBudget(key){
       if (!twoStep(b, `${nCls()}개 반으로 나눌까요?`)) return;
       splitAll(id); return;
     }
+    if (act === 'g-split'){
+      if (!twoStep(b, '나눌까요?')) return;
+      for (const l of (S.budG || []).filter(x => x.scope === '학급' && !x.cls)) await BUD.g.splitAll(l.id);
+      return;
+    }
     if (act === 'wish-del'){ if (!twoStep(b, '빼기?')) return; putWish((st.wish || []).filter(x => x.id !== id)); return; }
     if (act === 'wish-buy'){
       const x = (st.wish || []).find(w => w.id === id); if (!x) return;
@@ -3361,7 +3378,7 @@ function makeBudget(key){
         if (l){ await upd(lineId, {logs:(l.logs || []).concat([{id:rid(), date:ymd(today()), kind:'집행', text:x.name, amt:price, at:Date.now(), by:S.uid}])}); }
       }
       putWish((st.wish || []).map(w => w.id === id ? Object.assign({}, w, {done:true, price, line:lineId, doneAt:Date.now()}) : w));
-      toast(lineId && price > 0 ? `${x.name} ${wonS(price)}원을 집행으로 적었어요.` : `${x.name}을(를) 산 것으로 표시했어요. 금액과 예산 줄을 고르면 잔액에서도 빠져요.`);
+      toast(lineId && price > 0 ? `${x.name} ${wonS(price)}원을 사용으로 적었어요.` : `${x.name}을(를) 산 것으로 표시했어요. 금액과 예산 줄을 고르면 잔액에서도 빠져요.`);
       return;
     }
     if (act === 'add'){
@@ -3401,9 +3418,9 @@ function makeBudget(key){
         let sc = def;
         if (o.scope){ const cm = o.scope.match(/(\d{1,2})\s*반/); sc = cm ? (g ? {scope:'학급', cls:`${+cm[1]}반`} : {scope:'학급', cls:null}) : /학급|반/.test(o.scope) ? {scope:'학급', cls:null} : {scope:'학년', cls:null}; }
         const amount = numIn(o.amount), req = numIn(o.req), logs = [], d = ymd(today());
-        if (req > 0) logs.push({id:rid(), date:d, kind:'요구', text:'가져온 요구금액', amt:req, at:Date.now()});
+        if (req > 0) logs.push({id:rid(), date:d, kind:'집행', text:'가져온 요구금액', amt:req, at:Date.now()});
         if (o.spent !== undefined && numIn(o.spent) > 0) logs.push({id:rid(), date:d, kind:'집행', text:'가져온 집행액', amt:numIn(o.spent), at:Date.now()});
-        else if (o.rest !== undefined){ const used = amount - numIn(o.rest) - req; if (used > 0) logs.push({id:rid(), date:d, kind:'집행', text:'가져오기 전 집행액', amt:used, at:Date.now()}); else if (used < 0) logs.push({id:rid(), date:d, kind:'증액', text:'가져온 잔액에 맞춤', amt:-used, at:Date.now()}); }
+        else if (o.rest !== undefined){ const used = amount - numIn(o.rest) - req; if (used > 0) logs.push({id:rid(), date:d, kind:'집행', text:'이전 사용액', amt:used, at:Date.now()}); else if (used < 0) logs.push({id:rid(), date:d, kind:'증액', text:'가져온 잔액에 맞춤', amt:-used, at:Date.now()}); }
         items.push(Object.assign({act:o.act || '', biz:o.biz || '', item:o.item || '', stat:o.stat || '', amount, logs, createdBy:S.uid}, sc));
       });
       if (!items.length){ $('.bud-info', root).textContent = '읽을 수 있는 줄이 없어요. 스프레드시트에서 칸째로 복사해 주세요.'; return; }
@@ -3448,11 +3465,11 @@ function makeBudget(key){
         <div class="ocr-new" ${m ? 'hidden' : ''}><div class="ocr-grid">
           <label>세부사업${inp('biz', L.biz, '세부사업')}</label><label>세부항목${inp('item', L.item, '세부항목')}</label><label>원가통계비목${inp('stat', L.stat, '원가통계비목')}</label>
           <label>예산현액${inp('cur', L.cur ? wonS(L.cur) : '', '예산현액', 'amt')}</label><label>예산잔액 (이번 품의 뒤)${inp('rest', L.rest != null ? wonS(L.rest) : '', '예산잔액', 'amt')}</label></div>
-          <p class="hint" style="margin:0">현액에서 잔액과 이번 품의 금액을 뺀 돈은 "가져오기 전 집행액"으로 적어 둬요.</p></div>
-        ${L.rest != null ? `<label class="row hint ocr-sync" ${m ? '' : 'hidden'}><input type="checkbox" data-ocr="sync" checked> 넣은 뒤 잔액을 에듀파인 잔액 ${wonS(L.rest)}원에 맞추기 (모자라는 만큼 "이전 집행액"으로 적어요)</label>` : ''}
-        <h4>품의 내용 <span class="hint">요구·품의로 들어가요. 결제한 뒤 표에서 "집행으로"를 누르면 돼요.</span></h4>
+          <p class="hint" style="margin:0">현액에서 잔액과 이번 품의 금액을 뺀 돈은 "이전 사용액"으로 적어 둬요.</p></div>
+        ${L.rest != null ? `<label class="row hint ocr-sync" ${m ? '' : 'hidden'}><input type="checkbox" data-ocr="sync" checked> 넣은 뒤 잔액을 에듀파인 잔액 ${wonS(L.rest)}원에 맞추기 (모자라는 만큼 "이전 사용액"으로 적어요)</label>` : ''}
+        <h4>품의 내용 <span class="hint">사용으로 들어가 잔액에서 빠져요.</span></h4>
         <div class="ocr-items">${items.map((it, i) => `<div class="ocr-it" data-i="${i}"><input type="checkbox" data-ocr-on checked aria-label="이 품목 넣기">${inp('text', it.text, '내용')}${inp('calc', it.calc, '산출내역 (예: 25,000원 × 4)')}${inp('amt', it.amt ? wonS(it.amt) : '', '금액', 'amt')}</div>`).join('')}</div>
-        <div class="row"><label class="hint" for="ocr-date-${key}">날짜</label><input type="date" id="ocr-date-${key}" data-ocr="date" value="${ymd(today())}" style="width:auto"><select data-ocr="kind" style="width:auto"><option value="요구">요구·품의</option><option value="집행">집행 (이미 결제함)</option></select><span class="grow"></span><button type="button" class="btn" data-b="ocr-cancel">그만두기</button><button type="button" class="btn primary" data-b="ocr-save">넣기</button></div>
+        <div class="row"><label class="hint" for="ocr-date-${key}">날짜</label><input type="date" id="ocr-date-${key}" data-ocr="date" value="${ymd(today())}" style="width:auto"><span class="grow"></span><button type="button" class="btn" data-b="ocr-cancel">그만두기</button><button type="button" class="btn primary" data-b="ocr-save">넣기</button></div>
         <details><summary class="hint">읽은 글자 그대로 보기</summary><pre class="ocr-raw">${esc(o.raw)}</pre></details>
       </div></div>`;
   }
@@ -3470,7 +3487,7 @@ function makeBudget(key){
     if (b.dataset.b === 'ocr-cancel'){ st.ocr = null; ocrOut().innerHTML = ''; return; }
     if (b.dataset.b !== 'ocr-save' || !st.ocr) return;
     const f = $('.ocr-form', root), v = k => (($(`[data-ocr="${k}"]`, f) || {}).value || '').trim();
-    const date = v('date') || ymd(today()), kind = v('kind') || '요구';
+    const date = v('date') || ymd(today()), kind = '집행';
     const its = $$('.ocr-it', f).filter(r => $('[data-ocr-on]', r).checked).map(r => ({text:($('[data-ocr="text"]', r).value || '').trim(), calc:($('[data-ocr="calc"]', r).value || '').trim(), amt:numIn($('[data-ocr="amt"]', r).value)})).filter(x => x.amt > 0);
     if (!its.length){ toast('넣을 품목 금액이 없어요. 금액을 적어 주세요.'); return; }
     const logs = its.map((x, i) => Object.assign({id:rid(), date, kind, text:x.text, amt:x.amt, at:Date.now() + i, by:S.uid}, x.calc ? {calc:x.calc} : {}));
@@ -3480,7 +3497,7 @@ function makeBudget(key){
       if (v('line') === '__new'){
         const cur = numIn(v('cur')), rest = v('rest') === '' ? null : numIn(v('rest'));
         const pre = [];
-        if (cur > 0 && rest != null){ const used = cur - rest - sum; if (used > 0) pre.push({id:rid(), date, kind:'집행', text:'가져오기 전 집행액', amt:used, at:Date.now() - 1}); }
+        if (cur > 0 && rest != null){ const used = cur - rest - sum; if (used > 0) pre.push({id:rid(), date, kind:'집행', text:'이전 사용액', amt:used, at:Date.now() - 1}); }
         const sc = st.filter === 'all' || st.filter === '학년' ? {scope:'학년', cls:null} : scopeOf(st.filter);
         await col().add(Object.assign({act:'', biz:v('biz'), item:v('item'), stat:v('stat'), amount:cur, logs:pre.concat(logs), createdBy:S.uid, createdAt:Date.now(), order:Date.now()}, sc));
         toast(`새 예산 줄을 만들고 품의 ${wonS(sum)}원을 넣었어요.`);
@@ -3488,7 +3505,7 @@ function makeBudget(key){
         const l = lineOf(v('line')); if (!l) return;
         let all = (l.logs || []).concat(logs);
         const sy = $('[data-ocr="sync"]', f), er = st.ocr.line && st.ocr.line.rest;
-        if (sy && sy.checked && er != null){ const gap = budCalc(Object.assign({}, l, {logs:all})).rest - er; if (gap > 0) all = all.concat([{id:rid(), date, kind:'집행', text:'에듀파인 잔액에 맞춘 이전 집행액', amt:gap, at:Date.now() - 1, by:S.uid}]); }
+        if (sy && sy.checked && er != null){ const gap = budCalc(Object.assign({}, l, {logs:all})).rest - er; if (gap > 0) all = all.concat([{id:rid(), date, kind:'집행', text:'에듀파인 잔액에 맞춘 이전 사용액', amt:gap, at:Date.now() - 1, by:S.uid}]); }
         await upd(l.id, {logs:all});
         const c = budCalc(Object.assign({}, l, {logs:all}));
         toast(`${lineName(l)}에 ${wonS(sum)}원을 넣었어요 → 남은 돈 ${wonS(c.rest)}원`);
@@ -3497,7 +3514,7 @@ function makeBudget(key){
     } catch (er){ err(er); }
     b.disabled = false;
   });
-  return {render};
+  return {render, splitAll};
 }
 /* 글자 인식 (tesseract.js, 처음 쓸 때만 불러와요) */
 let tessP = null;
@@ -4499,6 +4516,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '예산: 학교에서는 품의와 동시에 집행되니까 요구금액·집행액을 나누지 않고 "사용액" 하나로 보여요. 내역 종류도 사용·증액·감액만 남겼어요.',
     '예산: "에듀파인 품의 화면 캡처로 넣기"에 품의 화면을 캡처해 붙이면 글자를 읽어 예산 줄·품의 내용·산출내역·금액을 채워 보여 줘요. 확인하고 "넣기"를 누르면 들어가요.',
     '예산 "내역"을 열면 쓴 돈 적는 칸에 날짜·종류·어디에 썼나요·산출내역·금액 이름이 붙고, 종류마다 무슨 뜻인지 설명이 나와요. 산출내역은 큰 칸 대신 내역 표의 "내용"과 "금액" 사이 칸에 적어요.',
     '학급일지에 "2번 출결 질병결석 병원진료"처럼 적으면 질병결석은 종류로 들어가고 사유에는 "병원진료"만 남아요. 예전에 적은 기록도 같은 방식으로 정리했어요.',
