@@ -1498,7 +1498,7 @@ function renderMeGrade(){
 function renderGrade(){ renderKindPick(); renderGMemo(); renderHeader(); renderTabList(); renderPageHead(); renderGradeToday(); renderCal(); renderDay(); renderTasks(); renderNotices(); renderLinks(); resolveNames(); }
 
 /* ---------- me render ---------- */
-function attLabel(a){ return a ? (a.reason === '출석인정' ? `출석인정 ${a.kind}` : `${a.reason}${a.kind}`) : ''; }
+function attLabel(a){ return a ? `${a.reason}${a.kind}` : ''; }
 const mdShort = k => { const d = fromYmd(k); return `${d.getMonth()+1}/${d.getDate()}`; };
 const covers = (e, k) => e.date === k || !!(e.end && e.date && e.date <= k && k <= e.end);
 function prioTag(p){ return p === '높음' ? '<span class="prio-high">높음</span>' : p === '낮음' ? '<span class="prio-low">낮음</span>' : ''; }
@@ -2872,7 +2872,7 @@ $('#ex-add').onclick = async () => {
 
 /* ---------- 출결 ---------- */
 const ATT_MARK = {결석:'결', 지각:'지', 조퇴:'조', 결과:'과'};
-const ATT_COLS = [['결석', '질병', '질결'], ['결석', '미인정', '미결'], ['결석', '기타', '기결'], ['결석', '출석인정', '인결'], ['지각', null, '지각'], ['조퇴', null, '조퇴'], ['결과', null, '결과']];
+const ATT_COLS = [['결석', '질병', '질병결석'], ['결석', '미인정', '미인정결석'], ['결석', '기타', '기타결석'], ['결석', '출석인정', '출석인정결석'], ['지각', null, '지각'], ['조퇴', null, '조퇴'], ['결과', null, '결과']];
 function isSchoolDay(k){ const d = fromYmd(k), w = d.getDay(); if (w === 0 || w === 6 || HOLIDAYS[k]) return false; return !subjFor(k).off; }
 function daysBetween(a, b){ const out = []; for (let d = fromYmd(a); ymd(d) <= b; d = addDays(d, 1)) out.push(ymd(d)); return out; }
 const schoolDaysBetween = (a, b) => daysBetween(a, b).filter(isSchoolDay);
@@ -2946,7 +2946,7 @@ function renderLedgers(){
   $('#led-trip').innerHTML = trip.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>시작일</th><th>종료일</th><th>일수</th><th title="체험 시작 하루 전까지 (주말·공휴일 빼고)">신청 기한</th><th>체험활동명</th><th>장소(기관)</th><th>활동내용</th><th>완결</th><th>나이스</th></tr></thead><tbody>${trip.map(({e, no}) => `<tr>
     <td class="n">${no}</td><td>${esc(stuNm(no))}</td><td class="n">${mdShort(e.date)}</td><td class="n">${mdShort(e.end || e.date)}</td><td class="n">${entryDays(e)}</td><td class="n">${(() => { const dl = prevSchoolDay(e.date); return `<span class="${dl < ymd(today()) && !(e.doc || {}).done ? 'neg' : ''}">${mdShort(dl)}(${WD[fromYmd(dl).getDay()]})</span>`; })()}</td>
     <td>${f(e, 'title', '예: 가족여행')}</td><td>${f(e, 'place', '장소')}</td><td>${f(e, 'content', '활동내용')}</td><td class="ck">${ck(e)}</td><td class="ck">${ck(e, 'neis', '나이스 입력')}</td></tr>`).join('')}</tbody></table></div>`
-    : '<p class="empty">이 기간에 체험학습(출석인정 결석)이 없어요. 학급일지에 "3번 11/18~20 체험학습 가족여행"처럼 적으면 여기 모여요.</p>';
+    : '<p class="empty">이 기간에 체험학습(출석인정결석)이 없어요. 학급일지에 "3번 11/18~20 체험학습 가족여행"처럼 적으면 여기 모여요.</p>';
 }
 $('#p-att').addEventListener('change', async e => {
   const el = e.target.closest('[data-led-e]'); if (!el){ if (e.target.id === 'led-all') renderLedgers(); return; }
@@ -4292,6 +4292,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '출결 합계에서 "질결·인결" 같은 줄임말 대신 질병결석·미인정결석·기타결석·출석인정결석처럼 원래 낱말로 보여요.',
     '예산: 학년 예산에서 구분을 우리 반(예: 초록지구반)으로 정한 줄이 나의 공간 예산에도 같이 보여요. 어느 쪽에서 고쳐도 같이 바뀌어요.',
     '예산: 구분에서 "모든 반"을 고르면 그 줄이 반마다 같은 금액으로 한 줄씩 한 번에 들어가요.',
     '명부(학년·우리 반): "칸 숨기기"로 보호자 연락처 같은 칸을 내 화면에서만 숨겨요. 칸 폭은 들어 있는 글자 수에 맞춰 저절로 줄고 늘어요.',
