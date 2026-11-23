@@ -1128,6 +1128,10 @@ table.pp-wk{border-collapse:collapse;width:100%;min-width:720px;table-layout:fix
 .pp-wk thead th.sel{box-shadow:inset 0 -3px 0 var(--accent)}
 .jd-wk td.done{background:color-mix(in srgb,var(--ok) 8%,var(--surface))}
 .jd-wk .ok{color:var(--ok)}
+.jd-wk tr.jd-memo-row td{background:color-mix(in srgb,var(--warn) 6%,var(--surface))}
+.jd-wk tr.jd-memo-row td.n{font-family:inherit;font-size:12px}
+.jl-t tr.jl-memo td{padding:2px 6px 6px;border-bottom:2px solid var(--line)}
+.jl-t tr.jl-memo textarea{width:100%;border:1px dashed var(--line);background:color-mix(in srgb,var(--warn) 6%,var(--surface));border-radius:6px;padding:5px 8px;font:inherit;font-size:13px;resize:vertical}
 .pp-wk textarea{width:100%;border:1px solid transparent;background:transparent;resize:none;font:inherit;font-size:12.5px;padding:3px 4px;border-radius:5px;min-height:28px;overflow:hidden}
 .pp-wk textarea:hover{border-color:var(--line)}.pp-wk textarea:focus{border-color:var(--accent);background:var(--surface);outline:none}
 /* 전담: 오늘 수업 · 시간표와 시수 */
@@ -1955,7 +1959,7 @@ body.ro .w-only{display:none!important}
             <span class="hint" id="jd-save"></span>
           </div>
           <div class="attline" id="jd-ev"></div>
-          <p class="hint" id="jd-whint" style="margin:0 0 8px" hidden>칸마다 들어가는 반이 나와 있어요. 대충의 차시만 짧게 적으면 돼요 (빈칸에 흐리게 보이는 건 다음 차시). 요일을 누르면 그날 메모를 아래에 적어요.</p>
+          <p class="hint" id="jd-whint" style="margin:0 0 8px" hidden>칸마다 들어가는 반이 나와 있어요. 대충의 차시만 짧게 적으면 돼요 (빈칸에 흐리게 보이는 건 다음 차시). 맨 아래 줄에 요일마다 메모를 따로 적어요.</p>
           <div id="jd-week" hidden></div>
           <div class="jd-cards" id="jd-cards"></div>
           <label class="f" for="jd-memo" style="margin-top:12px" id="jd-memo-lab">이 날 메모</label>
@@ -2733,7 +2737,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@baed43170c9d745e1026dd08be7a71fa0c018114/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@1e4e99afdc3eb1d74045cd0e5d6b2677db57a850/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
