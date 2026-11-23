@@ -4553,6 +4553,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '입력 창들을 요즘 앱처럼 바꿨어요. 오른쪽 위 ×로 닫고, 아래는 "취소 · 저장" (저장하면 바로 닫혀요). 글칸에서 Ctrl+Enter를 눌러도 저장돼요.',
     '아침 안내 "오늘 할 일"에서 안 끝난 오늘만 할 일 옆 "내일도"를 누르면 다음 등교일에도 들어가요. "안 끝난 일 내일도"로 한 번에 넘길 수도 있어요.',
     '아침 안내 날짜 왼쪽에 그날 결석한 학생 이름이 "결석 ○○○"으로 떠요. 출석부나 학급일지에 결석으로 적으면 저절로 나와요. 사유는 안 보여요.',
     '나의 공간에도 탭 줄 끝 "+ 새 탭"으로 나만 보는 표 탭을 만들 수 있어요. 학년 탭처럼 빈 표·체크리스트·학습준비물 같은 틀로 시작해요.',
@@ -6072,6 +6073,9 @@ $('#tools-full').onclick = () => { const on = $('#tools').classList.toggle('focu
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if (!$('#big').hidden) $('#big-close').click(); else if (!$('#tools').hidden && $$('.overlay').every(o => o.hidden)) $('#tools-close').click(); else closeDlgs(); } });
 $$('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeDlgs(); }));
+/* 요즘 앱처럼: 오른쪽 위 ×로 닫기, 글칸에서 Ctrl+Enter면 저장하고 닫기 */
+$$('.overlay > .dlg').forEach(d => { if (d.querySelector(':scope > .dlg-x')) return; const x = document.createElement('button'); x.type = 'button'; x.className = 'dlg-x'; x.setAttribute('data-close', ''); x.setAttribute('aria-label', '닫기'); x.textContent = '×'; d.prepend(x); });
+document.addEventListener('keydown', e => { if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return; const f = e.target.closest && e.target.closest('form.dlg'); if (f){ e.preventDefault(); f.requestSubmit(); } });
 window.addEventListener('hashchange', () => applyRoute(routeOf(location.hash)));
 
 window.__parse = parseLine; window.__cat = inferCat; window.__att = inferAtt;
