@@ -3205,6 +3205,11 @@ function makeBudget(key){
       <textarea rows="5" id="bud-${key}-paste" aria-label="붙여넣을 예산 표" placeholder="여기에 Ctrl+V"></textarea>
       <div class="row"><span class="hint bud-info"></span><span class="grow"></span><button type="button" class="btn small primary" data-b="import">표로 넣기</button></div>
     </details>
+    <details class="bud-ocr"><summary>에듀파인 품의 화면 캡처로 넣기</summary>
+      <p class="hint">품의 화면(예산내역·품목내역)을 캡처해서 아래 칸을 누르고 Ctrl+V로 붙이거나 사진 파일을 골라요. 글자를 읽어서 넣을 내용을 먼저 보여 드려요. 틀린 글자는 고치고 "넣기"를 눌러 주세요. 처음 한 번은 글자 인식 자료를 받느라 10초쯤 걸려요.</p>
+      <div class="row"><div class="ocr-drop" tabindex="0" role="button" aria-label="캡처 붙여넣는 곳">여기를 누르고 Ctrl+V</div><button type="button" class="btn small" data-b="ocr-file">사진 파일 고르기</button><input type="file" accept="image/*" class="ocr-file" hidden></div>
+      <div class="ocr-out"></div>
+    </details>
     <div class="bud-table"></div>
     <details class="bud-wish" open><summary>사야 할 것 <span class="hint wish-n"></span></summary>
       <div class="wish-list"></div>
@@ -3408,7 +3413,147 @@ function makeBudget(key){
       if (ok){ $(`#bud-${key}-paste`).value = ''; $('.bud-info', root).textContent = ''; toast(`예산 ${ok}줄을 넣었어요.`); $('.bud-paste', root).open = false; }
     }
   });
+  /* ---- 품의 화면 캡처 → 글자 읽기 → 확인 후 넣기 ---- */
+  const ocrOut = () => $('.ocr-out', root);
+  async function ocrRun(blob){
+    if (!can()){ toast(g ? '학년 공간을 고칠 권한이 없어요.' : '로그인한 상태로 열어야 적을 수 있어요.'); return; }
+    const out = ocrOut(); st.ocrImg = URL.createObjectURL(blob);
+    out.innerHTML = `<div class="ocr-wait"><img src="${st.ocrImg}" alt="붙인 캡처"><p class="hint" aria-live="polite">글자를 읽는 중이에요… <span class="ocr-pct"></span></p></div>`;
+    try {
+      const data = await ocrImage(blob, m => { const sp = $('.ocr-pct', out); if (sp && m && m.progress != null) sp.textContent = `${m.status === 'recognizing text' ? '읽는 중' : '준비 중'} ${Math.round(m.progress * 100)}%`; });
+      st.ocr = parseEdufine(data.text || '');
+      st.ocr.raw = data.text || '';
+      renderOcr();
+    } catch (er){
+      console.error(er);
+      out.innerHTML = '<p class="hint" style="color:var(--danger)">글자 인식을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 붙여 주세요. 학교 앱(구글)에서 열어야 돼요.</p>';
+    }
+  }
+  function ocrMatch(o){
+    const nz = t => String(t || '').replace(/[\s·\[\]()]/g, '');
+    const keys = [o.item, o.biz, o.calc].map(nz).filter(x => x.length >= 2);
+    let best = null, bs = 0;
+    list().forEach(l => { const ns = [l.item, l.act, l.biz, l.memo].map(nz).filter(Boolean); let sc = 0; keys.forEach(k => ns.forEach(n => { if (n === k) sc = Math.max(sc, 3); else if (n.includes(k) || k.includes(n)) sc = Math.max(sc, 2); else if (n.length === k.length && n.length >= 4 && [...n].filter((ch, i) => ch !== k[i]).length <= 1) sc = Math.max(sc, 2); })); if (o.cur && budCalc(l).cur === o.cur) sc += 1; if (sc > bs){ bs = sc; best = l; } });
+    return bs >= 2 ? best : null;
+  }
+  function renderOcr(){
+    const o = st.ocr, out = ocrOut(); if (!o) return;
+    const m = ocrMatch(o.line || {}), lineOpts = `<option value="__new" ${m ? '' : 'selected'}>새 예산 줄 만들기</option>` + list().map(l => `<option value="${esc(l.id)}" ${m && m.id === l.id ? 'selected' : ''}>${esc(sVal(l))} · ${esc(lineName(l))} (잔액 ${wonS(budCalc(l).rest)}원)</option>`).join('');
+    const L = o.line || {}, inp = (k, v, ph, cls) => `<input type="text" class="${cls || ''}" data-ocr="${k}" value="${esc(v ?? '')}" placeholder="${ph}" aria-label="${ph}">`;
+    const items = o.items.length ? o.items : [{text:L.calc || L.item || '', calc:'', amt:L.req || 0}];
+    out.innerHTML = `<div class="ocr-res"><img src="${st.ocrImg}" alt="붙인 캡처">
+      <div class="ocr-form">
+        <h4>어느 예산 줄에 넣을까요?</h4>
+        <select data-ocr="line">${lineOpts}</select>
+        <div class="ocr-new" ${m ? 'hidden' : ''}><div class="ocr-grid">
+          <label>세부사업${inp('biz', L.biz, '세부사업')}</label><label>세부항목${inp('item', L.item, '세부항목')}</label><label>원가통계비목${inp('stat', L.stat, '원가통계비목')}</label>
+          <label>예산현액${inp('cur', L.cur ? wonS(L.cur) : '', '예산현액', 'amt')}</label><label>예산잔액 (이번 품의 뒤)${inp('rest', L.rest != null ? wonS(L.rest) : '', '예산잔액', 'amt')}</label></div>
+          <p class="hint" style="margin:0">현액에서 잔액과 이번 품의 금액을 뺀 돈은 "가져오기 전 집행액"으로 적어 둬요.</p></div>
+        ${L.rest != null ? `<label class="row hint ocr-sync" ${m ? '' : 'hidden'}><input type="checkbox" data-ocr="sync" checked> 넣은 뒤 잔액을 에듀파인 잔액 ${wonS(L.rest)}원에 맞추기 (모자라는 만큼 "이전 집행액"으로 적어요)</label>` : ''}
+        <h4>품의 내용 <span class="hint">요구·품의로 들어가요. 결제한 뒤 표에서 "집행으로"를 누르면 돼요.</span></h4>
+        <div class="ocr-items">${items.map((it, i) => `<div class="ocr-it" data-i="${i}"><input type="checkbox" data-ocr-on checked aria-label="이 품목 넣기">${inp('text', it.text, '내용')}${inp('calc', it.calc, '산출내역 (예: 25,000원 × 4)')}${inp('amt', it.amt ? wonS(it.amt) : '', '금액', 'amt')}</div>`).join('')}</div>
+        <div class="row"><label class="hint" for="ocr-date-${key}">날짜</label><input type="date" id="ocr-date-${key}" data-ocr="date" value="${ymd(today())}" style="width:auto"><select data-ocr="kind" style="width:auto"><option value="요구">요구·품의</option><option value="집행">집행 (이미 결제함)</option></select><span class="grow"></span><button type="button" class="btn" data-b="ocr-cancel">그만두기</button><button type="button" class="btn primary" data-b="ocr-save">넣기</button></div>
+        <details><summary class="hint">읽은 글자 그대로 보기</summary><pre class="ocr-raw">${esc(o.raw)}</pre></details>
+      </div></div>`;
+  }
+  root.addEventListener('change', e => { if (e.target.matches('[data-ocr="line"]')){ const nw = $('.ocr-new', root), sy = $('.ocr-sync', root); if (nw) nw.hidden = e.target.value !== '__new'; if (sy) sy.hidden = e.target.value === '__new'; } });
+  root.addEventListener('paste', e => {
+    if (!e.target.closest('.ocr-drop')) return;
+    const f = [...(e.clipboardData || {}).items || []].find(x => x.type && x.type.startsWith('image/'));
+    if (!f){ toast('캡처한 사진이 없어요. 화면을 캡처한 뒤 붙여 주세요.'); return; }
+    e.preventDefault(); ocrRun(f.getAsFile());
+  });
+  root.addEventListener('change', e => { if (e.target.matches('.ocr-file') && e.target.files[0]) ocrRun(e.target.files[0]); });
+  root.addEventListener('click', async e => {
+    const b = e.target.closest('[data-b]'); if (!b) return;
+    if (b.dataset.b === 'ocr-file'){ const fi = $('.ocr-file', root); fi.value = ''; fi.click(); return; }
+    if (b.dataset.b === 'ocr-cancel'){ st.ocr = null; ocrOut().innerHTML = ''; return; }
+    if (b.dataset.b !== 'ocr-save' || !st.ocr) return;
+    const f = $('.ocr-form', root), v = k => (($(`[data-ocr="${k}"]`, f) || {}).value || '').trim();
+    const date = v('date') || ymd(today()), kind = v('kind') || '요구';
+    const its = $$('.ocr-it', f).filter(r => $('[data-ocr-on]', r).checked).map(r => ({text:($('[data-ocr="text"]', r).value || '').trim(), calc:($('[data-ocr="calc"]', r).value || '').trim(), amt:numIn($('[data-ocr="amt"]', r).value)})).filter(x => x.amt > 0);
+    if (!its.length){ toast('넣을 품목 금액이 없어요. 금액을 적어 주세요.'); return; }
+    const logs = its.map((x, i) => Object.assign({id:rid(), date, kind, text:x.text, amt:x.amt, at:Date.now() + i, by:S.uid}, x.calc ? {calc:x.calc} : {}));
+    const sum = its.reduce((a, x) => a + x.amt, 0);
+    b.disabled = true;
+    try {
+      if (v('line') === '__new'){
+        const cur = numIn(v('cur')), rest = v('rest') === '' ? null : numIn(v('rest'));
+        const pre = [];
+        if (cur > 0 && rest != null){ const used = cur - rest - sum; if (used > 0) pre.push({id:rid(), date, kind:'집행', text:'가져오기 전 집행액', amt:used, at:Date.now() - 1}); }
+        const sc = st.filter === 'all' || st.filter === '학년' ? {scope:'학년', cls:null} : scopeOf(st.filter);
+        await col().add(Object.assign({act:'', biz:v('biz'), item:v('item'), stat:v('stat'), amount:cur, logs:pre.concat(logs), createdBy:S.uid, createdAt:Date.now(), order:Date.now()}, sc));
+        toast(`새 예산 줄을 만들고 품의 ${wonS(sum)}원을 넣었어요.`);
+      } else {
+        const l = lineOf(v('line')); if (!l) return;
+        let all = (l.logs || []).concat(logs);
+        const sy = $('[data-ocr="sync"]', f), er = st.ocr.line && st.ocr.line.rest;
+        if (sy && sy.checked && er != null){ const gap = budCalc(Object.assign({}, l, {logs:all})).rest - er; if (gap > 0) all = all.concat([{id:rid(), date, kind:'집행', text:'에듀파인 잔액에 맞춘 이전 집행액', amt:gap, at:Date.now() - 1, by:S.uid}]); }
+        await upd(l.id, {logs:all});
+        const c = budCalc(Object.assign({}, l, {logs:all}));
+        toast(`${lineName(l)}에 ${wonS(sum)}원을 넣었어요 → 남은 돈 ${wonS(c.rest)}원`);
+      }
+      st.ocr = null; ocrOut().innerHTML = '';
+    } catch (er){ err(er); }
+    b.disabled = false;
+  });
   return {render};
+}
+/* 글자 인식 (tesseract.js, 처음 쓸 때만 불러와요) */
+let tessP = null;
+function loadTess(){
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  return tessP = tessP || new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'; sc.onload = () => window.Tesseract ? res(window.Tesseract) : rej(new Error('tess')); sc.onerror = () => { tessP = null; rej(new Error('load')); }; document.head.appendChild(sc); });
+}
+async function ocrImage(blob, onProg){
+  const T = await loadTess();
+  const bmp = await createImageBitmap(blob), k = bmp.width < 1600 ? 2 : 1;
+  const cv = document.createElement('canvas'); cv.width = bmp.width * k; cv.height = bmp.height * k;
+  const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(bmp, 0, 0, cv.width, cv.height);
+  const id = cx.getImageData(0, 0, cv.width, cv.height), d = id.data;
+  for (let i = 0; i < d.length; i += 4){ const y = .299 * d[i] + .587 * d[i + 1] + .114 * d[i + 2]; d[i] = d[i + 1] = d[i + 2] = y; }
+  cx.putImageData(id, 0, 0);
+  const w = await T.createWorker(['kor', 'eng'], 1, {logger:onProg || (() => {})});
+  try { await w.setParameters({preserve_interword_spaces:'1', tessedit_pageseg_mode:'6'}); const r = await w.recognize(cv); return r.data; } finally { w.terminate(); }
+}
+/* 에듀파인 품의 화면 글자 → 예산 줄 1개 + 품목들 */
+function parseEdufine(text){
+  const norm = t => t.replace(/(\d)\s*[,.]\s*(\d{3})(?!\d)/g, '$1$2').replace(/(\d)\s*[,.]\s*(\d{3})(?!\d)/g, '$1$2');
+  const lines = String(text || '').split(/\n/).map(x => x.replace(/[|｜]/g, '  ').trim()).filter(Boolean);
+  const out = {line:null, items:[]};
+  const korSegs = l => l.replace(/[\d,.]+/g, '  ').split(/\s{2,}|\t/).map(x => x.replace(/^[^가-힣\[(A-Za-z]+|[^가-힣\])A-Za-z]+$/g, '').trim()).filter(x => /[가-힣]{2,}/.test(x) && !/^(선택|합계|상태|순번)$/.test(x));
+  for (const raw of lines){
+    if (/합\s*계|소\s*계/.test(raw)) continue;
+    if (/세부사업|원가통계|예산현액|예상단가|예상금액|품목내역|예산내역/.test(raw) && !/\d{3}/.test(norm(raw))) continue;
+    const l = norm(raw), nums = (l.match(/\d+/g) || []).map(Number);
+    if (!/[가-힣]{2,}/.test(l)) continue;
+    /* 품목: 수량 × 단가 = 금액 이 맞는 세 수 */
+    let hit = null;
+    for (let i = nums.length - 3; i >= 0 && !hit; i--){ const [q, pz, a] = nums.slice(i, i + 3); if (q > 0 && q < 100000 && pz >= 10 && a >= 10 && Math.abs(q * pz - a) <= 1) hit = {q, p:pz, a}; }
+    if (hit){
+      const segs = korSegs(raw).filter(x => !/^\d/.test(x)); const txt = (segs[0] || '').trim();
+      out.items.push({text:txt, calc:`${wonS(hit.p)}원 × ${hit.q}`, amt:hit.a}); continue;
+    }
+    const big = nums.filter(n => n >= 1000);
+    if (!out.line && big.length >= 3){
+      /* 세부사업잔액 · 예산현액 · 예산잔액 · 요구금액 (끝자리를 잘못 읽어 요구금액이 빠지는 일이 있어요) */
+      let cur, rest, req;
+      if (big.length >= 4) [cur, rest, req] = big.slice(-3);
+      else if (big[0] > big[1] * 5) [cur, rest] = big.slice(1);
+      else [cur, rest, req] = big;
+      const segs = korSegs(raw);
+      const L = {cur, rest, req};
+      const calc = segs.find(x => /^\[|\]/.test(x)); if (calc) L.calc = calc;
+      const stat = segs.find(x => x !== calc && /(비|수당|여비|재료비|운영비|추진비)$/.test(x) && /업무|운영|추진|재료|수당|여비|일반|교육/.test(x)); if (stat) L.stat = stat;
+      const rest2 = segs.filter(x => x !== calc && x !== stat);
+      if (rest2.length >= 2){ L.biz = rest2[0]; L.item = rest2[1]; } else if (rest2.length === 1) L.item = rest2[0];
+      out.line = L; continue;
+    }
+    /* 수량·단가를 못 읽었어도 금액이 있으면 품목으로 */
+    if (out.line && big.length >= 1 && big.length <= 2){ const segs = korSegs(raw).filter(x => !/^\d/.test(x)); if (segs[0]) out.items.push({text:segs[0], calc:'', amt:big[big.length - 1]}); }
+  }
+  if (out.line && !out.line.req && out.items.length) out.line.req = out.items.reduce((a, x) => a + x.amt, 0);
+  return out;
 }
 
 /* ---------- 명부 ---------- */
@@ -4354,6 +4499,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '예산: "에듀파인 품의 화면 캡처로 넣기"에 품의 화면을 캡처해 붙이면 글자를 읽어 예산 줄·품의 내용·산출내역·금액을 채워 보여 줘요. 확인하고 "넣기"를 누르면 들어가요.',
     '예산 "내역"을 열면 쓴 돈 적는 칸에 날짜·종류·어디에 썼나요·산출내역·금액 이름이 붙고, 종류마다 무슨 뜻인지 설명이 나와요. 산출내역은 큰 칸 대신 내역 표의 "내용"과 "금액" 사이 칸에 적어요.',
     '학급일지에 "2번 출결 질병결석 병원진료"처럼 적으면 질병결석은 종류로 들어가고 사유에는 "병원진료"만 남아요. 예전에 적은 기록도 같은 방식으로 정리했어요.',
     '뽑기·순서 정하기에서 "오늘 빼는 학생"을 눌러 고르면 그 학생은 빼고 뽑아요. 오늘 결석으로 적힌 학생은 저절로 빠지고, 내일이 되면 다시 모두 들어가요.',
