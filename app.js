@@ -300,7 +300,23 @@ function inferCat(text, tags, forced, hasStu){
   if (/수업|단원|진도|평가|과제|숙제|받아쓰기/.test(text)) return '수업';
   return '메모';
 }
+/* "질병결석"·"출석인정 지각"처럼 종류를 적은 말 (사유에서는 빼요) */
+const ATT_LABEL_RE = /(질병|미인정|무단|기타|출석\s*인정|인정)\s*(결석|지각|조퇴|결과)/;
+/* 예전에 "질병결석 병원진료"처럼 들어간 출결 기록도 사유만 남게 한 번 정리해요 */
+let attTidyDone = false;
+function attTidySoon(){
+  if (attTidyDone || !S.db || !S.uid) return; attTidyDone = true;
+  setTimeout(async () => {
+    for (const e of (S.journal || []).filter(x => x.cat === '출결' && x.att && ATT_LABEL_RE.test(x.text || ''))){
+      const t = attClean(e.text); if (t === e.text) continue;
+      try { await S.db.doc(PROFILE()).collection('journal').doc(e.id).update({text:t}); } catch (er){ break; }
+    }
+  }, 1500);
+}
+function attClean(text){ return String(text || '').replace(new RegExp(ATT_LABEL_RE.source, 'g'), ' ').replace(/^\s*출결\s*[:·,-]?\s*/, '').replace(/\s{2,}/g, ' ').trim(); }
 function inferAtt(text, hasStu = true){
+  const lb = String(text || '').match(ATT_LABEL_RE);
+  if (lb) return {kind:lb[2], reason:/질병/.test(lb[1]) ? '질병' : /미인정|무단/.test(lb[1]) ? '미인정' : /기타/.test(lb[1]) ? '기타' : '출석인정'};
   const k = (text.match(/결석|지각|조퇴|결과/) || [])[0] || (hasStu && /체험학습/.test(text) ? '결석' : null);
   if (!k) return null;
   let r = '기타';
@@ -2100,7 +2116,7 @@ function startPrivate(){
     listen(db.doc(PROFILE()).collection('phrases'), 'mphrases', snap => { S.phM = docs(snap); if (S.page === 'ops') renderPhrases(); });
     listen(db.doc(PROFILE()).collection('ops'), 'mops', snap => { S.mops = docs(snap); if (S.space === 'me' && S.meTab === 'mops') renderOps(OPM); });
     listen(db.doc(PROFILE()).collection('budget'), 'mbudget', snap => { S.budM = docs(snap); if (S.space === 'me' && S.meTab === 'budget') BUD.m.render(); });
-    listen(db.doc(PROFILE()).collection('journal'), 'journal', snap => { S.journal = docs(snap); if (S.space === 'me') renderMe(); gcalSoon(); });
+    listen(db.doc(PROFILE()).collection('journal'), 'journal', snap => { S.journal = docs(snap); if (S.space === 'me') renderMe(); gcalSoon(); attTidySoon(); });
     listen(db.doc(NOTES()), 'notes', snap => {
       if (busy(NOTES())) return;
       S.notes = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {items:[]};
@@ -2481,7 +2497,7 @@ $('#j-form').addEventListener('submit', async ev => {
   const v = $('#j-input').value.trim(); if (!v && !S.stage.j.length) return;
   const p = parseLine(v, {students:true});
   const cat = inferCat(p.text, p.tags, S.jForced, p.students.length > 0);
-  const entry = {date:p.date || (cat === '할일' ? null : S.jDate), end:p.end || null, time:p.time || null, cat, text:p.text, students:p.students,
+  const entry = {date:p.date || (cat === '할일' ? null : S.jDate), end:p.end || null, time:p.time || null, cat, text:cat === '출결' ? attClean(p.text) : p.text, students:p.students,
     att:cat === '출결' ? inferAtt(p.text, p.students.length > 0) : null, prio:p.prio || '보통', area:areaOf(p), imgs:S.stage.j.slice(), every:cat === '할일' ? p.every || null : null, eom:!!p.eom, done:false, createdAt:Date.now()};
   try { await S.db.doc(PROFILE()).collection('journal').add(entry); }
   catch (e){ wErr(e, false); return; }
@@ -2527,7 +2543,7 @@ $('#e-form').addEventListener('submit', async ev => {
   const students = $('#e-stu').value.split(/[,\s]+/).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
   const orig = S.journal.find(x => x.id === id) || {};
   const d0 = $('#e-date').value || (cat === '할일' ? null : S.jDate), e0 = $('#e-end').value || null;
-  const upd = {date:d0, end:e0 && d0 && e0 > d0 ? e0 : null, time:$('#e-time').value || null, cat, text, students, att:cat === '출결' ? (inferAtt(text, students.length > 0) || orig.att || null) : null};
+  const upd = {date:d0, end:e0 && d0 && e0 > d0 ? e0 : null, time:$('#e-time').value || null, cat, text:cat === '출결' ? attClean(text) : text, students, att:cat === '출결' ? (inferAtt(text, students.length > 0) || orig.att || null) : null};
   upd.imgs = S.editImgs.slice();
   try { await S.db.doc(PROFILE()).collection('journal').doc(id).update(upd); S.editDrops.splice(0).forEach(dropImage); closeDlgs(); toast('고쳤어요.'); } catch (e){ wErr(e, false); }
 });
@@ -2544,7 +2560,7 @@ async function addEntryFrom(stageName, inputSel, opts){
   const p = parseLine(v, {students:true});
   const students = p.students.slice(); if (opts.student != null && !students.includes(opts.student)) students.unshift(opts.student);
   const cat = opts.cat || inferCat(p.text, p.tags, null, students.length > 0);
-  const entry = {date:p.date || ymd(today()), end:p.end || null, time:p.time || null, cat, text:p.text, students,
+  const entry = {date:p.date || ymd(today()), end:p.end || null, time:p.time || null, cat, text:cat === '출결' ? attClean(p.text) : p.text, students,
     att:cat === '출결' ? inferAtt(p.text, students.length > 0) : null, prio:p.prio || '보통', area:areaOf(p), imgs:S.stage[stageName].slice(), every:cat === '할일' ? p.every || null : null, eom:!!p.eom, done:false, createdAt:Date.now()};
   try { const ref = await S.db.doc(PROFILE()).collection('journal').add(entry); if (ref && ref.id && inputSel === '#j-input' && entry.date) setTimeout(() => addAfter('j:' + ref.id, '#cal-also-j'), 300); } catch (e){ wErr(e, false); return; }
   $(inputSel).value = ''; S.stage[stageName] = []; renderStage(stageName); toast(`${fmtMD(entry.date)} ${cat} 기록으로 적었어요.`);
@@ -4335,6 +4351,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '학급일지에 "2번 출결 질병결석 병원진료"처럼 적으면 질병결석은 종류로 들어가고 사유에는 "병원진료"만 남아요. 예전에 적은 기록도 같은 방식으로 정리했어요.',
     '뽑기·순서 정하기에서 "오늘 빼는 학생"을 눌러 고르면 그 학생은 빼고 뽑아요. 오늘 결석으로 적힌 학생은 저절로 빠지고, 내일이 되면 다시 모두 들어가요.',
     '타이머 이름 칸을 비운 채 시작하면 이름 칸이 사라지고 숫자만 보여요. "처음으로"를 누르면 다시 나와요.',
     '할 일로 잘못 들어간 일정은 할 일을 눌러 "일정으로 옮기기", 일정으로 잘못 들어간 할 일은 일정의 "고치기"에서 "할 일로 옮기기"를 누르면 옮겨져요.',
