@@ -4335,6 +4335,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '타이머 이름 칸을 비운 채 시작하면 이름 칸이 사라지고 숫자만 보여요. "처음으로"를 누르면 다시 나와요.',
     '할 일로 잘못 들어간 일정은 할 일을 눌러 "일정으로 옮기기", 일정으로 잘못 들어간 할 일은 일정의 "고치기"에서 "할 일로 옮기기"를 누르면 옮겨져요.',
     '출석부: "결석계"를 "결석신고서"로 바꿨어요. 감염병 같은 출석인정결석은 결석신고서 대장에 모이고, 교외체험학습만 체험학습 대장에 모여요. 잘못 들어간 줄은 대장의 "체험학습으로"·"결석신고서로" 버튼으로 옮겨요.',
     '출석부에서 결석·지각 칸에 마우스를 올리면 몇 번 누구인지, 날짜, 종류, 사유가 바로 떠요.',
@@ -5575,6 +5576,8 @@ function timerDraw(){
   const s = Math.max(0, Math.ceil(T.remain));
   $('#timer-face').textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
   $('#timer-go').textContent = T.running ? '잠깐 멈춤' : (T.remain < T.total && T.remain > 0 ? '이어서' : '시작');
+  /* 이름 없이 시작하면 이름 칸을 숨기고 숫자만 (처음으로·맞추기 하면 다시 보여요) */
+  const lb = $('#timer-label'); if (lb && document.activeElement !== lb) lb.hidden = !lb.value.trim() && (T.running || T.remain < T.total);
 }
 function timerSet(sec){ clearInterval(T.iv); T.running = false; T.total = T.remain = sec; $('#timer-face').classList.remove('ring'); $('#timer-done').textContent = ''; timerDraw(); }
 /* 끝 소리: 시작 버튼을 누를 때 소리 장치를 깨워 두고, 끝나면 그걸로 울려요 (브라우저가 저절로 나는 소리를 막아서) */
