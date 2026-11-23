@@ -4569,6 +4569,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '나의 공간 "수업 계획"이 한 주 보기로 열려요. 요일 × 교시 칸에 과목이 들어가 있고, 단원·주제만 짧게 적으면 돼요. 요일 이름을 누르면 그날을 자세히 써요.',
     '명부 "칸 정리"에서 칸 제목을 바꾸고 순서도 바꿀 수 있어요 (내 화면에만). 바깥을 누르면 닫혀요. 탭 정리·과목 정리·칸 정리 모두 ⤒ 맨 위로, ⤓ 맨 아래로 버튼이 생겼어요.',
     '입력 창들을 요즘 앱처럼 바꿨어요. 오른쪽 위 ×로 닫고, 아래는 "취소 · 저장" (저장하면 바로 닫혀요). 글칸에서 Ctrl+Enter를 눌러도 저장돼요.',
     '아침 안내 "오늘 할 일"에서 안 끝난 오늘만 할 일 옆 "내일도"를 누르면 다음 등교일에도 들어가요. "안 끝난 일 내일도"로 한 번에 넘길 수도 있어요.',
@@ -4721,7 +4722,54 @@ function maybeShowNews(){
 /* 날짜를 넘기기 전에 쓰던 칸을 마무리해요 (사파리는 버튼을 눌러도 칸에서 커서가 안 빠져요) */
 function blurIn(sel){ const a = document.activeElement; if (a && a.closest && a.closest(sel) && a.blur) a.blur(); }
 const PP_F = [['t', '단원 · 주제', '3단원 분수 (2/8차시)', 1], ['a', '수업 활동', '도입 - 전개 - 정리', 1], ['p', '준비물 · 메모', '활동지 25장', 1], ['r', '되돌아보기', '잘된 점, 다음에 챙길 것', 1]];
+/* 한 주 보기: 요일 × 교시에 과목과 "단원·주제" 한 줄만 (자세한 건 하루 보기) */
+const PPW = {cache:{}, view:(() => { try { return localStorage.getItem('gyomu.ppView') || 'week'; } catch (e){ return 'week'; } })()};
+async function ppWeekLoad(days){
+  const need = days.filter(k => k !== S.jDate && !PPW.cache[k]);
+  await Promise.all(need.map(async k => { try { const sn = await S.db.doc(DAYPATH(k)).get(); PPW.cache[k] = sn.exists ? JSON.parse(JSON.stringify(sn.data())) : {}; } catch (e){ PPW.cache[k] = {}; } }));
+}
+const ppDayData = k => k === S.jDate ? (S.day || {}) : (PPW.cache[k] || {});
+async function renderPlanWeek(){
+  const mon = mondayOf(S.jDate), days = [0, 1, 2, 3, 4].map(i => ymd(addDays(fromYmd(mon), i))), fri = fromYmd(days[4]), m0 = fromYmd(mon);
+  $('#pp-label').textContent = `${m0.getMonth() + 1}월 ${m0.getDate()}일 ~ ${fri.getMonth() + 1}월 ${fri.getDate()}일`;
+  $('#pp-src').textContent = '과목은 시간표에서 가져와요. 칸마다 단원·주제만 짧게 적으면 돼요. 요일 이름을 누르면 그날을 자세히 써요.';
+  $('#pp-ev').innerHTML = days.map(k => schoolEvents(k).map(t => `<span class="chip school">${mdShort(k)} ${esc(t)}</span>`).join('') + planOn(k).map(it => `<span class="chip">${mdShort(k)} 평가 · ${esc(it.name)}</span>`).join('')).join('');
+  if (S.db && S.uid) await ppWeekLoad(days);
+  if (document.activeElement && document.activeElement.closest('#pp-week')) return;
+  const L = lunchAt(), tk = ymd(today());
+  let h = `<div class="tablewrap"><table class="pp-wk"><thead><tr><th class="n">교시</th>${days.map(k => { const d = fromYmd(k), off = subjFor(k).off; return `<th class="${k === tk ? 'today' : ''} ${off ? 'off' : ''}"><button type="button" class="linkbtn" data-pp-day="${k}" title="이날 자세히 쓰기">${WD[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}</button>${off ? `<small>${esc(off)}</small>` : ''}</th>`; }).join('')}</tr></thead><tbody>`;
+  for (let i = 0; i < 6; i++){
+    if (i === L) h += `<tr class="lunch"><td colspan="6">점심</td></tr>`;
+    h += `<tr><td class="n">${i + 1}</td>${days.map(k => {
+      const sf = subjFor(k); if (sf.off) return '<td class="off"></td>';
+      const p = (ppDayData(k).plan || [])[i] || {}, subj = p.s !== undefined && p.s !== null ? p.s : expand((sf.s || [])[i]);
+      if (!subj && !p.t) return '<td class="empty"></td>';
+      return `<td><div class="pw-s">${esc(subj || '')}</div><textarea id="pw-${k}-${i}" data-pw-k="${k}" data-pw-i="${i}" rows="1" placeholder="단원·주제" aria-label="${mdShort(k)} ${i + 1}교시 ${esc(subj || '')} 단원·주제">${esc(p.t || '')}</textarea></td>`;
+    }).join('')}</tr>`;
+  }
+  h += '</tbody></table></div>';
+  $('#pp-week').innerHTML = h;
+  $$('#pp-week textarea').forEach(growTa);
+}
+$('#pp-week').addEventListener('input', e => { if (e.target.matches('textarea')) growTa(e.target); });
+$('#pp-week').addEventListener('change', e => {
+  const el = e.target.closest('[data-pw-k]'); if (!el || !S.uid) return;
+  const k = el.dataset.pwK, i = +el.dataset.pwI, v = el.value.replace(/\s+$/, '');
+  const src = k === S.jDate ? S.day : (PPW.cache[k] = PPW.cache[k] || {});
+  const plan = (src.plan || []).slice(); while (plan.length < 6) plan.push({});
+  plan[i] = Object.assign({}, plan[i] || {}, {t:v}); src.plan = plan;
+  if (k === S.jDate) saveDay(); else { const data = Object.assign({}, src, {date:k}); queueSet(DAYPATH(k), () => data, false); }
+  $('#pp-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5);
+});
+$('#pp-week').addEventListener('click', e => { const b = e.target.closest('[data-pp-day]'); if (!b) return; ppSetView('day'); ppGo(b.dataset.ppDay); });
+function ppSetView(v){ PPW.view = v; try { localStorage.setItem('gyomu.ppView', v); } catch (e){} }
+$('#pp-view').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; ppSetView(b.dataset.v); PPW.cache = {}; renderPlanPage(); });
 function renderPlanPage(){
+  const wk = PPW.view === 'week';
+  $$('#pp-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === PPW.view));
+  $('#pp-rows').hidden = wk; $('#pp-week').hidden = !wk; $$('#p-plan .pp-dayonly').forEach(x => { x.hidden = wk; });
+  $('#pp-prev').setAttribute('aria-label', wk ? '지난주' : '전날'); $('#pp-next').setAttribute('aria-label', wk ? '다음 주' : '다음 날'); $('#pp-today').textContent = wk ? '이번 주' : '오늘';
+  if (wk){ $('#pp-date').value = S.jDate; renderPlanWeek(); return; }
   const k = S.jDate, d = S.day || {};
   $('#pp-label').textContent = fmtLong(k); $('#pp-date').value = k;
   const sf = subjFor(k), tt = sf.s || [];
@@ -4756,9 +4804,9 @@ $('#pp-rows').addEventListener('change', e => {
 });
 $('#pp-memo').addEventListener('change', e => { if (!S.uid) return; S.day.memo = e.target.value; saveDay(); $('#pp-save').textContent = '저장했어요 ' + new Date().toTimeString().slice(0, 5); });
 $('#p-plan').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#p-plan'))) renderPlanPage(); }, 0));
-const ppGo = k => { blurIn('#p-plan'); setJDate(k); renderPlanPage(); };
-$('#pp-prev').onclick = () => ppGo(ymd(addDays(fromYmd(S.jDate), -1)));
-$('#pp-next').onclick = () => ppGo(ymd(addDays(fromYmd(S.jDate), 1)));
+const ppGo = k => { blurIn('#p-plan'); PPW.cache = {}; setJDate(k); renderPlanPage(); };
+$('#pp-prev').onclick = () => ppGo(ymd(addDays(fromYmd(S.jDate), PPW.view === 'week' ? -7 : -1)));
+$('#pp-next').onclick = () => ppGo(ymd(addDays(fromYmd(S.jDate), PPW.view === 'week' ? 7 : 1)));
 $('#pp-today').onclick = () => ppGo(ymd(today()));
 $('#pp-date').addEventListener('change', e => { if (e.target.value) ppGo(e.target.value); });
 
