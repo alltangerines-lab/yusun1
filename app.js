@@ -1112,19 +1112,20 @@ function renderUnits(subj, list){
   const groups = [['', '단원 무관']].concat(units.map((u, i) => [u, u]));
   const linkChip = lkChip;
   const rowLinks = key => list.filter(l => keyOf(l) === key);
-  let h = groups.map(([key, name], gi) => {
-    const ls = rowLinks(key), open = UN.open.has(gi);
-    const nm0 = String(name).match(/^\s*(\d+)\s*[.)]?\s/);
-    const num = gi === 0 || !nm0 ? `<span class="un-dot" ${gi === 0 ? '' : 'style="background:var(--warn)"'}></span>` : `<span class="un-n">${String(+nm0[1]).padStart(2, '0')}</span>`;
-    const nm = gi === 0 ? name : name.replace(/^\s*\d+\s*[.)]?\s+/, '');
-    return `<div class="un-row ${open ? 'open' : ''}"><div class="un-head" data-untg="${gi}">${num}<b>${esc(nm)}</b><span class="un-chips">${ls.slice(0, 6).map(linkChip).join('')}${ls.length > 6 ? `<span class="hint">+${ls.length - 6}</span>` : ''}</span><button type="button" class="un-plus" data-untg="${gi}" aria-label="${esc(nm)} ${open ? '접기' : '펼치기'}">${open ? '−' : '+'}</button></div>
-      ${open ? `<div class="un-body">${ls.map(l => `<div class="un-li">${linkChip(l)}<span class="hint un-url">${esc(lkSub(l))}</span><span class="grow"></span>${can ? `<select class="lsubj" data-unmove="${l.id}" aria-label="단원 옮기기"><option value="">단원 무관</option>${units.map(u => `<option value="${esc(u)}" ${keyOf(l) === u ? 'selected' : ''}>${esc(u.replace(/^\s*\d+\s*[.)]\s*/, ''))}</option>`).join('')}</select><button type="button" class="btn small ${S.armed === 'link:' + l.id ? 'armed' : 'danger'}" data-act="link-del" data-id="${l.id}">${S.armed === 'link:' + l.id ? '정말 삭제' : '삭제'}</button>` : ''}</div>`).join('') || '<p class="hint" style="margin:2px 0">아직 자료가 없어요.</p>'}
-        ${can ? `<form class="un-add" data-unadd="${esc(key)}"><input type="text" placeholder="자료 이름" aria-label="자료 이름"><textarea rows="1" placeholder="https:// 주소 또는 줄글" aria-label="주소나 글"></textarea><button type="button" class="btn small" data-lkpic title="사진 올리기">사진</button><button type="button" class="btn small" data-lkfile title="파일 올리기 (3MB까지)">파일</button><button type="submit" class="btn small primary">넣기</button></form>` : ''}</div>` : ''}</div>`;
-  }).join('');
+  /* 왼쪽: 단원 제목 목록 · 오른쪽: 고른 단원의 자료 */
+  const split = n => { const m = String(n).match(/^\s*(\d+)\s*[.)]?\s/); return {num:m ? String(+m[1]).padStart(2, '0') : '', nm:String(n).replace(/^\s*\d+\s*[.)]?\s+/, '')}; };
+  if (UN.sel == null || UN.sel >= groups.length) UN.sel = groups.length > 1 ? 1 : 0;
+  const nav = groups.map(([key, name], gi) => { const n = rowLinks(key).length, sp = gi === 0 ? {num:'', nm:name} : split(name);
+    return `<button type="button" class="un-nav-it ${UN.sel === gi ? 'on' : ''} ${gi === 0 ? 'any' : ''}" data-unsel="${gi}" aria-current="${UN.sel === gi}"><span class="un-n">${sp.num || (gi === 0 ? '·' : '•')}</span><span class="t">${esc(sp.nm)}</span>${n ? `<span class="c">${n}</span>` : ''}</button>`; }).join('');
+  const [skey, sname] = groups[UN.sel], ls = rowLinks(skey), ssp = UN.sel === 0 ? {num:'', nm:sname} : split(sname);
+  const body = `<div class="un-pane-h">${ssp.num ? `<span class="un-n">${ssp.num}</span>` : ''}<h3>${esc(ssp.nm)}</h3><span class="hint">자료 ${ls.length}개</span></div>
+    <div class="un-items">${ls.map(l => `<div class="un-li">${linkChip(l)}<span class="hint un-url">${esc(lkSub(l))}</span><span class="grow"></span>${can ? `<select class="lsubj" data-unmove="${l.id}" aria-label="단원 옮기기"><option value="">단원 무관</option>${units.map(u => `<option value="${esc(u)}" ${keyOf(l) === u ? 'selected' : ''}>${esc(u.replace(/^\s*\d+\s*[.)]\s*/, ''))}</option>`).join('')}</select><button type="button" class="btn small ${S.armed === 'link:' + l.id ? 'armed' : 'danger'}" data-act="link-del" data-id="${l.id}">${S.armed === 'link:' + l.id ? '정말 삭제' : '삭제'}</button>` : ''}</div>`).join('') || '<p class="hint" style="margin:6px 2px">아직 자료가 없어요. 아래에 넣어 주세요.</p>'}</div>
+    ${can ? `<form class="un-add" data-unadd="${esc(skey)}"><input type="text" placeholder="자료 이름" aria-label="자료 이름"><textarea rows="1" placeholder="https:// 주소 또는 줄글" aria-label="주소나 글"></textarea><button type="button" class="btn small" data-lkpic title="사진 올리기">사진</button><button type="button" class="btn small" data-lkfile title="파일 올리기 (3MB까지)">파일</button><button type="submit" class="btn small primary">넣기</button></form>` : ''}`;
+  let h = `<div class="un-split"><nav class="un-nav" aria-label="단원">${nav}</nav><section class="un-pane">${body}</section></div>`;
   const other = list.filter(l => keyOf(l) === '__other');
   if (other.length) h += `<p class="hint" style="margin:8px 0 0">다른 학기 단원에 넣은 자료 ${other.length}개는 ${gradeNum()}-${sem === '1' ? '2' : '1'}을 누르면 보여요.</p>`;
   if (!units.length && !UN.edit) h = `<div class="jd-empty" style="margin-bottom:8px">${esc(subjName(subj))} ${gradeNum()}-${sem} 목차가 아직 없어요.${can ? ' 위 "진도표 올리기"로 학년 진도표(한글 파일)를 올리면 모든 과목 단원이 한 번에 들어가요. "목차 넣기"로 단원 이름을 직접 붙여 넣어도 돼요. 동학년 모두에게 같이 보여요.' : ''}</div>` + h;
-  $('#links').innerHTML = `<div class="un-list">${h}</div>`;
+  $('#links').innerHTML = h;
 }
 $('#unit-bar').addEventListener('click', async e => {
   const sb = e.target.closest('[data-unsem]'); if (sb){ UN.sem = sb.dataset.unsem; UN.open.clear(); renderLinks(); return; }
@@ -1267,6 +1268,7 @@ $('#un-file').addEventListener('change', async e => {
   } catch (er){ console.error(er); toast('파일을 읽지 못했어요. 한글 파일(.hwp, .hwpx)인지 확인해 주세요.'); }
 });
 $('#links').addEventListener('click', e => {
+  const us = e.target.closest('[data-unsel]'); if (us){ UN.sel = +us.dataset.unsel; renderLinks(); const b = $(`#links [data-unsel="${UN.sel}"]`); if (b) b.focus(); return; }
   const tg = e.target.closest('[data-untg]'); if (!tg || e.target.closest('a, [data-lk]')) return;
   const i = +tg.dataset.untg; UN.open.has(i) ? UN.open.delete(i) : UN.open.add(i); renderLinks();
 });
@@ -4572,7 +4574,8 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.18';
 const CHANGELOG = [
   ['2.18', '11월 24일', [
-    '아침 안내에서 결석한 학생 이름이 날짜 왼쪽이 아니라 오른쪽 끝에 떠요.'
+    '아침 안내에서 결석한 학생 이름이 날짜 왼쪽이 아니라 오른쪽 끝에 떠요.',
+    '수업자료 단원 보기를 바꿨어요. 왼쪽에 단원 제목이 차례로 있고, 단원을 누르면 오른쪽에 그 단원 자료가 떠요. 자료 넣기도 오른쪽 아래에서 바로 해요.'
   ]],
   ['2.17', '11월 23일', [
     '전담 수업일지 "한 주 간단히" 표 맨 위에 그날 끝낼 할 일(나의 할 일·학년 할 일)이 떠요. 눌러서 끝낸 것으로 표시해요. 오늘 칸에는 지난 할 일도 빨갛게 나와요.',
