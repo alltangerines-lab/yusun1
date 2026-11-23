@@ -1128,6 +1128,13 @@ table.pp-wk{border-collapse:collapse;width:100%;min-width:720px;table-layout:fix
 .pp-wk thead th.sel{box-shadow:inset 0 -3px 0 var(--accent)}
 .jd-wk td.done{background:color-mix(in srgb,var(--ok) 8%,var(--surface))}
 .jd-wk .ok{color:var(--ok)}
+.jd-wk tr.jd-todo-row td{background:color-mix(in srgb,var(--accent) 5%,var(--surface));vertical-align:top}
+.jd-wk tr.jd-todo-row td.n{font-family:inherit;font-size:12px}
+.jd-todo{display:flex;align-items:flex-start;gap:5px;width:100%;text-align:left;border:0;background:none;font:inherit;font-size:12.5px;padding:2px 0;cursor:pointer;color:var(--fg)}
+.jd-todo .bx{flex-shrink:0;width:13px;height:13px;border:1.5px solid var(--muted);border-radius:3px;margin-top:3px}
+.jd-todo:hover .bx{border-color:var(--accent);background:var(--accent-soft)}
+.jd-todo small{color:var(--accent);font-weight:700;margin-right:2px}
+.jd-todo.late{color:var(--danger)}
 .jd-wk tr.jd-memo-row td{background:color-mix(in srgb,var(--warn) 6%,var(--surface))}
 .jd-wk tr.jd-memo-row td.n{font-family:inherit;font-size:12px}
 .jl-t tr.jl-memo td{padding:2px 6px 6px;border-bottom:2px solid var(--line)}
@@ -2742,7 +2749,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b1c484ff58723cc4eb722660452b217ff5be433e/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@1ebaafaa74678e7e6c4f3422d48034cb0f5420e9/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
