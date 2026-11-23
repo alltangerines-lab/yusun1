@@ -678,6 +678,8 @@ table.attg{border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-
 .out-chip{cursor:pointer;font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface)}
 .out-chip.off{opacity:.55;text-decoration:line-through;background:var(--surface-2)}
 .out-chip small{color:var(--danger);text-decoration:none}
+#p-ctab > .card{border:0;box-shadow:none;background:transparent;margin:0}
+#p-ctab > .card > .card-h{padding-top:0}
 .tip-pop{position:fixed;z-index:80;max-width:300px;background:var(--fg);color:var(--bg);font-size:12.5px;line-height:1.5;padding:7px 10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.2);white-space:pre-line;pointer-events:none}
 .attg td.tot{font-family:var(--mono);color:var(--muted);padding:3px 5px}
 .attg td.tot.has{color:var(--danger);font-weight:600}
@@ -1741,6 +1743,7 @@ body.ro .w-only{display:none!important}
       <div class="card-b"><div class="ros" id="ros-g"></div></div>
     </div>
 
+    <div id="pg-tab-home" hidden></div>
     <div class="card pg pg-tab">
       <div class="card-h">
         <h2 id="tab-title"></h2>
@@ -1755,7 +1758,7 @@ body.ro .w-only{display:none!important}
         <div id="tab-table"></div>
         <div class="row" style="margin-top:10px">
           <button type="button" class="btn small primary w-only" id="row-add">+ 줄 추가</button>
-          <span class="hint">칸에 적고 다른 칸으로 넘어가면 저장돼요. 학년 선생님 모두에게 같은 표가 보여요.</span>
+          <span class="hint" id="row-add-hint">칸에 적고 다른 칸으로 넘어가면 저장돼요. 학년 선생님 모두에게 같은 표가 보여요.</span>
         </div>
       </div>
     </div>
@@ -2158,6 +2161,7 @@ body.ro .w-only{display:none!important}
           </div>
         </div>
 
+        <div class="panel" id="p-ctab" hidden></div>
         <div class="panel" id="p-budget" hidden>
           <div class="bud" id="bud-m"></div>
         </div>
@@ -2699,7 +2703,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b4e40621d67226eb63708cddcdf5a95a3a0e2e16/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@7576e151bf3479ecb30866d79a96e63925565e43/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
