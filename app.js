@@ -578,9 +578,9 @@ function imageTarget(name){
   if (name === 'daily') return {scope:'shared', add:refs => { S.dailyImgs.push(...refs); markDailyDirty(); renderDailyThumbs(); }};
   if (name === 'edit') return {scope:'private', add:refs => { S.editImgs.push(...refs); renderEditThumbs(); }};
   if (name.startsWith('note:')){ const id = name.slice(5); return {scope:'private', add:refs => { const n = S.notes.items.find(x => x.id === id); if (!n) return; n.imgs = (n.imgs || []).concat(refs); saveNotes(); renderNotes(true); }}; }
-  if (name.startsWith('cell:')){ const [, row, col] = name.split(':'); return {scope:'shared', add:async refs => {
+  if (name.startsWith('cell:')){ const [, row, col] = name.split(':'); return {scope:S.tabMine ? 'private' : 'shared', add:async refs => {
     const rr = S.rows.find(x => x.id === row); const cur = rr && Array.isArray((rr.cells || {})[col]) ? rr.cells[col] : [];
-    try { await S.db.doc(`tabs/${S.tabId}/rows/${row}`).update({cells:{[col]:cur.concat(refs)}}); } catch (e){ wErr(e, true); }
+    try { await S.db.doc(`${tabBase()}/${S.tabId}/rows/${row}`).update({cells:{[col]:cur.concat(refs)}}); } catch (e){ wErr(e, true); }
   }}; }
   return null;
 }
@@ -626,7 +626,7 @@ async function removeImg(key, i){
   else if (kind === 'cell'){
     const rr = S.rows.find(x => x.id === a); const cur = rr && Array.isArray((rr.cells || {})[b]) ? rr.cells[b].slice() : [];
     const r = cur.splice(i, 1)[0];
-    try { await S.db.doc(`tabs/${S.tabId}/rows/${a}`).update({cells:{[b]:cur}}); if (r) dropImage(r); } catch (e){ wErr(e, true); }
+    try { await S.db.doc(`${tabBase()}/${S.tabId}/rows/${a}`).update({cells:{[b]:cur}}); if (r) dropImage(r); } catch (e){ wErr(e, true); }
   }
 }
 function openLightbox(src){ if (!src) return; $('#lb-img').src = src; $('#lightbox').hidden = false; }
@@ -662,6 +662,18 @@ document.addEventListener('click', e => {
   go(a.getAttribute('href').slice(1) || 'grade');
 }, true);
 const sortedTabs = () => S.tabs.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+/* 나의 공간 탭: 나만 보는 표 (data/users/나/tabs). 학년 탭과 같은 화면을 써요 */
+const sortedMTabs = () => (S.mtabs || []).slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+const tabBase = () => S.tabMine ? `${PROFILE()}/tabs` : 'tabs';
+const curTabs = () => S.tabMine ? (S.mtabs || []) : (S.tabs || []);
+const tabCan = () => S.tabMine ? !!(S.db && S.uid) : S.canWrite;
+const inTabView = () => (S.space === 'grade' && S.page === 'tab') || (S.space === 'me' && S.meTab === 'ctab');
+function placeTabCard(){
+  const card = document.querySelector('.card.pg-tab'), home = $('#pg-tab-home'), slot = $('#p-ctab'); if (!card || !home || !slot) return;
+  if (S.space === 'me' && S.meTab === 'ctab'){ if (card.parentElement !== slot) slot.appendChild(card); card.hidden = false; }
+  else { if (card.parentElement === slot) home.after(card); card.hidden = !(S.space === 'grade' && S.page === 'tab'); }
+  $('#row-add-hint').textContent = S.tabMine ? '칸에 적고 다른 칸으로 넘어가면 저장돼요. 나만 보는 표예요.' : '칸에 적고 다른 칸으로 넘어가면 저장돼요. 학년 선생님 모두에게 같은 표가 보여요.';
+}
 function applyRoute(r){
   let space = 'grade', page = 'main';
   let m = curMP().find(x => x[0] === r); const g = GPAGES.find(x => x[0] === r);
@@ -671,7 +683,8 @@ function applyRoute(r){
   else if (g){ page = g[2]; if (r === 'links') S.linkSubj = 'all'; }
   else if (r === 'daily'){ r = 'calendar'; page = 'calendar'; }
   else if (/^links-[a-z]+$/.test(r) && SUBJ.some(x => 'links-' + x[0] === r)){ page = 'links'; S.linkSubj = r.slice(6); }
-  else if (/^t-[A-Za-z0-9_-]+$/.test(r)){ page = 'tab'; if (S.tabId !== r.slice(2)){ S.tabId = r.slice(2); listenRows(); } }
+  else if (/^t-[A-Za-z0-9_-]+$/.test(r)){ page = 'tab'; if (S.tabId !== r.slice(2) || S.tabMine){ S.tabMine = false; S.tabId = r.slice(2); listenRows(); } }
+  else if (/^m-[A-Za-z0-9_-]+$/.test(r)){ space = 'me'; S.meTab = 'ctab'; if (S.tabId !== r.slice(2) || !S.tabMine){ S.tabMine = true; S.tabId = r.slice(2); listenRows(); } }
   else r = 'grade';
   const changed = S.route !== r;
   S.route = r; S.space = space; S.page = page;
@@ -683,6 +696,7 @@ function applyRoute(r){
   $('#v-grade').hidden = space !== 'grade'; $('#v-me').hidden = space !== 'me';
   $('#sw-grade').setAttribute('aria-pressed', space === 'grade'); $('#sw-me').setAttribute('aria-pressed', space === 'me');
   $$('#v-grade .pg').forEach(el => { el.hidden = !el.classList.contains('pg-' + page); });
+  placeTabCard();
   renderStrip(); renderPageHead();
   if (space === 'me') renderMe();
   else { renderCal(); renderDay(); if (page === 'tab') renderTabPage(); if (page === 'ops') renderOps(); if (page === 'lessons') renderLessons(); if (page === 'links' || page === 'main') renderLinks(); if (page === 'notices' || page === 'main'){ renderNotices(); resolveNames(); } if (page === 'budget' && BUD.g) BUD.g.render(); if (page === 'roster' && ROS.g) ROS.g.render(); }
@@ -693,7 +707,7 @@ const tabPrefKey = () => S.space === 'grade' ? 'grade' : (isJD() ? 'jd' : 'me');
 function tabItems(space){
   let items;
   if (space === 'grade') items = GPAGES.map(([r, n]) => ({key:r, href:r, name:pgName('grade', r, n), base:true})).concat(sortedTabs().map(t => ({key:'t:' + t.id, href:'t-' + t.id, name:t.name || '이름 없는 탭', base:false})));
-  else items = curMP().map(([r, n]) => ({key:r, href:r, name:pgName('me', r, n), base:true}));
+  else items = curMP().map(([r, n]) => ({key:r, href:r, name:pgName('me', r, n), base:true})).concat(sortedMTabs().map(t => ({key:'m:' + t.id, href:'m-' + t.id, name:t.name || '이름 없는 탭', base:false})));
   const pf = ((S.profile || {}).tabPrefs || {})[space === 'grade' ? 'grade' : (isJD() ? 'jd' : 'me')] || {};
   const ord = pf.order || [], hid = new Set(pf.hidden || []);
   const pos = k => { const i = ord.indexOf(k); return i < 0 ? 1e4 : i; };
@@ -750,11 +764,11 @@ function renderStrip(){
   const sp = S.space === 'grade' ? 'grade' : 'me';
   let h = '', prevBase = true;
   items.filter(x => !x.hidden || isCur(x)).forEach(x => {
-    if (sp === 'grade' && !custom && prevBase && !x.base) h += '<span class="stab-sep"></span>';
+    if (!custom && prevBase && !x.base) h += '<span class="stab-sep"></span>';
     prevBase = x.base;
     h += `<a class="stab" href="#${esc(x.href)}" data-ren="${esc(x.key)}" title="두 번 누르거나 오른쪽 클릭하면 이름을 바꿔요" ${isCur(x) ? 'aria-current="page"' : ''}>${esc(x.name)}</a>`;
   });
-  if (sp === 'grade' && S.canWrite) h += '<button type="button" class="stab add" data-act="newtab">+ 새 탭</button>';
+  if (sp === 'grade' ? S.canWrite : (S.uid && !S.arc)) h += '<button type="button" class="stab add" data-act="newtab">+ 새 탭</button>';
   if (S.uid) h += '<button type="button" class="stab add ta-open" data-act="tabarrange" title="탭 숨기기·순서 바꾸기">탭 정리</button>';
   if (S.renaming) return;
   $('#sheetbar').innerHTML = h;
@@ -800,7 +814,7 @@ function listenRows(){
   if (!S.db || !S.tabId) return;
   if (S.unsubRows) S.unsubRows();
   const id = S.tabId; S.rows = [];
-  S.unsubRows = S.db.collection(`tabs/${id}/rows`).onSnapshot(snap => {
+  S.unsubRows = S.db.collection(`${tabBase()}/${id}/rows`).onSnapshot(snap => {
     if (id !== S.tabId) return;
     S.rows = docs(snap); renderTabPage();
   }, () => {});
@@ -813,17 +827,17 @@ function renderTabList(){
 }
 function cellVal(r, c){ const v = (r.cells || {})[c.id]; return v === undefined || v === null ? '' : v; }
 function renderTabPage(){
-  if (S.page !== 'tab') return;
-  renderPageHead();
-  const t = S.tabs.find(x => x.id === S.tabId);
+  if (!inTabView()) return;
+  if (!S.tabMine) renderPageHead();
+  const t = curTabs().find(x => x.id === S.tabId);
   if (!t){
-    $('#tab-title').textContent = S.pending.has('tabs') || !S.db ? '불러오는 중…' : '없는 탭이에요';
+    $('#tab-title').textContent = S.pending.has(S.tabMine ? 'mtabs' : 'tabs') || !S.db ? '불러오는 중…' : '없는 탭이에요';
     $('#tab-count').textContent = '';
     $('#tab-table').innerHTML = '<p class="empty">이 탭은 지워졌거나 아직 불러오지 못했어요. 위 탭 막대에서 다른 탭을 골라 주세요.</p>';
     $('#tab-edit').hidden = true; $('#tab-del').hidden = true; $('#row-add').hidden = true; $('#tab-addimg').hidden = true; $('#tab-budget').innerHTML = ''; return;
   }
   $('#tab-edit').hidden = false; $('#tab-del').hidden = false; $('#row-add').hidden = false;
-  { const tb = (S.tabs || []).find(x => x.id === S.tabId); $('#tab-addimg').hidden = !tb || (tb.cols || []).some(c => c.type === 'image' && !c.hidden); }
+  { const tb = curTabs().find(x => x.id === S.tabId); $('#tab-addimg').hidden = !tb || (tb.cols || []).some(c => c.type === 'image' && !c.hidden); }
   renderBudget(t);
   $('#tab-title').textContent = t.name;
   const ae = document.activeElement;
@@ -832,8 +846,8 @@ function renderTabPage(){
   const rows = S.rows.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
   $('#tab-count').textContent = `${rows.length}줄`;
   if (!cols.length){ $('#tab-table').innerHTML = '<p class="empty">보이는 열이 없어요. "탭·열 고치기"에서 열을 추가하거나 되살려 주세요.</p>'; return; }
-  const dis = S.canWrite ? '' : 'disabled';
-  const head = `<tr><th class="idx">#</th>${cols.map(c => `<th>${esc(c.name)}<small>${TYPE_LABEL[c.type] || ''}</small></th>`).join('')}${S.canWrite ? '<th class="del"></th>' : ''}</tr>`;
+  const dis = tabCan() ? '' : 'disabled';
+  const head = `<tr><th class="idx">#</th>${cols.map(c => `<th>${esc(c.name)}<small>${TYPE_LABEL[c.type] || ''}</small></th>`).join('')}${tabCan() ? '<th class="del"></th>' : ''}</tr>`;
   const body = rows.map((r, i) => `<tr><td class="idx">${i + 1}</td>${cols.map(c => {
     const v = cellVal(r, c), a = `data-row="${esc(r.id)}" data-col="${esc(c.id)}" id="c-${esc(r.id)}-${esc(c.id)}" aria-label="${i + 1}번째 줄 ${esc(c.name)}"`;
     if (c.type === 'check') return `<td class="ck"><button type="button" class="tick" data-act="cell-tick" ${a} ${dis}>${v ? '✓' : ''}</button></td>`;
@@ -841,16 +855,16 @@ function renderTabPage(){
     if (c.type === 'date') return `<td><input type="date" ${a} value="${esc(v)}" ${dis}></td>`;
     if (c.type === 'image'){
       const refs = Array.isArray(v) ? v : [];
-      return `<td><div class="imgcell" ${S.canWrite ? 'tabindex="0"' : ''} data-row="${esc(r.id)}" data-col="${esc(c.id)}" aria-label="${i + 1}번째 줄 ${esc(c.name)}. 사진을 붙여넣거나 눌러서 고르세요">${thumbsHtml(refs, S.canWrite ? `cell|${r.id}|${c.id}` : '')}${refs.length ? '' : `<span class="ph">${S.canWrite ? '눌러서 고르거나 Ctrl+V' : ''}</span>`}</div></td>`;
+      return `<td><div class="imgcell" ${tabCan() ? 'tabindex="0"' : ''} data-row="${esc(r.id)}" data-col="${esc(c.id)}" aria-label="${i + 1}번째 줄 ${esc(c.name)}. 사진을 붙여넣거나 눌러서 고르세요">${thumbsHtml(refs, tabCan() ? `cell|${r.id}|${c.id}` : '')}${refs.length ? '' : `<span class="ph">${tabCan() ? '눌러서 고르거나 Ctrl+V' : ''}</span>`}</div></td>`;
     }
     return `<td><input type="text" ${a} value="${esc(v)}" ${dis}></td>`;
-  }).join('')}${S.canWrite ? `<td class="del"><button type="button" class="xrow ${S.armed === 'row:' + r.id ? 'armed' : ''}" data-act="row-del" data-id="${esc(r.id)}" aria-label="${i + 1}번째 줄 지우기">${S.armed === 'row:' + r.id ? '지우기?' : '×'}</button></td>` : ''}</tr>`).join('');
+  }).join('')}${tabCan() ? `<td class="del"><button type="button" class="xrow ${S.armed === 'row:' + r.id ? 'armed' : ''}" data-act="row-del" data-id="${esc(r.id)}" aria-label="${i + 1}번째 줄 지우기">${S.armed === 'row:' + r.id ? '지우기?' : '×'}</button></td>` : ''}</tr>`).join('');
   const needFoot = cols.some(c => c.type === 'number' || c.type === 'check');
   const foot = needFoot ? `<tfoot><tr><td class="idx">합계</td>${cols.map(c => {
     if (c.type === 'number'){ const sum = rows.reduce((s, r) => s + (Number(cellVal(r, c)) || 0), 0); return `<td class="num">${sum.toLocaleString('ko-KR')}</td>`; }
     if (c.type === 'check') return `<td style="text-align:center">${rows.filter(r => cellVal(r, c)).length}/${rows.length}</td>`;
     return '<td></td>';
-  }).join('')}${S.canWrite ? '<td></td>' : ''}</tr></tfoot>` : '';
+  }).join('')}${tabCan() ? '<td></td>' : ''}</tr></tfoot>` : '';
   $('#tab-table').innerHTML = `<div class="tablewrap"><table class="grid"><thead>${head}</thead><tbody>${body || `<tr><td colspan="${cols.length + 2}" class="hint" style="padding:14px">아직 줄이 없어요. 아래 "+ 줄 추가"를 눌러 주세요.</td></tr>`}</tbody>${foot}</table></div>`;
   if (S.focusRow){
     const f = $(`#tab-table input[data-row="${S.focusRow}"]`) || $(`#tab-table button[data-row="${S.focusRow}"]`);
@@ -861,7 +875,9 @@ function renderTplPicker(){
   $('#nt-tpls').innerHTML = TEMPLATES.map(t => `<button type="button" data-tpl="${t.key}" aria-pressed="${S.newTpl === t.key}">${t.name}<small>${t.desc}</small></button>`).join('');
 }
 function openNewTab(){
-  if (!S.db || !S.canWrite){ toast('학년 탭을 만들려면 편집 권한이 필요해요.'); return; }
+  S.newTabMine = S.space === 'me';
+  if (S.newTabMine ? !(S.db && S.uid) : (!S.db || !S.canWrite)){ toast(S.newTabMine ? '로그인한 상태로 열어야 탭을 만들 수 있어요.' : '학년 탭을 만들려면 편집 권한이 필요해요.'); return; }
+  $('#nt-form h2').textContent = S.newTabMine ? '나의 공간 새 탭 (나만 봐요)' : '새 학년 탭 (동학년 모두 봐요)';
   S.newTpl = 'blank'; $('#nt-name').value = ''; renderTplPicker(); openDlg('#dlg-newtab');
 }
 function syncEditCols(){
@@ -1972,11 +1988,11 @@ function renderMe(){
   $('#me-on').hidden = !S.privateOk && !!S.privateOffMsg;
   if (S.privateOffMsg) $('#me-off-text').textContent = S.privateOffMsg;
   $$('#me-tabs button').forEach(b => { b.setAttribute('aria-selected', b.dataset.tab === S.meTab); const m = MPAGES.find(x => x[2] === b.dataset.tab); if (m){ if (!b.dataset.def) b.dataset.def = b.textContent; b.textContent = (S.profile.pageNames || {})[m[0]] || b.dataset.def; } });
-  ['day', 'plan', 'todo', 'stu', 'cns', 'att', 'sheet', 'tt', 'budget', 'roster', 'mops', 'jday', 'jtt', 'jles', 'jprog', 'jcls', 'eval'].forEach(t => { $('#p-' + t).hidden = S.meTab !== t; });
+  ['day', 'plan', 'todo', 'stu', 'cns', 'att', 'sheet', 'tt', 'budget', 'roster', 'mops', 'jday', 'jtt', 'jles', 'jprog', 'jcls', 'eval', 'ctab'].forEach(t => { $('#p-' + t).hidden = S.meTab !== t; });
   placeStuCol();
   $('#me-top').hidden = S.meTab !== 'day';
   renderToday(); renderNotes(); renderCats(); renderJPreview(); renderStage('j'); renderStage('cns'); renderStage('stu');
-  ({day:renderDayBoard, plan:renderPlanPage, todo:renderTodo, stu:renderStu, cns:renderCns, att:renderAtt, sheet:renderSheet, tt:renderTT, budget:() => BUD.m && BUD.m.render(), roster:renderRoster, mops:() => renderOps(OPM), jday:renderJDay, jtt:renderJTT, jles:renderJLes, jprog:renderJProg, jcls:renderJCls, eval:renderEval})[S.meTab]();
+  ({day:renderDayBoard, plan:renderPlanPage, todo:renderTodo, stu:renderStu, cns:renderCns, att:renderAtt, sheet:renderSheet, tt:renderTT, budget:() => BUD.m && BUD.m.render(), roster:renderRoster, mops:() => renderOps(OPM), jday:renderJDay, jtt:renderJTT, jles:renderJLes, jprog:renderJProg, jcls:renderJCls, eval:renderEval, ctab:() => { placeTabCard(); renderTabPage(); }})[S.meTab]();
 }
 function renderAll(){ renderGrade(); if (S.space === 'me') renderMe(); }
 
@@ -2115,6 +2131,7 @@ function startPrivate(){
     });
     listen(db.doc(PROFILE()).collection('phrases'), 'mphrases', snap => { S.phM = docs(snap); if (S.page === 'ops') renderPhrases(); });
     listen(db.doc(PROFILE()).collection('ops'), 'mops', snap => { S.mops = docs(snap); if (S.space === 'me' && S.meTab === 'mops') renderOps(OPM); });
+    listen(db.doc(PROFILE()).collection('tabs'), 'mtabs', snap => { S.mtabs = docs(snap); renderStrip(); if (inTabView() && S.tabMine) renderTabPage(); });
     listen(db.doc(PROFILE()).collection('budget'), 'mbudget', snap => { S.budM = docs(snap); if (S.space === 'me' && S.meTab === 'budget') BUD.m.render(); });
     listen(db.doc(PROFILE()).collection('journal'), 'journal', snap => { S.journal = docs(snap); if (S.space === 'me') renderMe(); gcalSoon(); attTidySoon(); });
     listen(db.doc(NOTES()), 'notes', snap => {
@@ -2331,9 +2348,9 @@ document.addEventListener('click', async ev => {
   } else if (act === 'cell-tick'){
     const r = S.rows.find(x => x.id === a.dataset.row); if (!r) return;
     const cur = (r.cells || {})[a.dataset.col];
-    try { await S.db.doc(`tabs/${S.tabId}/rows/${a.dataset.row}`).update({cells:{[a.dataset.col]:!cur}}); } catch (er){ wErr(er, true); }
+    try { await S.db.doc(`${tabBase()}/${S.tabId}/rows/${a.dataset.row}`).update({cells:{[a.dataset.col]:!cur}}); } catch (er){ wErr(er, true); }
   } else if (act === 'row-del'){
-    if (arm('row:' + id)){ S.armed = null; const r = S.rows.find(x => x.id === id); try { await S.db.doc(`tabs/${S.tabId}/rows/${id}`).delete(); Object.values((r && r.cells) || {}).forEach(v => { if (Array.isArray(v)) v.forEach(dropImage); }); } catch (er){ wErr(er, true); } }
+    if (arm('row:' + id)){ S.armed = null; const r = S.rows.find(x => x.id === id); try { await S.db.doc(`${tabBase()}/${S.tabId}/rows/${id}`).delete(); Object.values((r && r.cells) || {}).forEach(v => { if (Array.isArray(v)) v.forEach(dropImage); }); } catch (er){ wErr(er, true); } }
     else renderTabPage();
   } else if (act === 'todo-toggle'){
     if (a.dataset.src === 'me'){ try { await S.db.doc(PROFILE()).collection('journal').doc(id).update({done:true}); toast('끝냈어요.'); spawnNext('entry', S.journal.find(x => x.id === id)); } catch (er){ wErr(er, false); } }
@@ -2754,11 +2771,11 @@ $('#th-write').onclick = () => {
 };
 
 $('#tab-table').addEventListener('change', async e => {
-  const inp = e.target.closest('input[data-row]'); if (!inp || !S.canWrite) return;
+  const inp = e.target.closest('input[data-row]'); if (!inp || !tabCan()) return;
   let v = inp.value.trim();
   if (inp.type === 'number') v = v === '' ? null : Number(v);
   if (v === '') v = null;
-  try { await S.db.doc(`tabs/${S.tabId}/rows/${inp.dataset.row}`).update({cells:{[inp.dataset.col]:v}}); } catch (er){ wErr(er, true); }
+  try { await S.db.doc(`${tabBase()}/${S.tabId}/rows/${inp.dataset.row}`).update({cells:{[inp.dataset.col]:v}}); } catch (er){ wErr(er, true); }
 });
 $('#tab-table').addEventListener('keydown', e => {
   const inp = e.target.closest('input[data-row]'); if (!inp || e.key !== 'Enter') return;
@@ -2769,12 +2786,12 @@ $('#tab-table').addEventListener('keydown', e => {
 $('#tab-table').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest('#tab-table'))) renderTabPage(); }, 0));
 $('#row-add').onclick = async () => {
   if (!S.db || !S.tabId) return;
-  const ref = S.db.collection(`tabs/${S.tabId}/rows`).doc();
+  const ref = S.db.collection(`${tabBase()}/${S.tabId}/rows`).doc();
   S.focusRow = ref.id;
   try { await ref.set({cells:{}, order:Date.now(), createdBy:S.uid}); } catch (er){ S.focusRow = null; wErr(er, true); }
 };
 $('#tab-export').onclick = () => {
-  const t = S.tabs.find(x => x.id === S.tabId); if (!t) return;
+  const t = curTabs().find(x => x.id === S.tabId); if (!t) return;
   const cols = (t.cols || []).filter(c => !c.hidden);
   const rows = [cols.map(c => c.name)];
   S.rows.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(r => rows.push(cols.map(c => { const v = cellVal(r, c); return c.type === 'check' ? (v ? 'O' : '') : c.type === 'image' ? (Array.isArray(v) && v.length ? `사진 ${v.length}장` : '') : v; })));
@@ -2784,20 +2801,20 @@ $('#nt-form').addEventListener('submit', async ev => {
   ev.preventDefault();
   const tpl = TEMPLATES.find(t => t.key === S.newTpl) || TEMPLATES[0];
   const name = $('#nt-name').value.trim() || (tpl.key === 'blank' ? '새 탭' : tpl.name);
-  const ref = S.db.collection('tabs').doc();
+  const mine = !!S.newTabMine, ref = S.db.collection(mine ? `${PROFILE()}/tabs` : 'tabs').doc();
   try { await ref.set({name, cols:tpl.cols.map(([n, t]) => ({id:cid(), name:n, type:t})), createdAt:Date.now(), createdBy:S.uid}); }
-  catch (er){ wErr(er, true); return; }
-  closeDlgs(); toast(`"${name}" 탭을 만들었어요.`); go('t-' + ref.id);
+  catch (er){ wErr(er, !mine); return; }
+  closeDlgs(); toast(`"${name}" 탭을 만들었어요.${mine ? ' 나만 보는 탭이에요.' : ''}`); go((mine ? 'm-' : 't-') + ref.id);
 });
 $('#tab-addimg').onclick = async () => {
-  const tb = (S.tabs || []).find(x => x.id === S.tabId); if (!tb) return;
+  const tb = curTabs().find(x => x.id === S.tabId); if (!tb) return;
   const cols = (tb.cols || []).map(c => Object.assign({}, c));
   const old = cols.find(c => c.type === 'image');
   if (old) old.hidden = false; else cols.push({id:cid(), name:'사진', type:'image'});
-  try { await S.db.doc('tabs/' + S.tabId).update({cols}); toast('사진 칸을 만들었어요. 칸을 누르거나 사진을 복사해 Ctrl+V로 붙여 넣어요.'); } catch (er){ wErr(er, true); }
+  try { await S.db.doc(tabBase() + '/' + S.tabId).update({cols}); toast('사진 칸을 만들었어요. 칸을 누르거나 사진을 복사해 Ctrl+V로 붙여 넣어요.'); } catch (er){ wErr(er, true); }
 };
 $('#tab-edit').onclick = () => {
-  const t = S.tabs.find(x => x.id === S.tabId); if (!t) return;
+  const t = curTabs().find(x => x.id === S.tabId); if (!t) return;
   S.editCols = JSON.parse(JSON.stringify(t.cols || []));
   $('#tb-name').value = t.name || ''; renderEditCols(); fillBudgetForm(t);
   $('#tb-del').textContent = '탭 지우기'; $('#tb-del').classList.remove('armed');
@@ -2808,17 +2825,19 @@ $('#tb-form').addEventListener('submit', async ev => {
   ev.preventDefault();
   syncEditCols();
   const name = $('#tb-name').value.trim() || '이름 없는 탭';
-  try { await S.db.doc('tabs/' + S.tabId).update({name, cols:S.editCols, budget:readBudgetForm()}); closeDlgs(); toast('탭을 고쳤어요.'); } catch (er){ wErr(er, true); }
+  try { await S.db.doc(tabBase() + '/' + S.tabId).update({name, cols:S.editCols, budget:readBudgetForm()}); closeDlgs(); toast('탭을 고쳤어요.'); } catch (er){ wErr(er, true); }
 });
 async function deleteTab(id){
-  if (!S.canWrite){ toast('학년 공간을 고칠 권한이 없어요.'); return; }
-  const t = S.tabs.find(x => x.id === id);
+  const mine = S.tabMine && S.tabId === id, base = mine ? `${PROFILE()}/tabs` : 'tabs';
+  if (mine ? !S.uid : !S.canWrite){ toast('고칠 권한이 없어요.'); return; }
+  const t = (mine ? S.mtabs || [] : S.tabs).find(x => x.id === id);
   try {
-    const snap = await S.db.collection(`tabs/${id}/rows`).get();
-    for (const d of snap.docs){ const cells = (d.data() || {}).cells || {}; Object.values(cells).forEach(v => { if (Array.isArray(v)) v.forEach(dropImage); }); await S.db.doc(`tabs/${id}/rows/${d.id}`).delete(); }
-    await S.db.doc('tabs/' + id).delete();
+    const snap = await S.db.collection(`${base}/${id}/rows`).get();
+    for (const d of snap.docs){ const cells = (d.data() || {}).cells || {}; Object.values(cells).forEach(v => { if (Array.isArray(v)) v.forEach(dropImage); }); await S.db.doc(`${base}/${id}/rows/${d.id}`).delete(); }
+    await S.db.doc(base + '/' + id).delete();
     closeDlgs(); toast(`"${(t && t.name) || '탭'}" 탭을 지웠어요.`);
     if (S.route === 't-' + id) go('grade');
+    if (S.route === 'm-' + id) go('me');
   } catch (er){ wErr(er, true); }
 }
 $('#tb-del').onclick = () => {
@@ -2826,7 +2845,7 @@ $('#tb-del').onclick = () => {
   if (!b.classList.contains('armed')){ b.classList.add('armed'); b.textContent = '줄까지 모두 지워져요. 한 번 더 누르기'; return; }
   deleteTab(S.tabId);
 };
-$('#tab-del').onclick = () => { const b = $('#tab-del'); if (!twoStep(b, '모든 선생님 화면에서 지워져요. 한 번 더 누르기')) return; deleteTab(S.tabId); };
+$('#tab-del').onclick = () => { const b = $('#tab-del'); if (!twoStep(b, S.tabMine ? '줄까지 모두 지워져요. 한 번 더 누르기' : '모든 선생님 화면에서 지워져요. 한 번 더 누르기')) return; deleteTab(S.tabId); };
 $('#tablist').addEventListener('click', e => { const b = e.target.closest('[data-tab-del]'); if (!b) return; if (!twoStep(b, '정말 지우기')) return; deleteTab(b.dataset.tabDel); });
 const shiftDay = n => {
   const d = addDays(fromYmd(S.selDate), n); S.selDate = ymd(d);
@@ -4516,6 +4535,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '나의 공간에도 탭 줄 끝 "+ 새 탭"으로 나만 보는 표 탭을 만들 수 있어요. 학년 탭처럼 빈 표·체크리스트·학습준비물 같은 틀로 시작해요.',
     '예산: 학교에서는 품의와 동시에 집행되니까 요구금액·집행액을 나누지 않고 "사용액" 하나로 보여요. 내역 종류도 사용·증액·감액만 남겼어요.',
     '예산: "에듀파인 품의 화면 캡처로 넣기"에 품의 화면을 캡처해 붙이면 글자를 읽어 예산 줄·품의 내용·산출내역·금액을 채워 보여 줘요. 확인하고 "넣기"를 누르면 들어가요.',
     '예산 "내역"을 열면 쓴 돈 적는 칸에 날짜·종류·어디에 썼나요·산출내역·금액 이름이 붙고, 종류마다 무슨 뜻인지 설명이 나와요. 산출내역은 큰 칸 대신 내역 표의 "내용"과 "금액" 사이 칸에 적어요.',
@@ -6062,7 +6082,7 @@ function startRename(a){
   const key = a.dataset.ren; if (!key || S.arc) return;
   const isMe = S.space === 'me';
   if (isMe ? !S.uid : !S.canWrite){ toast(isMe ? '로그인한 상태에서만 바꿀 수 있어요.' : '학년 공간을 고칠 권한이 없어요.'); return; }
-  const def = key.startsWith('t:') ? '' : ((isMe ? curMP() : GPAGES).find(x => x[0] === key) || [])[1] || '';
+  const def = key.startsWith('t:') || key.startsWith('m:') ? '' : ((isMe ? curMP() : GPAGES).find(x => x[0] === key) || [])[1] || '';
   S.renaming = true;
   const old = a.textContent;
   a.innerHTML = `<input class="ren-in" value="${esc(old)}" maxlength="20" aria-label="탭 이름" style="width:${Math.max(4, old.length + 2)}em">`;
@@ -6074,6 +6094,7 @@ function startRename(a){
     if (ok && v !== old){
       try {
         if (key.startsWith('t:')){ if (v) await S.db.doc('tabs/' + key.slice(2)).update({name:v}); }
+        else if (key.startsWith('m:')){ if (v) await S.db.doc(`${PROFILE()}/tabs/` + key.slice(2)).update({name:v}); }
         else if (isMe){ const m = Object.assign({}, S.profile.pageNames || {}); if (!v || v === def) delete m[key]; else m[key] = v; S.profile.pageNames = m; saveProfile(); }
         else { const m = Object.assign({}, S.settings.pageNames || {}); if (!v || v === def) delete m[key]; else m[key] = v; S.settings.pageNames = m; await S.db.doc('grade/settings').set(Object.assign({}, S.settings, {pageNames:m})); }
         toast(v ? `탭 이름을 "${v}"(으)로 바꿨어요.` : '원래 이름으로 돌렸어요.');
