@@ -634,7 +634,7 @@ function openLightbox(src){ if (!src) return; $('#lb-img').src = src; $('#lightb
 /* ---------- pages (tabs) ---------- */
 const GPAGES = [['grade','오늘','main'],['calendar','달력','calendar'],['lessons','특별수업','lessons'],['tasks','할 일','tasks'],['notices','협의·공지','notices'],['links','수업자료','links'],['ops','운영자료','ops'],['budget','예산','budget'],['roster','명부','roster']];
 const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출석부','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-roster','명부','roster'],['me-ops','자료','mops']];
-const JPAGES = [['me','오늘 수업','jday'],['me-jles','수업일지','jles'],['me-jprog','진도표','jprog'],['me-jcls','반별 명렬','jcls'],['me-jtt','시간표·시수','jtt'],['me-todo','할 일','todo'],['me-cns','상담일지','cns'],['me-budget','예산','budget'],['me-ops','자료','mops']];
+const JPAGES = [['me','수업일지','jday'],['me-jprog','진도표','jprog'],['me-jcls','반별 명렬','jcls'],['me-jtt','시간표·시수','jtt'],['me-todo','할 일','todo'],['me-cns','상담일지','cns'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const isJD = () => !!(S.profile && S.profile.role === 'jd');
 const curMP = () => isJD() ? JPAGES : MPAGES;
 const PAGE_DESC = {
@@ -676,6 +676,7 @@ function placeTabCard(){
 }
 function applyRoute(r){
   let space = 'grade', page = 'main';
+  if (r === 'me-jles'){ JV.set('detail'); r = 'me'; try { history.replaceState(null, '', '#me'); } catch (e){} }
   let m = curMP().find(x => x[0] === r); const g = GPAGES.find(x => x[0] === r);
   let redirected = false;
   if (!m && (MPAGES.concat(JPAGES)).some(x => x[0] === r)){ if (!S.profileLoaded && !S.pendDone) S.pendRoute = r; r = 'me'; m = curMP()[0]; redirected = true; try { history.replaceState(null, '', '#me'); } catch (e){} }
@@ -1986,6 +1987,8 @@ function renderRosterQuick(){
   $('#r-text').value = (S.profile.roster || []).map(r => [r.no, r.name, r.sex].filter(Boolean).join(' ')).join('\n');
 }
 function renderMe(){
+  if (isJD() && (S.meTab === 'jday' || S.meTab === 'jles')) S.meTab = JV.v === 'detail' ? 'jles' : 'jday';
+  $$('.jv-seg [data-jv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.jv === JV.v));
   renderHeader();
   $('#me-off').hidden = S.privateOk || !S.privateOffMsg;
   $('#me-on').hidden = !S.privateOk && !!S.privateOffMsg;
@@ -4569,7 +4572,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
-    '전담 "오늘 수업"도 한 주 보기로 열려요. 요일 × 교시 칸에 들어가는 반이 나와 있고, 대충의 차시만 짧게 적으면 돼요. 아래에는 고른 날 메모를 적어요.',
+    '전담: "오늘 수업"과 "수업일지"를 "수업일지" 한 탭으로 합쳤어요. 위에서 한 주 간단히(요일×교시 표에 차시 한 줄) · 한 주 자세히(활동·준비물·특이사항, 똑같이 버튼) · 하루(카드)를 골라요. 아래에는 고른 날 메모를 적어요.',
     '나의 공간 "수업 계획"이 한 주 보기로 열려요. 요일 × 교시 칸에 과목이 들어가 있고, 단원·주제만 짧게 적으면 돼요. 요일 이름을 누르면 그날을 자세히 써요.',
     '명부 "칸 정리"에서 칸 제목을 바꾸고 순서도 바꿀 수 있어요 (내 화면에만). 바깥을 누르면 닫혀요. 탭 정리·과목 정리·칸 정리 모두 ⤒ 맨 위로, ⤓ 맨 아래로 버튼이 생겼어요.',
     '입력 창들을 요즘 앱처럼 바꿨어요. 오른쪽 위 ×로 닫고, 아래는 "취소 · 저장" (저장하면 바로 닫혀요). 글칸에서 Ctrl+Enter를 눌러도 저장돼요.',
@@ -4724,6 +4727,13 @@ function maybeShowNews(){
 function blurIn(sel){ const a = document.activeElement; if (a && a.closest && a.closest(sel) && a.blur) a.blur(); }
 const PP_F = [['t', '단원 · 주제', '3단원 분수 (2/8차시)', 1], ['a', '수업 활동', '도입 - 전개 - 정리', 1], ['p', '준비물 · 메모', '활동지 25장', 1], ['r', '되돌아보기', '잘된 점, 다음에 챙길 것', 1]];
 /* 한 주 보기: 요일 × 교시에 과목과 "단원·주제" 한 줄만 (자세한 건 하루 보기) */
+/* 전담 수업일지 보기: 한 주 간단히(표) · 한 주 자세히(줄 목록) · 하루(카드) — 한 탭에서 골라요 */
+var JV = {v:(() => { try { const x = localStorage.getItem('gyomu.jv'); return ['week', 'detail', 'day'].includes(x) ? x : 'week'; } catch (e){ return 'week'; } })(),
+  set(v){ this.v = v; try { localStorage.setItem('gyomu.jv', v); } catch (e){} } };
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.jv-seg [data-jv]'); if (!b) return;
+  blurIn('#p-jday'); blurIn('#p-jles'); JV.set(b.dataset.jv); renderMe();
+});
 const PPW = {cache:{}, view:(() => { try { return localStorage.getItem('gyomu.ppView') || 'week'; } catch (e){ return 'week'; } })()};
 async function ppWeekLoad(days){
   const need = days.filter(k => k !== S.jDate && !PPW.cache[k]);
@@ -5199,7 +5209,7 @@ function jdDayClasses(k){
   return Array.from({length:6}, (_, p) => jdCell(mon, w, p));
 }
 /* 전담 오늘 수업: 한 주 보기 (요일 × 교시, 반과 차시 한 줄) */
-const JDW = {view:(() => { try { return localStorage.getItem('gyomu.jdView') || 'week'; } catch (e){ return 'week'; } })()};
+const JDW = {view:'week'};
 async function renderJDayWeek(){
   const k = S.jDate, mon = mondayOf(k), days = [0, 1, 2, 3, 4].map(i => ymd(addDays(fromYmd(mon), i))), m0 = fromYmd(mon), f0 = fromYmd(days[4]);
   $('#jd-label').textContent = `${m0.getMonth() + 1}월 ${m0.getDate()}일 ~ ${f0.getMonth() + 1}월 ${f0.getDate()}일`; $('#jd-date').value = k;
@@ -5228,11 +5238,11 @@ async function renderJDayWeek(){
 $('#jd-week').addEventListener('input', e => { if (e.target.matches('textarea')) growTa(e.target); });
 $('#jd-week').addEventListener('change', jdLogChange);
 $('#jd-week').addEventListener('click', e => { const b = e.target.closest('[data-jd-day]'); if (!b) return; blurIn('#p-jday'); setJDate(b.dataset.jdDay); renderJDay(); setTimeout(() => $('#jd-memo').focus(), 50); });
-$('#jd-view').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; JDW.view = b.dataset.v; try { localStorage.setItem('gyomu.jdView', JDW.view); } catch (er){} renderJDay(); });
+
 function renderJDay(){
   if (S.meTab !== 'jday') return;
+  JDW.view = JV.v === 'day' ? 'day' : 'week';
   const wk = JDW.view === 'week';
-  $$('#jd-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === JDW.view));
   $('#jd-week').hidden = !wk; $('#jd-whint').hidden = !wk; $('#jd-cards').hidden = wk;
   $('#jd-prev').setAttribute('aria-label', wk ? '지난주' : '전날'); $('#jd-next').setAttribute('aria-label', wk ? '다음 주' : '다음 날'); $('#jd-today').textContent = wk ? '이번 주' : '오늘';
   if (wk){ renderJDayWeek(); return; }
@@ -5355,8 +5365,8 @@ async function jlLoadWeek(force){
 async function renderJLes(noFetch){
   if (S.meTab !== 'jles') return;
   const wk = JLW.view === 'week', k = S.jDate;
-  $$('#jl-view button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === JLW.view));
-  $('#jl-memo-wrap').hidden = wk;
+  $('#jl-today').textContent = '이번 주'; $('#jl-prev').setAttribute('aria-label', '지난주'); $('#jl-next').setAttribute('aria-label', '다음 주');
+  $('#jl-memo-wrap').hidden = false; $('#jl-memo-lab').textContent = `${fmtMD(k)} 메모`; if (document.activeElement !== $('#jl-memo')) $('#jl-memo').value = (S.day || {}).memo || '';
   if (wk){ const m = fromYmd(mondayOf(k)), f = addDays(m, 4); $('#jl-label').textContent = `${m.getMonth() + 1}월 ${m.getDate()}일 ~ ${f.getMonth() + 1}월 ${f.getDate()}일`; }
   else $('#jl-label').textContent = fmtLong(k);
   $('#jl-date').value = k;
@@ -5420,8 +5430,7 @@ $('#p-jles').addEventListener('focusout', () => setTimeout(() => { if (!(documen
 const jlGo = k => { blurIn('#p-jles'); setJDate(k); renderJLes(); };
 $('#jl-prev').onclick = () => jlGo(ymd(addDays(fromYmd(S.jDate), JLW.view === 'week' ? -7 : -1)));
 $('#jl-next').onclick = () => jlGo(ymd(addDays(fromYmd(S.jDate), JLW.view === 'week' ? 7 : 1)));
-$('#jl-view').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; JLW.view = b.dataset.v; try { localStorage.setItem('jlView', JLW.view); } catch (er){} renderJLes(); });
-try { const v = localStorage.getItem('jlView'); if (v === 'day' || v === 'week') JLW.view = v; } catch (e){}
+
 $('#jl-today').onclick = () => jlGo(ymd(today()));
 $('#jl-date').addEventListener('change', e => { if (e.target.value) jlGo(e.target.value); });
 function jlParse(text, g){
