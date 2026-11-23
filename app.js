@@ -166,7 +166,7 @@ const catStyle = c => `style="--c:var(${CATVAR[c] || '--c-memo'})"`;
 
 const S = {
   space:'grade', db:null, user:null, dl:null, uid:null, canWrite:true, privateOk:false,
-  settings:{gradeName:'3학년', classCount:4, lunchAfter:3},
+  settings:{gradeName:(() => { try { return localStorage.getItem('gyomu.gradeName') || ''; } catch (e){ return ''; } })(), classCount:4, lunchAfter:3},
   events:[], tasks:[], notices:[], links:[], daily:null,
   profile:{myClass:'', roster:[]}, journal:[], sheet:{items:[], values:{}},
   month:(() => { const d = today(); return new Date(d.getFullYear(), d.getMonth(), 1); })(),
@@ -760,7 +760,7 @@ function termCountdown(){
   return `<span class="cd-i">이번 학기 등교일 <b>${n}일</b> 남음</span><span class="cd-i">${vac} <b>${d.getMonth() + 1}월 ${d.getDate()}일(${WD[d.getDay()]})</b> ${esc(e.name)}</span><span class="cd-i dday">${dd === 0 ? 'D-DAY' : 'D-' + dd}</span>`;
 }
 function renderPageHead(){
-  const g = S.settings.gradeName || '3학년';
+  const g = S.settings.gradeName || '학년';
   let title = `${g} 공간`;
   if (S.page === 'tab'){ const t = S.tabs.find(x => x.id === S.tabId); title = t ? t.name : `${g} 탭`; }
   else if (S.page !== 'main'){ const p = GPAGES.find(x => x[2] === S.page); title = `${g} · ${p ? pgName('grade', p[0], p[1]) : ''}${S.page === 'links' && S.linkSubj && S.linkSubj !== 'all' ? ' · ' + subjName(S.linkSubj) : ''}`; }
@@ -863,9 +863,11 @@ function renderEditCols(){
 
 /* ---------- grade render ---------- */
 function renderHeader(){
-  const g = S.settings.gradeName || '3학년';
-  $('#brand-name').textContent = `${g} 교무수첩`;
-  $('#g-heading').textContent = `${g} 공간`;
+  /* 학년 이름은 불러오기 전엔 비워 둬요 (다른 학년이 잠깐 3학년으로 보이지 않게). 한 번 불러오면 이 기기에 기억해요 */
+  const g = S.settings.gradeName || '';
+  $('#brand-name').textContent = g ? `${g} 교무수첩` : '교무수첩';
+  $('#g-heading').textContent = g ? `${g} 공간` : '학년 공간';
+  document.title = g ? `${g} 교무수첩` : '교무수첩';
   const d = today(); $('#brand-date').textContent = `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. ${WD[d.getDay()]}요일`;
   $('#me-class').textContent = isJD() ? `${(S.jd && S.jd.subject) || '교과'} 전담` : S.profile.myClass ? `${g} ${clsLabel(S.profile.myClass)}` : '우리 반';
   const ask = $('#cls-ask');
@@ -2008,7 +2010,7 @@ function listenDaily(){
 }
 function startListening(){
   const db = S.db;
-  listen(db.doc('grade/settings'), 'settings', snap => { if (snap.exists) S.settings = Object.assign({gradeName:'3학년', classCount:4, lunchAfter:3}, snap.data()); renderHeader(); renderPageHead(); renderMeal(); if (S.space === 'me') renderMe(); else if (S.page === 'budget') BUD.g.render(); else if (S.page === 'roster') ROS.g.render(); });
+  listen(db.doc('grade/settings'), 'settings', snap => { if (snap.exists){ S.settings = Object.assign({gradeName:'3학년', classCount:4, lunchAfter:3}, snap.data()); try { localStorage.setItem('gyomu.gradeName', S.settings.gradeName || ''); } catch (e){} } renderHeader(); renderPageHead(); renderMeal(); if (S.space === 'me') renderMe(); else if (S.page === 'budget') BUD.g.render(); else if (S.page === 'roster') ROS.g.render(); });
   listen(db.collection('events'), 'events', snap => { S.events = docs(snap); renderGradeToday(); renderCal(); renderDay(); renderTasks(); if (S.space === 'me') renderToday(); gcalSoon(); });
   listen(db.collection('tasks'), 'tasks', snap => { S.tasks = docs(snap); gcalSoon(); renderGradeToday(); renderCal(); renderDay(); renderTasks(); if (S.space === 'me'){ renderToday(); if (S.meTab === 'todo') renderTodo(); } });
   db.doc('daily/' + ymd(today())).onSnapshot(snap => { S.dailyToday = snap.exists ? snap.data() : null; renderGradeToday(); resolveNames(); }, () => {});
@@ -4269,6 +4271,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '처음 켤 때 학년 이름을 불러오기 전 잠깐 "3학년"으로 보이던 것을 고쳤어요. 이제 "교무수첩"으로 보이다가 우리 학년 이름으로 바뀌고, 두 번째부터는 바로 우리 학년으로 떠요.',
     '특별수업 같은 탭에서 새로고침하거나 다시 열 때 "화면을 불러오다 문제가 생겼어요"가 뜨던 것을 고쳤어요.'
   ]],
   ['2.16', '11월 20일', [
