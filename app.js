@@ -2022,7 +2022,7 @@ function startListening(){
   listen(db.collection('phrases'), 'phrases', snap => { S.phG = docs(snap); if (S.page === 'ops') renderPhrases(); });
   listen(db.doc('grade/units'), 'gunits', snap => { if (busy('grade/units')) return; S.gunits = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {}; renderLinks(); });
   listen(db.doc('grade/memo'), 'gmemo', snap => { S.gmemo = snap.exists ? snap.data() : {}; renderGMemo(); });
-  listen(db.collection('budget'), 'budget', snap => { S.budG = docs(snap); if (S.page === 'budget' && S.space === 'grade') BUD.g.render(); });
+  listen(db.collection('budget'), 'budget', snap => { S.budG = docs(snap); if (S.page === 'budget' && S.space === 'grade') BUD.g.render(); if (S.space === 'me' && S.meTab === 'budget') BUD.m.render(); });
   listen(db.collection('roster'), 'roster', snap => {
     const m = {}; docs(snap).forEach(d => { m[d.id] = d; });
     Object.keys(S.rosG || {}).forEach(k => { if (busy('roster/' + k)) m[k] = S.rosG[k]; });
@@ -3127,10 +3127,13 @@ function makeBudget(key){
   const g = key === 'g';
   const st = {filter:'all', open:new Set()};
   const root = $('#bud-' + key);
-  const list = () => ((g ? S.budG : S.budM) || []).slice().sort((a, b) => (a.order || a.createdAt || 0) - (b.order || b.createdAt || 0));
+  /* 나의 공간 예산에는 학년 예산에서 우리 반으로 정한 줄도 같이 보여요 (고치면 학년 예산에 그대로 저장) */
+  const gradeMine = () => { const my = clsNo(S.profile.myClass); return my ? (S.budG || []).filter(l => l.scope === '학급' && l.cls && clsNo(l.cls) === my).map(l => Object.assign({}, l, {_g:true})) : []; };
+  const list = () => (g ? (S.budG || []) : (S.budM || []).concat(gradeMine())).slice().sort((a, b) => (a.order || a.createdAt || 0) - (b.order || b.createdAt || 0));
   const col = () => g ? S.db.collection('budget') : S.db.doc(PROFILE()).collection('budget');
   const can = () => !!S.db && (g ? S.canWrite : !!S.uid);
   const err = e => wErr(e, g);
+  const colOf = id => { const l = ((g ? S.budG : S.budM) || []).find(x => x.id === id) || (g ? null : gradeMine().find(x => x.id === id)); return l && l._g ? S.db.collection('budget') : col(); };
   const nCls = () => Math.max(1, Math.min(20, +S.settings.classCount || 4));
   const sVal = l => l.scope === '학급' ? (g ? (l.cls || '학급') : '학급') : '학년';
   const match = l => { const f = st.filter; if (f === 'all') return true; if (f === '학년') return l.scope !== '학급'; if (f === '학급') return l.scope === '학급'; return l.scope === '학급' && l.cls === f; };
@@ -3165,7 +3168,7 @@ function makeBudget(key){
   }
   function scopeOpts(l){
     const v = sVal(l); let h = `<option value="학년" ${v === '학년' ? 'selected' : ''}>학년</option>`;
-    if (g){ if (v === '학급') h += '<option value="학급" selected>학급</option>'; for (let i = 1; i <= nCls(); i++) h += `<option value="${i}반" ${v === i + '반' ? 'selected' : ''}>${esc(clsLabel(i + '반'))}</option>`; }
+    if (g){ if (v === '학급') h += '<option value="학급" selected>학급</option>'; h += '<option value="__all">모든 반 (반마다 같은 금액)</option>'; for (let i = 1; i <= nCls(); i++) h += `<option value="${i}반" ${v === i + '반' ? 'selected' : ''}>${esc(clsLabel(i + '반'))}</option>`; }
     else h += `<option value="학급" ${v === '학급' ? 'selected' : ''}>학급</option>`;
     return h;
   }
@@ -3203,7 +3206,7 @@ function makeBudget(key){
       const t = f => `<td ${f === 'memo' ? 'class="memo"' : ''}><input type="text" id="bf-${key}-${l.id}-${f}" data-id="${esc(l.id)}" data-f="${f}" value="${esc(l[f] || '')}" aria-label="${{act:'주요활동', biz:'세부사업', item:'세부항목', stat:'원가통계비목', memo:'메모'}[f]}" ${f === 'memo' ? 'placeholder="메모"' : ''} ${dis}></td>`;
       const canSplit = g && can() && l.scope === '학급' && !l.cls;
       const open = st.open.has(l.id);
-      return `<tr class="${open ? 'opened' : ''}"><td><select id="bf-${key}-${l.id}-scope" data-id="${esc(l.id)}" data-f="scope" aria-label="구분" ${dis}>${scopeOpts(l)}</select></td>${t('act')}${showBiz ? t('biz') : ''}${t('item')}${showStat ? t('stat') : ''}${t('memo')}
+      return `<tr class="${open ? 'opened' : ''}"><td>${l._g ? `<span class="chip acc" title="학년 예산에서 우리 반으로 정한 줄이에요. 여기서 고치면 학년 예산에도 같이 바뀌어요.">학년 예산 · ${esc(clsLabel(l.cls))}</span>` : `<select id="bf-${key}-${l.id}-scope" data-id="${esc(l.id)}" data-f="scope" aria-label="구분" ${dis}>${scopeOpts(l)}</select>`}</td>${t('act')}${showBiz ? t('biz') : ''}${t('item')}${showStat ? t('stat') : ''}${t('memo')}
         <td class="n"><input type="text" inputmode="numeric" class="amt" id="bf-${key}-${l.id}-amount" data-id="${esc(l.id)}" data-f="amount" value="${wonS(c.base)}" aria-label="처음 예산" ${dis}>${c.adj ? `<small class="adj">${c.adj > 0 ? '+' : '−'}${wonS(Math.abs(c.adj))} → ${wonS(c.cur)}</small>` : ''}</td>
         <td class="n rest ${c.rest < 0 ? 'neg' : ''}">${wonS(c.rest)}</td><td class="n">${wonS(c.req)}</td><td class="n">${wonS(c.spent)}</td>
         <td class="act"><button type="button" class="btn small ${open ? 'on' : ''}" data-b="open" data-id="${esc(l.id)}" aria-expanded="${open}">내역 ${(l.logs || []).length}${l.calc ? ' · 산출' : ''}</button>${canSplit ? `<button type="button" class="btn small" data-b="split" data-id="${esc(l.id)}" title="반마다 같은 금액으로 한 줄씩 나눠요">반마다</button>` : ''}${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(l.id)}" aria-label="이 줄 지우기">×</button>` : ''}</td></tr>
@@ -3238,11 +3241,21 @@ function makeBudget(key){
     putWish(items);
   });
   function render(){ if (!root.isConnected) return; listenWish(); renderSum(); renderTable(); renderWish(); $$('[data-b="add"], [data-b="import"], [data-b="wish-add"]', root).forEach(b => { b.disabled = !can(); }); }
-  const lineOf = id => ((g ? S.budG : S.budM) || []).find(l => l.id === id);
-  async function upd(id, data){ try { await col().doc(id).update(data); } catch (e){ err(e); } }
+  const lineOf = id => list().find(l => l.id === id);
+  /* 한 줄을 모든 반에 같은 금액으로 한 줄씩 (그 줄은 1반 줄이 돼요) */
+  async function splitAll(id){
+    const l = lineOf(id); if (!l || !g) return;
+    try {
+      for (let i = 2; i <= nCls(); i++){ const c = Object.assign({}, l); delete c.id; c.scope = '학급'; c.cls = i + '반'; c.logs = []; c.order = (l.order || l.createdAt || 0) + i / 100; c.createdAt = Date.now() + i; await col().add(c); }
+      await col().doc(id).update({scope:'학급', cls:'1반'});
+      toast(`${l.item || l.act || '이 줄'}을(를) ${nCls()}개 반에 같은 금액으로 넣었어요. 반마다 쓴 돈을 따로 적을 수 있어요.`);
+    } catch (er){ err(er); }
+  }
+  async function upd(id, data){ try { await colOf(id).doc(id).update(data); } catch (e){ err(e); } }
   root.addEventListener('change', e => {
     const el = e.target.closest('[data-f]'); if (!el || !can()) return;
     const f = el.dataset.f, id = el.dataset.id;
+    if (f === 'scope' && el.value === '__all'){ splitAll(id); return; }
     if (f === 'scope') upd(id, scopeOf(el.value));
     else if (f === 'amount'){ const n = numIn(el.value); el.value = wonS(n); upd(id, {amount:n}); }
     else upd(id, {[f]:el.value.trim()});
@@ -3270,13 +3283,8 @@ function makeBudget(key){
       $(`#wi-${key}-n`).value = ''; $(`#wi-${key}-p`).value = ''; return;
     }
     if (act === 'split'){
-      const l = lineOf(id); if (!l) return;
       if (!twoStep(b, `${nCls()}개 반으로 나눌까요?`)) return;
-      try {
-        for (let i = 1; i <= nCls(); i++){ const c = Object.assign({}, l); delete c.id; c.cls = i + '반'; c.logs = []; c.order = (l.order || l.createdAt || 0) + i / 100; c.createdAt = Date.now() + i; await col().add(c); }
-        await col().doc(id).delete(); toast(`${l.item || l.act || '이 줄'}을(를) ${nCls()}개 반으로 나눴어요. 반마다 쓴 돈을 따로 적을 수 있어요.`);
-      } catch (er){ err(er); }
-      return;
+      splitAll(id); return;
     }
     if (act === 'wish-del'){ if (!twoStep(b, '빼기?')) return; putWish((st.wish || []).filter(x => x.id !== id)); return; }
     if (act === 'wish-buy'){
@@ -3295,7 +3303,7 @@ function makeBudget(key){
       try { await col().add(Object.assign({act:'', biz:'', item:'', stat:'', amount:0, logs:[], createdAt:Date.now(), createdBy:S.uid}, sc)); } catch (er){ err(er); }
     } else if (act === 'del'){
       if (!twoStep(b, '지울까요?')) return;
-      try { await col().doc(id).delete(); st.open.delete(id); toast('예산 줄을 지웠어요.'); } catch (er){ err(er); }
+      try { await colOf(id).doc(id).delete(); st.open.delete(id); toast('예산 줄을 지웠어요.'); } catch (er){ err(er); }
     } else if (act === 'log-add'){
       const l = lineOf(id); if (!l) return;
       const p = `#bl-${key}-${id}-`;
@@ -4284,6 +4292,8 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '예산: 학년 예산에서 구분을 우리 반(예: 초록지구반)으로 정한 줄이 나의 공간 예산에도 같이 보여요. 어느 쪽에서 고쳐도 같이 바뀌어요.',
+    '예산: 구분에서 "모든 반"을 고르면 그 줄이 반마다 같은 금액으로 한 줄씩 한 번에 들어가요.',
     '명부(학년·우리 반): "칸 숨기기"로 보호자 연락처 같은 칸을 내 화면에서만 숨겨요. 칸 폭은 들어 있는 글자 수에 맞춰 저절로 줄고 늘어요.',
     '교실 도구 타이머: 시간 위에 무엇을 하는 시간인지 적을 수 있어요. 시간이 끝나면 숫자가 빨개지며 흔들리고 "○○ 시간 끝!"과 함께 소리가 나요. 끝 소리는 딩동댕·삐삐삐·종소리·소리 없음 중에 골라요.',
     '처음 켤 때 학년 이름을 불러오기 전 잠깐 "3학년"으로 보이던 것을 고쳤어요. 이제 "교무수첩"으로 보이다가 우리 학년 이름으로 바뀌고, 두 번째부터는 바로 우리 학년으로 떠요.',
