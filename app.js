@@ -4572,6 +4572,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '전담 반별 명렬: 왼쪽 네모로 학생을 고르고 칸 제목 아래 "한꺼번에"로 O·X·△나 정한 말을 한 번에 넣어요 (안 고르면 모두). 새 칸을 "말로 고르기"로 만들면 잘함·보통·노력처럼 말로 눌러 넣어요.',
     '전담: "오늘 수업"과 "수업일지"를 "수업일지" 한 탭으로 합쳤어요. 위에서 한 주 간단히(요일×교시 표에 차시 한 줄) · 한 주 자세히(활동·준비물·특이사항, 똑같이 버튼) · 하루(카드)를 골라요. 아래에는 고른 날 메모를 적어요.',
     '나의 공간 "수업 계획"이 한 주 보기로 열려요. 요일 × 교시 칸에 과목이 들어가 있고, 단원·주제만 짧게 적으면 돼요. 요일 이름을 누르면 그날을 자세히 써요.',
     '명부 "칸 정리"에서 칸 제목을 바꾸고 순서도 바꿀 수 있어요 (내 화면에만). 바깥을 누르면 닫혀요. 탭 정리·과목 정리·칸 정리 모두 ⤒ 맨 위로, ⤓ 맨 아래로 버튼이 생겼어요.',
@@ -5514,7 +5515,10 @@ $('#jp-table').addEventListener('click', e => {
 });
 
 /* ---------- 전담: 반별 명렬표 · 누가기록 ---------- */
-const JC = {c:null, paste:false};
+const JC = {c:null, paste:false, sel:new Set()};
+/* 칸마다 고를 말: 기본은 O X △, "말로" 칸은 선생님이 정한 말 (예: 잘함, 보통, 노력) */
+const jcMarks = cl => Array.isArray(cl.m) && cl.m.length ? cl.m : ['O', 'X', '△'];
+const jcCls = v => v === 'O' ? 'O' : v === 'X' ? 'X' : v === '△' ? 'T' : v ? 'W' : '';
 function jcData(c){ const o = S.jc.c[c] = S.jc.c[c] || {}; if (!Array.isArray(o.st)) o.st = []; if (!Array.isArray(o.cols)) o.cols = []; if (!o.v) o.v = {}; if (!Array.isArray(o.notes)) o.notes = []; return o; }
 const JC_CYCLE = ['', 'O', 'X', '△'];
 function renderJCls(){
@@ -5531,18 +5535,19 @@ function renderJCls(){
     <div id="jc-paste" ${JC.paste || !st.length ? '' : 'hidden'} style="margin-top:8px"><p class="hint" style="margin:0 0 4px">한 줄에 한 명씩 붙여 넣어요. "번호[탭]이름"이나 이름만 있어도 돼요. 담임 선생님께 받은 명단을 그대로 복사해 오면 돼요.</p>
     <textarea id="jc-paste-txt" rows="4" placeholder="1	김가나&#10;2	이다라"></textarea><div class="row" style="margin-top:6px"><span class="grow"></span><button type="button" class="btn primary" id="jc-paste-go">명단 넣기</button></div></div></section>`;
   if (st.length){
-    h += `<section class="jt-sec"><div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:8px"><b>체크 · 평가</b><span class="hint">체크 칸은 누를 때마다 O → X → △ → 빈칸으로 바뀌어요.</span><span class="grow"></span>
-      <input id="jc-col-name" placeholder="새 칸 이름 (예: 과제 1, 줄넘기 평가)" style="width:220px"><select id="jc-col-type" style="width:auto"><option value="chk">체크</option><option value="txt">글·점수</option></select><button type="button" class="btn small" id="jc-col-add">칸 더하기</button></div>
-      <div class="jt-wrap"><table class="jc-t"><thead><tr><th>번호</th><th>이름</th>${o.cols.map(cl => `<th>${esc(cl.name)}<small>${cl.d ? fmtMD(cl.d) : ''} <button type="button" class="x" data-jcdel="${cl.id}" aria-label="${esc(cl.name)} 칸 지우기" style="font-size:11px">×</button></small></th>`).join('')}</tr></thead><tbody>`;
-    st.forEach(s0 => { h += `<tr><td>${esc(s0.no)}</td><td class="nm">${esc(s0.name)}</td>${o.cols.map(cl => { const v = (o.v[cl.id] || {})[s0.no] || ''; return cl.t === 'txt' ? `<td><input data-jcv="${cl.id}" data-no="${esc(s0.no)}" value="${esc(v)}" aria-label="${esc(s0.name)} ${esc(cl.name)}"></td>` : `<td><button type="button" class="ck ${v === '△' ? 'T' : v}" data-jck="${cl.id}" data-no="${esc(s0.no)}" aria-label="${esc(s0.name)} ${esc(cl.name)} ${v || '빈칸'}">${esc(v)}</button></td>`; }).join('')}</tr>`; });
-    h += `<tr><td colspan="2" class="jc-sum">O / X / 빈칸</td>${o.cols.map(cl => { if (cl.t === 'txt') return '<td></td>'; const vs = st.map(s0 => (o.v[cl.id] || {})[s0.no] || ''); return `<td class="jc-sum">${vs.filter(v => v === 'O').length}/${vs.filter(v => v === 'X').length}/${vs.filter(v => !v).length}</td>`; }).join('')}</tr>`;
+    h += `<section class="jt-sec"><div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:8px"><b>체크 · 평가</b><span class="hint">칸을 누를 때마다 다음 말로 바뀌어요 (O → X → △ → 빈칸). 왼쪽 네모로 학생을 고르고 칸 제목 아래 "한꺼번에"를 쓰면 고른 학생(안 고르면 모두)에게 한 번에 넣어요.</span><span class="grow"></span>
+      <input id="jc-col-name" placeholder="새 칸 이름 (예: 과제 1, 줄넘기 평가)" style="width:220px"><select id="jc-col-type" style="width:auto"><option value="chk">체크 (O X △)</option><option value="word">말로 고르기</option><option value="txt">글·점수 (직접 쓰기)</option></select><input id="jc-col-words" placeholder="고를 말 (예: 잘함, 보통, 노력)" style="width:200px" hidden><button type="button" class="btn small" id="jc-col-add">칸 더하기</button></div>
+      ${JC.sel.size ? `<p class="hint" style="margin:0 0 6px"><b>${JC.sel.size}명</b> 골랐어요. "한꺼번에"는 이 학생들에게만 들어가요. <button type="button" class="btn small" id="jc-sel-clear">고르기 풀기</button></p>` : ''}
+      <div class="jt-wrap"><table class="jc-t"><thead><tr><th class="sel"><input type="checkbox" id="jc-sel-all" ${JC.sel.size && JC.sel.size === st.length ? 'checked' : ''} aria-label="모두 고르기"></th><th>번호</th><th>이름</th>${o.cols.map(cl => `<th>${esc(cl.name)}<small>${cl.d ? fmtMD(cl.d) : ''} <button type="button" class="x" data-jcdel="${cl.id}" aria-label="${esc(cl.name)} 칸 지우기" style="font-size:11px">×</button></small>${cl.t === 'txt' ? `<input class="jc-bulk-in" data-jcbulkt="${cl.id}" placeholder="한꺼번에 쓰기" aria-label="${esc(cl.name)} 한꺼번에 쓰기">` : `<select class="jc-bulk" data-jcbulk="${cl.id}" aria-label="${esc(cl.name)} 한꺼번에 넣기"><option value="">한꺼번에 ▾</option>${jcMarks(cl).map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}<option value="__clear">비우기</option></select>`}</th>`).join('')}</tr></thead><tbody>`;
+    st.forEach(s0 => { h += `<tr class="${JC.sel.has(s0.no) ? 'picked' : ''}"><td class="sel"><input type="checkbox" data-jcsel="${esc(s0.no)}" ${JC.sel.has(s0.no) ? 'checked' : ''} aria-label="${esc(s0.name)} 고르기"></td><td>${esc(s0.no)}</td><td class="nm">${esc(s0.name)}</td>${o.cols.map(cl => { const v = (o.v[cl.id] || {})[s0.no] || ''; return cl.t === 'txt' ? `<td><input data-jcv="${cl.id}" data-no="${esc(s0.no)}" value="${esc(v)}" aria-label="${esc(s0.name)} ${esc(cl.name)}"></td>` : `<td><button type="button" class="ck ${jcCls(v)}" data-jck="${cl.id}" data-no="${esc(s0.no)}" aria-label="${esc(s0.name)} ${esc(cl.name)} ${v || '빈칸'}">${esc(v)}</button></td>`; }).join('')}</tr>`; });
+    h += `<tr><td colspan="3" class="jc-sum">모은 수</td>${o.cols.map(cl => { if (cl.t === 'txt') return '<td></td>'; const vs = st.map(s0 => (o.v[cl.id] || {})[s0.no] || ''); return `<td class="jc-sum">${jcMarks(cl).map(m => `${esc(m)} ${vs.filter(v => v === m).length}`).join(' · ')} · 빈칸 ${vs.filter(v => !v).length}</td>`; }).join('')}</tr>`;
     h += '</tbody></table></div></section>';
     h += `<section class="jt-sec"><b>누가기록</b><form id="jc-note-form" class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px"><input type="date" id="jc-note-d" value="${ymd(today())}" style="width:auto" aria-label="날짜"><select id="jc-note-no" style="width:auto" aria-label="학생"><option value="">반 전체</option>${st.map(s0 => `<option value="${esc(s0.no)}">${esc(s0.no)} ${esc(s0.name)}</option>`).join('')}</select><input id="jc-note-t" placeholder="예: 줄넘기 모둠 활동에서 친구를 잘 도와줌" style="flex:1;min-width:200px" aria-label="기록"><button type="submit" class="btn small primary">적기</button></form>
       <div class="jc-notes">${o.notes.slice().sort((a, b) => a.d < b.d ? 1 : a.d > b.d ? -1 : 0).map(n => { const s1 = st.find(s0 => s0.no === n.no); return `<div class="jc-note"><span class="dt">${fmtMD(n.d)}</span><span class="who">${s1 ? esc(s1.no + ' ' + s1.name) : '반 전체'}</span><span class="tx">${esc(n.t)}</span><button type="button" class="x" data-jcnd="${n.id}" aria-label="지우기">×</button></div>`; }).join('') || '<p class="hint" style="margin:4px 0 0">아직 기록이 없어요.</p>'}</div></section>`;
   }
   $('#jc-main').innerHTML = h;
 }
-$('#jc-tabs').addEventListener('click', e => { const b = e.target.closest('[data-jcc]'); if (!b) return; JC.c = b.dataset.jcc; JC.paste = false; renderJCls(); });
+$('#jc-tabs').addEventListener('click', e => { const b = e.target.closest('[data-jcc]'); if (!b) return; JC.c = b.dataset.jcc; JC.paste = false; JC.sel.clear(); renderJCls(); });
 $('#jc-main').addEventListener('click', e => {
   if (!S.uid || !JC.c) return; const o = jcData(JC.c);
   if (e.target.id === 'jc-paste-open'){ JC.paste = true; renderJCls(); $('#jc-paste-txt').focus(); return; }
@@ -5553,9 +5558,15 @@ $('#jc-main').addEventListener('click', e => {
     if (!st.length){ toast('명단을 찾지 못했어요.'); return; }
     o.st = st; JC.paste = false; jcSave(); renderJCls(); toast(`${st.length}명을 넣었어요.`); return;
   }
-  if (e.target.id === 'jc-col-add'){ const name = $('#jc-col-name').value.trim(); if (!name){ $('#jc-col-name').focus(); return; } o.cols.push({id:'c' + Date.now().toString(36), name:name.slice(0, 20), t:$('#jc-col-type').value, d:ymd(today())}); jcSave(); renderJCls(); return; }
+  if (e.target.id === 'jc-col-add'){
+    const name = $('#jc-col-name').value.trim(); if (!name){ $('#jc-col-name').focus(); return; }
+    const ty = $('#jc-col-type').value, col = {id:'c' + Date.now().toString(36), name:name.slice(0, 20), t:ty === 'txt' ? 'txt' : 'chk', d:ymd(today())};
+    if (ty === 'word'){ const ws = $('#jc-col-words').value.split(/[,，、\/·]+/).map(x => x.trim()).filter(Boolean).slice(0, 8).map(x => x.slice(0, 8)); if (!ws.length){ toast('고를 말을 쉼표로 적어 주세요. 예: 잘함, 보통, 노력'); $('#jc-col-words').focus(); return; } col.m = ws; }
+    o.cols.push(col); jcSave(); renderJCls(); return;
+  }
+  if (e.target.id === 'jc-sel-clear'){ JC.sel.clear(); renderJCls(); return; }
   const ck = e.target.closest('[data-jck]');
-  if (ck){ const m = o.v[ck.dataset.jck] = o.v[ck.dataset.jck] || {}; const v = JC_CYCLE[(JC_CYCLE.indexOf(m[ck.dataset.no] || '') + 1) % JC_CYCLE.length]; if (v) m[ck.dataset.no] = v; else delete m[ck.dataset.no]; jcSave(); renderJCls(); return; }
+  if (ck){ const cl = o.cols.find(c => c.id === ck.dataset.jck) || {}, cyc = [''].concat(jcMarks(cl)); const m = o.v[ck.dataset.jck] = o.v[ck.dataset.jck] || {}; const v = cyc[(cyc.indexOf(m[ck.dataset.no] || '') + 1) % cyc.length]; if (v) m[ck.dataset.no] = v; else delete m[ck.dataset.no]; jcSave(); renderJCls(); return; }
   const cd = e.target.closest('[data-jcdel]');
   if (cd){ if (!twoStep(cd, '지울까요?')) return; o.cols = o.cols.filter(c => c.id !== cd.dataset.jcdel); delete o.v[cd.dataset.jcdel]; jcSave(); renderJCls(); return; }
   const nd = e.target.closest('[data-jcnd]');
@@ -5564,6 +5575,17 @@ $('#jc-main').addEventListener('click', e => {
 $('#jc-main').addEventListener('change', e => {
   if (!S.uid || !JC.c) return; const o = jcData(JC.c);
   if (e.target.id === 'jc-teacher'){ o.teacher = e.target.value.trim().slice(0, 20); jcSave(); return; }
+  if (e.target.id === 'jc-col-type'){ $('#jc-col-words').hidden = e.target.value !== 'word'; if (e.target.value === 'word') $('#jc-col-words').focus(); return; }
+  if (e.target.id === 'jc-sel-all'){ if (e.target.checked) o.st.forEach(s0 => JC.sel.add(s0.no)); else JC.sel.clear(); renderJCls(); return; }
+  if (e.target.matches('[data-jcsel]')){ e.target.checked ? JC.sel.add(e.target.dataset.jcsel) : JC.sel.delete(e.target.dataset.jcsel); renderJCls(); return; }
+  /* 한꺼번에: 고른 학생(없으면 모두)에게 같은 말·글 */
+  const bk = e.target.closest('[data-jcbulk], [data-jcbulkt]');
+  if (bk){
+    const cid = bk.dataset.jcbulk || bk.dataset.jcbulkt, val = bk.dataset.jcbulk ? bk.value : bk.value.trim().slice(0, 40); if (!val && bk.dataset.jcbulk) return;
+    const who = JC.sel.size ? o.st.filter(s0 => JC.sel.has(s0.no)) : o.st, m = o.v[cid] = o.v[cid] || {};
+    who.forEach(s0 => { if (val === '__clear' || !val) delete m[s0.no]; else m[s0.no] = val; });
+    jcSave(); toast(`${JC.sel.size ? who.length + '명' : '모두'}에게 ${val === '__clear' || !val ? '비웠어요' : `"${val}"을(를) 넣었어요`}.`); renderJCls(); return;
+  }
   const v = e.target.closest('[data-jcv]'); if (v){ const m = o.v[v.dataset.jcv] = o.v[v.dataset.jcv] || {}; const t = v.value.trim(); if (t) m[v.dataset.no] = t.slice(0, 40); else delete m[v.dataset.no]; jcSave(); }
 });
 $('#jc-main').addEventListener('submit', e => {
