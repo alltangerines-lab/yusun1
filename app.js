@@ -3714,7 +3714,7 @@ function makeRoster(key){
     <div class="ros-bar"><span class="ros-count hint"></span><span class="grow"></span>
       ${g ? '' : '<button type="button" class="btn small" data-b="from-grade">학년 명부에서 우리 반 가져오기</button>'}
       <button type="button" class="btn small primary" data-b="add">+ 학생 추가</button>
-      <details class="ros-cols"><summary class="btn small">칸 숨기기</summary><div class="ros-colpick"></div></details>
+      <details class="ros-cols"><summary class="btn small">칸 정리</summary><div class="ros-colpick"></div></details>
       <button type="button" class="btn small" data-b="csv">${g ? '이 반 CSV' : 'CSV로 받기'}</button>${g ? '<button type="button" class="btn small" data-b="csv-all">학년 전체 CSV</button>' : ''}</div>
     <details class="ros-paste"><summary>스프레드시트에서 붙여넣기</summary>
       <p class="hint">나이스·스프레드시트에서 제목 줄까지 칸째로 복사해 붙이면 번호·이름·성별·생년월일·이전 학년반·보호자·보호자 연락처·주소·비고 칸을 알아서 찾고, 처음 보는 제목은 새 열로 만들어요.${g ? ' <b>"반" 또는 "현재 반" 칸이 있으면 반별로 알아서 나눠 넣어요</b> (최대 6반). 없으면 지금 고른 반에 들어가요.' : ''} 제목 없이 붙여도 번호·이름·성별·날짜·전화번호 모양을 보고 칸을 맞춰요.</p>
@@ -3732,15 +3732,23 @@ function makeRoster(key){
   /* 칸 숨기기(내 화면에만)와 글자 수에 맞춘 칸 폭 */
   const hidKey = 'ros-' + key;
   const hidSet = () => new Set((((S.profile || {}).tabPrefs || {})[hidKey]) || []);
-  const allCols = extra => [...ROS_F.map(([f, n]) => ({f, n, ex:-1})), ...extra.map((n, i) => ({f:'x:' + n, n, ex:i}))];
+  /* 칸 이름 바꾸기·순서 (내 화면에만, 기록 열쇠는 그대로) */
+  const colPref = () => (((S.profile || {}).tabPrefs || {})['rosc-' + key]) || {};
+  const allCols = extra => { const cp = colPref(), nm = cp.names || {}, ord = cp.order || [], pos = f => { const i = ord.indexOf(f); return i < 0 ? 1e4 : i; };
+    return [...ROS_F.map(([f, n]) => ({f, n, ex:-1})), ...extra.map((n, i) => ({f:'x:' + n, n, ex:i}))].map((c, i) => Object.assign(c, {i, n0:c.n, n:nm[c.f] || c.n})).sort((a, b) => (pos(a.f) - pos(b.f)) || (a.i - b.i)); };
+  const saveColPref = o => { const tp = Object.assign({}, S.profile.tabPrefs || {}); tp['rosc-' + key] = Object.assign({}, colPref(), o); S.profile.tabPrefs = tp; saveProfile(); render(); };
   const vcols = extra => { const h = hidSet(); return allCols(extra || get().extra).filter(c => !h.has(c.f)); };
   const textW = v => { let w = 0; for (const ch of String(v ?? '')) w += /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3\u4e00-\u9fff]/.test(ch) ? 1.85 : 1; return w; };
   const colW = (students, c) => { let m = textW(c.n) * 0.9; students.forEach(s => { m = Math.max(m, textW(c.f.startsWith('x:') ? (s.x || {})[c.f.slice(2)] : s[c.f])); }); return Math.max(3, Math.min(42, Math.ceil(m + 1.6))); };
   function render(){
     if (!root.isConnected) return;
     { const ex0 = get().extra, h0 = hidSet();
-      $('.ros-colpick', root).innerHTML = `<p class="hint" style="margin:0 0 6px">체크를 풀면 그 칸이 내 화면에서만 숨겨져요. 기록은 그대로 있고 CSV에도 다 들어가요.</p>` + allCols(ex0).map(c => `<label class="row" style="gap:6px"><input type="checkbox" data-hidecol="${esc(c.f)}" ${h0.has(c.f) ? '' : 'checked'} ${c.f === 'no' || c.f === 'name' ? 'disabled' : ''}> ${esc(c.n)}</label>`).join('');
-      const sm = $('.ros-cols summary', root); sm.textContent = h0.size ? `숨긴 칸 ${[...h0].filter(f => allCols(ex0).some(c => c.f === f)).length}개` : '칸 숨기기'; }
+      const ae1 = document.activeElement;
+      if (!(ae1 && $('.ros-colpick', root).contains(ae1) && ae1.matches('input[type="text"]'))){
+        const ac = allCols(ex0);
+        $('.ros-colpick', root).innerHTML = `<p class="hint" style="margin:0 0 6px">체크를 풀면 숨겨지고, 이름 칸을 고치면 제목이 바뀌고, ↑↓로 순서를 바꿔요. 내 화면에만 적용되고 기록은 그대로예요.</p>` + ac.map((c, i) => `<div class="rc-row"><input type="checkbox" data-hidecol="${esc(c.f)}" ${h0.has(c.f) ? '' : 'checked'} ${c.f === 'no' || c.f === 'name' ? 'disabled' : ''} aria-label="${esc(c.n)} 보이기"><input type="text" data-rcname="${esc(c.f)}" value="${esc(c.n)}" placeholder="${esc(c.n0)}" aria-label="${esc(c.n0)} 칸 이름"><button type="button" class="btn small" data-rcmv="${esc(c.f)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="${esc(c.n)} 앞으로">↑</button><button type="button" class="btn small" data-rcmv="${esc(c.f)}" data-d="1" ${i === ac.length - 1 ? 'disabled' : ''} aria-label="${esc(c.n)} 뒤로">↓</button></div>`).join('') + `<button type="button" class="btn small" data-rcreset style="justify-self:start">처음대로</button>`;
+      }
+      const sm = $('.ros-cols summary', root); sm.textContent = h0.size ? `칸 정리 (숨긴 칸 ${[...h0].filter(f => allCols(ex0).some(c => c.f === f)).length}개)` : '칸 정리'; }
     if (g){
       $('.ros-cls', root).innerHTML = Array.from({length:nCls()}, (_, i) => { const n = i + 1, c = (((S.rosG || {})['c' + n] || {}).students || []).length; return `<button type="button" data-cls="${n}" aria-pressed="${curCls() === n}">${esc(clsLabel(n + '반'))} <small>${c}명</small></button>`; }).join('');
     }
@@ -3780,6 +3788,7 @@ function makeRoster(key){
       <label class="hint row" style="gap:4px"><input type="checkbox" data-b="sync-auto" ${auto ? 'checked' : ''} ${S.uid ? '' : 'disabled'}> 한쪽을 고치면 다른 쪽도 저절로 맞추기</label>`;
   }
   root.addEventListener('change', e => {
+    if (e.target.matches('[data-rcname]')){ const nm = Object.assign({}, colPref().names || {}), v = e.target.value.trim(), c0 = allCols(get().extra).find(c => c.f === e.target.dataset.rcname); if (!v || (c0 && v === c0.n0)) delete nm[e.target.dataset.rcname]; else nm[e.target.dataset.rcname] = v.slice(0, 20); e.target.blur(); saveColPref({names:nm}); return; }
     if (e.target.matches('[data-hidecol]')){ const h = hidSet(); e.target.checked ? h.delete(e.target.dataset.hidecol) : h.add(e.target.dataset.hidecol); const tp = Object.assign({}, S.profile.tabPrefs || {}); tp[hidKey] = [...h]; S.profile.tabPrefs = tp; saveProfile(); render(); return; }
     if (e.target.matches('[data-b="sync-auto"]')){ S.profile.rosterSync = e.target.checked; saveProfile(); if (e.target.checked) rosterAutoSync(g ? 'grade' : 'mine'); toast(e.target.checked ? '이제 한쪽을 고치면 다른 쪽도 맞춰져요.' : '자동 맞추기를 껐어요.'); ROS.g.render(); ROS.m.render(); return; }
     const el = e.target.closest('[data-f]'); if (!el || !can()) return;
@@ -3795,7 +3804,11 @@ function makeRoster(key){
     put(data);
   });
   root.addEventListener('focusout', () => setTimeout(() => { const ae = document.activeElement; if (!(ae && $('.ros-table', root).contains(ae) && ae.matches('input'))) render(); }, 0));
+  root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-rcname]')){ e.preventDefault(); e.target.blur(); } });
   root.addEventListener('click', async e => {
+    const mv = e.target.closest('[data-rcmv]');
+    if (mv){ const o = allCols(get().extra).map(c => c.f), i = o.indexOf(mv.dataset.rcmv), j = i + +mv.dataset.d; if (i < 0 || j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; saveColPref({order:o}); const nb = $(`.ros-colpick [data-rcmv="${CSS.escape(mv.dataset.rcmv)}"][data-d="${mv.dataset.d}"]`, root); if (nb && !nb.disabled) nb.focus(); return; }
+    if (e.target.closest('[data-rcreset]')){ const tp = Object.assign({}, S.profile.tabPrefs || {}); delete tp['rosc-' + key]; S.profile.tabPrefs = tp; saveProfile(); render(); toast('칸 이름과 순서를 처음대로 돌렸어요.'); return; }
     const cb = e.target.closest('[data-cls]'); if (cb){ st.cls = +cb.dataset.cls; render(); return; }
     const b = e.target.closest('[data-b]'); if (!b) return;
     const act = b.dataset.b;
@@ -4553,6 +4566,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '명부 "칸 정리"에서 칸 제목을 바꾸고 ↑↓로 순서도 바꿀 수 있어요 (내 화면에만).',
     '입력 창들을 요즘 앱처럼 바꿨어요. 오른쪽 위 ×로 닫고, 아래는 "취소 · 저장" (저장하면 바로 닫혀요). 글칸에서 Ctrl+Enter를 눌러도 저장돼요.',
     '아침 안내 "오늘 할 일"에서 안 끝난 오늘만 할 일 옆 "내일도"를 누르면 다음 등교일에도 들어가요. "안 끝난 일 내일도"로 한 번에 넘길 수도 있어요.',
     '아침 안내 날짜 왼쪽에 그날 결석한 학생 이름이 "결석 ○○○"으로 떠요. 출석부나 학급일지에 결석으로 적으면 저절로 나와요. 사유는 안 보여요.',
