@@ -3243,12 +3243,13 @@ function makeBudget(key){
     }).join('');
     return `<div class="logs"><table><thead><tr><th>날짜</th><th>종류</th><th>내용</th><th>금액</th><th>남은 돈</th><th></th></tr></thead>
       <tbody><tr class="start"><td></td><td><span class="kind">편성</span></td><td>처음 예산</td><td class="n">${wonS(c.base)}</td><td class="n">${wonS(c.base)}</td><td></td></tr>${rows}</tbody></table>
-      ${can() ? `<div class="log-add">
-        <input type="date" id="bl-${key}-${l.id}-d" value="${ymd(today())}" aria-label="날짜" ${dis}>
-        <select id="bl-${key}-${l.id}-k" aria-label="종류">${Object.entries(BUD_KIND_LABEL).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select>
-        <input type="text" id="bl-${key}-${l.id}-t" placeholder="내용 (예: 체험학습 버스 대절)" aria-label="내용">
-        <input type="text" inputmode="numeric" id="bl-${key}-${l.id}-a" class="amt" placeholder="금액" aria-label="금액">
-        <button type="button" class="btn small primary" data-b="log-add" data-id="${esc(l.id)}">넣기</button></div>` : ''}</div>`;
+      ${can() ? `<div class="log-add-box"><h4>돈을 쓰거나 품의를 올렸으면 여기에 한 줄씩 적어요</h4><div class="log-add">
+        <label for="bl-${key}-${l.id}-d">날짜<input type="date" id="bl-${key}-${l.id}-d" value="${ymd(today())}" ${dis}></label>
+        <label for="bl-${key}-${l.id}-k">종류<select id="bl-${key}-${l.id}-k">${Object.entries(BUD_KIND_LABEL).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label>
+        <label for="bl-${key}-${l.id}-t">어디에 썼나요<input type="text" id="bl-${key}-${l.id}-t" placeholder="예: 학년 티셔츠 120벌"></label>
+        <label for="bl-${key}-${l.id}-a">금액 (원)<input type="text" inputmode="numeric" id="bl-${key}-${l.id}-a" class="amt" placeholder="예: 960,000"></label>
+        <button type="button" class="btn primary" data-b="log-add" data-id="${esc(l.id)}">넣기</button></div>
+        <p class="hint" style="margin:0"><b>집행</b> 실제로 결제한 돈 · <b>요구·품의</b> 품의만 올리고 아직 결제 전 (결제하면 위 표에서 "집행으로") · <b>증액·감액</b> 예산 자체가 늘거나 줄었을 때. 넣으면 예산잔액에서 저절로 빠져요.</p></div>` : ''}</div>`;
   }
   function renderTable(){
     const ae = document.activeElement;
@@ -3269,7 +3270,7 @@ function makeBudget(key){
         <td class="n"><input type="text" inputmode="numeric" class="amt" id="bf-${key}-${l.id}-amount" data-id="${esc(l.id)}" data-f="amount" value="${wonS(c.base)}" aria-label="처음 예산" ${dis}>${c.adj ? `<small class="adj">${c.adj > 0 ? '+' : '−'}${wonS(Math.abs(c.adj))} → ${wonS(c.cur)}</small>` : ''}</td>
         <td class="n rest ${c.rest < 0 ? 'neg' : ''}">${wonS(c.rest)}</td><td class="n">${wonS(c.req)}</td><td class="n">${wonS(c.spent)}</td>
         <td class="act"><button type="button" class="btn small ${open ? 'on' : ''}" data-b="open" data-id="${esc(l.id)}" aria-expanded="${open}">내역 ${(l.logs || []).length}${l.calc ? ' · 산출' : ''}</button>${canSplit ? `<button type="button" class="btn small" data-b="split" data-id="${esc(l.id)}" title="반마다 같은 금액으로 한 줄씩 나눠요">반마다</button>` : ''}${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(l.id)}" aria-label="이 줄 지우기">×</button>` : ''}</td></tr>
-        ${open ? `<tr class="logrow"><td colspan="${nCol}"><label class="f bud-calc" for="bf-${key}-${l.id}-calc">산출내역 <span class="hint">예: 기본 강사비 130,000원 × 3회 × 1학급</span><textarea id="bf-${key}-${l.id}-calc" data-id="${esc(l.id)}" data-f="calc" rows="2" ${dis}>${esc(l.calc || '')}</textarea></label>${logsHTML(l, c)}</td></tr>` : ''}`;
+        ${open ? `<tr class="logrow"><td colspan="${nCol}"><label class="f bud-calc" for="bf-${key}-${l.id}-calc">산출내역 <span class="hint">이 예산을 어떻게 계산했는지 적는 메모예요. 예: 기본 강사비 130,000원 × 3회 × 1학급</span><textarea id="bf-${key}-${l.id}-calc" data-id="${esc(l.id)}" data-f="calc" rows="2" ${dis}>${esc(l.calc || '')}</textarea></label>${logsHTML(l, c)}</td></tr>` : ''}`;
     }).join('');
     $('.bud-table', root).innerHTML = `<div class="tablewrap"><table class="bud"><thead><tr><th>구분</th><th>주요활동</th>${showBiz ? '<th>세부사업</th>' : ''}<th>세부항목</th>${showStat ? '<th>원가통계비목</th>' : ''}<th>메모</th><th>예산현액</th><th>예산잔액</th><th>요구금액</th><th>집행액</th><th></th></tr></thead>
       <tbody>${body}</tbody><tfoot><tr><td colspan="${nCol - 5}">합계 (${ls.length}줄)${!st.showAll && (!showBiz || !showStat) ? ` <button type="button" class="btn small" data-b="showall" style="margin-left:6px">에듀파인 칸 보이기</button>` : ''}</td><td class="n">${wonS(tot.cur)}</td><td class="n rest ${tot.rest < 0 ? 'neg' : ''}">${wonS(tot.rest)}</td><td class="n">${wonS(tot.req)}</td><td class="n">${wonS(tot.spent)}</td><td></td></tr></tfoot></table></div>`;
@@ -4351,6 +4352,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '예산 "내역"을 열면 쓴 돈 적는 칸에 날짜·종류·어디에 썼나요·금액 이름이 붙고, 종류마다 무슨 뜻인지 설명이 나와요.',
     '학급일지에 "2번 출결 질병결석 병원진료"처럼 적으면 질병결석은 종류로 들어가고 사유에는 "병원진료"만 남아요. 예전에 적은 기록도 같은 방식으로 정리했어요.',
     '뽑기·순서 정하기에서 "오늘 빼는 학생"을 눌러 고르면 그 학생은 빼고 뽑아요. 오늘 결석으로 적힌 학생은 저절로 빠지고, 내일이 되면 다시 모두 들어가요.',
     '타이머 이름 칸을 비운 채 시작하면 이름 칸이 사라지고 숫자만 보여요. "처음으로"를 누르면 다시 나와요.',
