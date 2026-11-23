@@ -672,6 +672,12 @@ table.attg{border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-
 .attg td.nm .mono{color:var(--muted);margin-right:4px}
 .attg td button{border:0;background:none;width:100%;min-width:24px;min-height:26px;font-weight:700;font-size:11.5px;padding:0}
 .attg td button:hover{background:var(--accent-soft)}
+.tool-out{max-width:900px;margin:0 auto 10px;text-align:center}
+.tool-out > summary{cursor:pointer;display:inline-block}
+.tool-out .out-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.out-chip{cursor:pointer;font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface)}
+.out-chip.off{opacity:.55;text-decoration:line-through;background:var(--surface-2)}
+.out-chip small{color:var(--danger);text-decoration:none}
 .tip-pop{position:fixed;z-index:80;max-width:300px;background:var(--fg);color:var(--bg);font-size:12.5px;line-height:1.5;padding:7px 10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.2);white-space:pre-line;pointer-events:none}
 .attg td.tot{font-family:var(--mono);color:var(--muted);padding:3px 5px}
 .attg td.tot.has{color:var(--danger);font-weight:600}
@@ -2608,6 +2614,7 @@ body.ro .w-only{display:none!important}
     <div class="row center tool-opts"><div class="seg" role="group" aria-label="누구에서" id="pick-sx"><button type="button" data-sx="all" aria-pressed="true">모두</button><button type="button" data-sx="여" aria-pressed="false">여자만</button><button type="button" data-sx="남" aria-pressed="false">남자만</button></div>
       <label class="hint row" for="pick-n" style="gap:4px">한 번에 <input type="number" id="pick-n" value="1" min="1" max="30" style="width:64px"> 명</label>
     </div>
+    <details class="tool-out" id="pick-out"><summary class="hint"></summary><p class="hint" style="margin:4px 0 6px">누르면 빼고, 다시 누르면 넣어요. 오늘 결석으로 적힌 학생은 저절로 빠져요. 내일이 되면 다시 모두 들어가요.</p><div class="out-chips"></div></details>
     <div class="pick-face" id="pick-face">?</div>
     <div class="row center">
       <button type="button" class="btn primary big-btn" id="pick-go">뽑기</button>
@@ -2633,6 +2640,7 @@ body.ro .w-only{display:none!important}
   </div>
   <div class="tool" id="tool-order" hidden>
     <div class="row center tool-opts"><div class="seg" role="group" aria-label="누구에서" id="order-sx"><button type="button" data-sx="all" aria-pressed="true">모두</button><button type="button" data-sx="여" aria-pressed="false">여자만</button><button type="button" data-sx="남" aria-pressed="false">남자만</button></div></div>
+    <details class="tool-out" id="order-out"><summary class="hint"></summary><p class="hint" style="margin:4px 0 6px">누르면 빼고, 다시 누르면 넣어요. 오늘 결석으로 적힌 학생은 저절로 빠져요. 내일이 되면 다시 모두 들어가요.</p><div class="out-chips"></div></details>
     <div class="row center">
       <button type="button" class="btn primary big-btn" id="order-go">순서 정하기</button>
       <label class="row hint" for="order-one"><input type="checkbox" id="order-one"> 한 명씩 공개</label>
@@ -2671,7 +2679,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@d9fa63b932e907f6242383710c7742035964bc5c/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@920b92d55a02b21bff0a4845ce8616f10f52c72f/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
