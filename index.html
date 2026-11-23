@@ -1275,6 +1275,21 @@ table.jc-t{border-collapse:collapse;font-size:13px}
 .un-bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:4px 0 10px}
 .un-edit{margin:0 0 10px}
 .un-list{display:grid;gap:8px}
+.un-split{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:14px;align-items:start}
+.un-nav{display:grid;gap:4px;position:sticky;top:12px;max-height:calc(100vh - 40px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px}
+.un-nav-it{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;font:inherit;font-size:14px;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--fg)}
+.un-nav-it:hover{background:var(--surface-2)}
+.un-nav-it.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.un-nav-it .t{flex:1;min-width:0}
+.un-nav-it .c{font-size:11.5px;font-weight:700;color:var(--muted);background:var(--surface-2);border-radius:99px;padding:1px 7px}
+.un-nav-it.on .c{background:var(--surface);color:var(--accent)}
+.un-nav-it.any{border-bottom:1px dashed var(--line);border-radius:8px 8px 0 0;margin-bottom:2px}
+.un-pane{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:10px;min-width:0}
+.un-pane-h{display:flex;align-items:center;gap:10px}.un-pane-h h3{margin:0;font-size:17px;flex:1}
+.un-items{display:grid;gap:6px}
+.un-pane .un-li{background:var(--surface-2)}
+.un-pane .un-li .grow{flex:1 1 0}
+@media (max-width:760px){.un-split{grid-template-columns:1fr}.un-nav{position:static;max-height:none;grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto}}
 .un-row{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .un-row.open{border-color:var(--accent)}
 .un-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;flex-wrap:wrap}
@@ -2749,7 +2764,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.18 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3b521763563c6749323fa1a70d70254ac7671c7f/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@0c4e9d10f6ec4f7d59bc67da2d3af91883a91574/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
