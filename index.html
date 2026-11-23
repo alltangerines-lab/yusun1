@@ -674,6 +674,13 @@ table.attg{border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-
 .attg td button:hover{background:var(--accent-soft)}
 .attg td.tot{font-family:var(--mono);color:var(--muted);padding:3px 5px}
 .attg td.tot.has{color:var(--danger);font-weight:600}
+.attg td.nm{width:1%;max-width:9em;overflow:hidden;text-overflow:ellipsis}
+.attg tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.attg tbody tr:hover td{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.attg th.st{white-space:nowrap;min-width:3.2em;line-height:1.2;background:color-mix(in srgb,var(--warn) 14%,var(--surface-2));padding:3px 3px}
+.attg td.tot{background:color-mix(in srgb,var(--warn) 6%,var(--surface))}
+.attg tbody tr:nth-child(even) td.tot{background:color-mix(in srgb,var(--warn) 11%,var(--surface))}
+.attg th.st0,.attg td.st0{border-left:3px solid var(--fg)}
 .attg tfoot td{background:var(--surface-2);font-family:var(--mono);padding:3px;color:var(--muted)}
 .mk-질병{color:var(--c-cns)}.mk-미인정{color:var(--danger)}.mk-기타{color:var(--c-life)}.mk-출석인정{color:var(--ok)}
 .att-legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:8px 0 0}
@@ -2661,7 +2668,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@f9c0f1a842c66960ebbd9b31934baa460c625baa/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@6d6ca6aef98cb07ccee78c48f5c697d3aaf0231f/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
