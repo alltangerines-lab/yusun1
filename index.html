@@ -753,11 +753,13 @@ button.x.armed,button.rt-del.armed{color:var(--danger)!important;font-size:12px!
 .kind.k-증액{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
 .log-add-box{display:grid;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 .log-add-box h4{margin:0;font-size:13px}
-.log-add{display:grid;grid-template-columns:150px 140px minmax(160px,1fr) 150px auto;gap:8px;align-items:end}
+.log-add{display:grid;grid-template-columns:150px 140px minmax(140px,1fr) minmax(140px,1fr) 150px auto;gap:8px;align-items:end}
 .log-add label{display:grid;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
 .bud .log-add input,.bud .log-add select{padding:6px 8px;font-size:13px;border:1px solid var(--line);background:var(--surface);border-radius:6px;min-width:0;width:100%;color:var(--fg)}
 .bud .log-add input:focus,.bud .log-add select:focus{border-color:var(--accent)}
 .bud .log-add .amt{text-align:right}
+.bud .logs td.calc{color:var(--muted);font-size:12px}
+.bud .logs td.calc input{width:100%;min-width:180px;font-size:12px}
 @media (max-width:740px){.log-add{grid-template-columns:1fr 1fr}.log-add input[type=text]:not(.amt){grid-column:1/-1}}
 .ros td.f-no input{min-width:44px;width:52px;text-align:center;font-family:var(--mono)}
 .ros td.f-sex input{min-width:40px;width:46px;text-align:center}
@@ -2684,7 +2686,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@70f90fe08955df241bb8e2da8d7ddb86f4031ec4/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@89de0c4fcec3fb31fe1b4db1df61b76d38156be7/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
