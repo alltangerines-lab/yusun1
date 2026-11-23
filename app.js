@@ -4335,6 +4335,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '뽑기·순서 정하기에서 "오늘 빼는 학생"을 눌러 고르면 그 학생은 빼고 뽑아요. 오늘 결석으로 적힌 학생은 저절로 빠지고, 내일이 되면 다시 모두 들어가요.',
     '타이머 이름 칸을 비운 채 시작하면 이름 칸이 사라지고 숫자만 보여요. "처음으로"를 누르면 다시 나와요.',
     '할 일로 잘못 들어간 일정은 할 일을 눌러 "일정으로 옮기기", 일정으로 잘못 들어간 할 일은 일정의 "고치기"에서 "할 일로 옮기기"를 누르면 옮겨져요.',
     '출석부: "결석계"를 "결석신고서"로 바꿨어요. 감염병 같은 출석인정결석은 결석신고서 대장에 모이고, 교외체험학습만 체험학습 대장에 모여요. 잘못 들어간 줄은 대장의 "체험학습으로"·"결석신고서로" 버튼으로 옮겨요.',
@@ -5562,6 +5563,7 @@ function showTool(name){
   if (name === 'note') renderNoteTool();
   if (name === 'dice') diceInfo();
   if (name === 'morn') renderMorning(true);
+  if (name === 'pick' || name === 'order') renderOut();
   if (name === 'pick') pickInfo();
   if (name === 'seat') loadSeatRules();
   if (name === 'score') renderTeams();
@@ -5618,10 +5620,32 @@ $('#timer-label').addEventListener('keydown', e => { if (e.key === 'Enter' && !e
 $('#timer-set').onclick = () => { const m = parseInt($('#timer-min').value, 10); if (m > 0 && m <= 120) timerSet(m * 60); else toast('1분에서 120분 사이로 적어 주세요.'); };
 const sxOf = id => (($(`#${id} [aria-pressed="true"]`) || {}).dataset || {}).sx || 'all';
 ['pick-sx', 'order-sx'].forEach(id => $('#' + id).addEventListener('click', e => { const b = e.target.closest('[data-sx]'); if (!b) return; $$(`#${id} button`).forEach(x => x.setAttribute('aria-pressed', x === b)); if (id === 'pick-sx'){ T.pool = null; pickInfo(); } }));
-function poolFor(sx){ const all = rosterForTools(); if (sx === 'all') return all; return all.filter(r => r.sex === sx); }
+/* 오늘 빼는 학생: 결석으로 적힌 학생은 저절로, 나머지는 눌러서 (오늘만 기억) */
+const TOUT = (() => { try { const v = JSON.parse(localStorage.getItem('gyomu.toolOut') || 'null'); if (v && v.day === ymd(today())) return {day:v.day, off:new Set(v.off || []), on:new Set(v.on || [])}; } catch (e){} return {day:ymd(today()), off:new Set(), on:new Set()}; })();
+function toutSave(){ try { localStorage.setItem('gyomu.toolOut', JSON.stringify({day:TOUT.day, off:[...TOUT.off], on:[...TOUT.on]})); } catch (e){} }
+function absentToday(){ const k = ymd(today()), out = new Set(); try { const ix = attIndex(); rosterForTools().forEach(r => { const a = ix[r.no + '|' + k]; if (a && a.kind === '결석') out.add(r.no); }); } catch (e){} return out; }
+function isOut(no){ if (TOUT.day !== ymd(today())){ TOUT.day = ymd(today()); TOUT.off.clear(); TOUT.on.clear(); } return TOUT.off.has(no) || (absentToday().has(no) && !TOUT.on.has(no)); }
+function renderOut(){
+  const ab = absentToday(), all = rosterForTools(), outN = all.filter(r => isOut(r.no)).length;
+  ['pick', 'order'].forEach(k => {
+    const box = $(`#${k}-out`); if (!box) return;
+    $('summary', box).textContent = outN ? `오늘 빼는 학생 ${outN}명 (${all.filter(r => isOut(r.no)).map(r => r.name).join(', ')})` : '오늘 빼는 학생 고르기 (결석·안 하는 학생)';
+    $('.out-chips', box).innerHTML = all.map(r => `<button type="button" class="chip out-chip ${isOut(r.no) ? 'off' : ''}" data-out="${r.no}" aria-pressed="${isOut(r.no)}">${esc(r.name)}${ab.has(r.no) ? ' <small>결석</small>' : ''}</button>`).join('');
+  });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-out]'); if (!b) return;
+  const no = +b.dataset.out, now = isOut(no), ab = absentToday().has(no);
+  if (now){ TOUT.off.delete(no); if (ab) TOUT.on.add(no); } else { TOUT.on.delete(no); if (!ab) TOUT.off.add(no); }
+  toutSave();
+  if (T.pool){ T.pool = T.pool.filter(x => !isOut(x.no)); if (now){ const r = rosterForTools().find(x => x.no === no); if (r && !T.pool.some(x => x.no === no) && !(T.hist || []).includes(r.name)) T.pool.push(r); } }
+  renderOut(); pickInfo();
+});
+function poolFor(sx){ const all = rosterForTools().filter(r => !isOut(r.no)); if (sx === 'all') return all; return all.filter(r => r.sex === sx); }
 function pickInfo(){
   const sx = sxOf('pick-sx'), all = poolFor(sx);
   if (!T.pool) T.pool = all.slice();
+  T.pool = T.pool.filter(x => !isOut(x.no));
   const noSex = sx !== 'all' && !rosterForTools().some(r => r.sex);
   $('#pick-info').textContent = noSex ? '명부에 성별이 없어요. 명부 탭에서 성별을 넣으면 여자만·남자만 뽑을 수 있어요.' : (S.profile.roster || []).length ? `남은 학생 ${T.pool.length}명 / ${all.length}명${sx !== 'all' ? ` (${sx}자만)` : ''}` : `명단이 없어서 1~24번으로 뽑아요. 명부 탭에서 바꿀 수 있어요.`;
   $('#pick-hist').innerHTML = T.hist.map(h => `<span class="chip">${esc(h)}</span>`).join('');
