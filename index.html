@@ -1253,6 +1253,9 @@ table.jc-t{border-collapse:collapse;font-size:13px}
 .jc-t td.nm{text-align:left;font-weight:600}
 .jc-t button.ck{width:40px;height:28px;border:0;background:transparent;font:inherit;font-weight:700;cursor:pointer}
 .jc-t button.ck.O{color:var(--ok)} .jc-t button.ck.X{color:var(--danger)} .jc-t button.ck.T{color:var(--warn)} .jc-t button.ck.W{color:var(--accent);font-size:12.5px;width:auto;min-width:48px;padding:0 6px}
+.jt-two{display:grid;gap:12px;align-items:start}
+@media (min-width:1100px){.jt-two{grid-template-columns:fit-content(560px) minmax(460px,1fr)}.jt-two > .jt-sec{margin:0}}
+#jt-sum th,#jt-sum td{white-space:nowrap}
 .jc-t th.sel,.jc-t td.sel{width:30px;padding:2px}.jc-t tr.picked td{background:var(--accent-soft)}
 .jc-t select.jc-bulk,.jc-t input.jc-bulk-in{display:block;margin:3px auto 1px;font-size:11.5px;padding:2px 4px;width:96px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--fg);font-weight:400}
 .jc-t input{width:90px;border:0;background:transparent;padding:4px;text-align:center}
@@ -2022,16 +2025,18 @@ body.ro .w-only{display:none!important}
             <textarea id="jt-paste-txt" rows="5" placeholder="여기에 Ctrl+V"></textarea>
             <div class="row" style="margin-top:6px"><span class="hint grow" id="jt-paste-info"></span><button type="button" class="btn" id="jt-paste-cancel">닫기</button><button type="button" class="btn primary" id="jt-paste-go">넣기</button></div>
           </section>
-          <section class="jt-sec">
-            <h3>반별 시수</h3>
-            <p class="hint" style="margin:0 0 6px">목표 시수를 적어 두면, 아래 주별 시간표로 계산한 시수와 맞는지 보여 줘요. 쉬는 날 칸은 빼고 세요.</p>
-            <div class="jt-wrap" id="jt-sum"></div>
-          </section>
+          <div class="jt-two">
           <section class="jt-sec">
             <h3>기본 시간표</h3>
             <p class="hint" style="margin:0 0 6px">칸에 반을 적어요 (예: 4-1, 41, 3-2, 2안). 한글·엑셀 시간표 표를 복사해서 아무 칸에나 Ctrl+V 하면 칸마다 나눠 들어가요 (요일 줄·교시 칸이 있으면 알아서 맞춰요). 여기 넣은 시간표가 아래 학기 주별 시간표에 쭉 깔려요.</p>
             <div class="jt-wrap" id="jt-base"></div>
           </section>
+          <section class="jt-sec">
+            <h3>반별 시수</h3>
+            <p class="hint" style="margin:0 0 6px">목표 시수를 적어 두면, 아래 주별 시간표로 계산한 시수와 맞는지 보여 줘요. 쉬는 날 칸은 빼고 세요.</p>
+            <div class="jt-wrap" id="jt-sum"></div>
+          </section>
+          </div>
           <section class="jt-sec">
             <div class="row"><h3 style="margin:0">주별 시간표</h3><span class="hint">기본 시간표가 학기 전체에 자동으로 들어가 있어요. 바뀐 주만 그 칸을 고치세요.</span><span class="grow"></span><button type="button" class="btn small" id="jt-refill">기본 시간표로 다시 채우기</button></div>
             <div class="jt-legend"><span><i style="background:var(--grade-soft)"></i>기본과 다른 칸</span><span><i style="background:repeating-linear-gradient(135deg,var(--surface-2) 0 4px,transparent 4px 8px)"></i>쉬는 날 (세지 않음)</span><span>확정 칸에 체크하면 그 주가 확정된 거예요</span></div>
@@ -2737,7 +2742,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@1e4e99afdc3eb1d74045cd0e5d6b2677db57a850/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b1c484ff58723cc4eb722660452b217ff5be433e/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
