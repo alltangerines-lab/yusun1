@@ -432,9 +432,11 @@ table.sheet{border-collapse:collapse;width:100%;font-size:13px;font-variant-nume
 
 /* overlays */
 .overlay{position:fixed;inset:0;z-index:50;background:color-mix(in srgb,#000 45%,transparent);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-.dlg{background:var(--surface);border-radius:12px;width:min(480px,100%);max-height:100%;overflow:auto;padding:18px;display:grid;gap:12px;box-shadow:var(--shadow)}
-.dlg h2{margin:0;font-size:17px}
-.dlg .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.dlg{position:relative;background:var(--surface);border-radius:12px;width:min(480px,100%);max-height:100%;overflow:auto;padding:18px;display:grid;gap:12px;box-shadow:var(--shadow)}
+.dlg-x{position:absolute;top:10px;right:10px;width:32px;height:32px;border:0;background:transparent;border-radius:8px;font-size:20px;line-height:1;color:var(--muted);cursor:pointer}
+.dlg-x:hover{background:var(--surface-2);color:var(--fg)}
+.dlg h2{margin:0;font-size:17px;padding-right:36px}
+.dlg .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:-18px;background:var(--surface);margin:0 -18px -18px;padding:12px 18px 16px;border-top:1px solid var(--line);z-index:2}
 .dlg .acts .left{margin-right:auto}
 .big{position:fixed;inset:0;z-index:60;background:#FFFDF6;color:#1B1A17;display:flex;flex-direction:column;padding:max(20px,env(safe-area-inset-top,0px)) max(28px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(28px,env(safe-area-inset-left,0px))}
 .big-h{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid #E6DDBF;padding-bottom:10px}
@@ -2219,7 +2221,7 @@ body.ro .w-only{display:none!important}
     <div class="acts">
       <button type="button" class="btn danger left w-only" id="t-del">삭제</button>
       <button type="button" class="btn w-only" id="t-toev" title="할 일이 아니라 일정이면 달력 일정으로 옮겨요">일정으로 옮기기</button>
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn primary w-only">저장</button>
     </div>
   </form>
@@ -2241,7 +2243,7 @@ body.ro .w-only{display:none!important}
     <div class="acts">
       <button type="button" class="btn danger left" id="g-del">삭제</button>
       <button type="button" class="btn" id="g-totk" title="일정이 아니라 할 일이면 할 일로 옮겨요">할 일로 옮기기</button>
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn primary">저장</button>
     </div>
   </form>
@@ -2263,7 +2265,7 @@ body.ro .w-only{display:none!important}
     <div class="row"><button type="button" class="btn small" data-pick="edit">사진</button><div class="thumbs" id="e-thumbs" style="margin-top:0"></div></div>
     <div class="acts">
       <button type="button" class="btn danger left" id="e-del">삭제</button>
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn primary">저장</button>
     </div>
   </form>
@@ -2315,7 +2317,7 @@ body.ro .w-only{display:none!important}
     </fieldset>
     <div class="row"><span class="hint grow">학년 공간의 일정과 할 일을 파일로 보관하기</span><button type="button" class="btn small" id="export-grade">학년 기록 받기 (CSV)</button></div>
     <div class="acts">
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn primary w-only">저장</button>
     </div>
   </form>
@@ -2338,7 +2340,7 @@ body.ro .w-only{display:none!important}
     </fieldset>
     <p class="hint" id="ny-prog" style="margin:0" aria-live="polite"></p>
     <div class="acts">
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn primary" id="ny-go">보관하고 비우기</button>
     </div>
   </form>
@@ -2368,7 +2370,7 @@ body.ro .w-only{display:none!important}
       <span class="hint">교시</span><span id="lsb-pers"><label class="ls-pc"><input type="checkbox" value="1">1</label><label class="ls-pc"><input type="checkbox" value="2">2</label><label class="ls-pc"><input type="checkbox" value="3">3</label><label class="ls-pc"><input type="checkbox" value="4">4</label><label class="ls-pc"><input type="checkbox" value="5">5</label><label class="ls-pc"><input type="checkbox" value="6">6</label></span><button type="button" class="btn small" id="lsb-per-go">교시 맞추기</button>
       <button type="button" class="btn small" id="lsb-all">모든 반 줄 만들기</button></div>
     <div id="lsf-rows" class="tablewrap"></div>
-    <div class="acts"><span class="hint left">넣을 것 <b id="lsf-n">0</b>개 · 빨간 줄은 겹쳐요</span><button type="button" class="btn" data-close>닫기</button><button type="button" class="btn primary" id="lsf-save">저장</button></div>
+    <div class="acts"><span class="hint left">넣을 것 <b id="lsf-n">0</b>개 · 빨간 줄은 겹쳐요</span><button type="button" class="btn" data-close>취소</button><button type="button" class="btn primary" id="lsf-save">저장</button></div>
   </div>
 </div>
 <div class="overlay" id="dlg-lse" hidden>
@@ -2379,7 +2381,7 @@ body.ro .w-only{display:none!important}
     <label class="f" for="lse-prog">수업 이름<input type="text" id="lse-prog" autocomplete="off"></label>
     <div class="two"><label class="f" for="lse-teacher">담당<input type="text" id="lse-teacher" autocomplete="off"></label><label class="f" for="lse-place">장소<input type="text" id="lse-place" autocomplete="off"></label></div>
     <p id="lse-warn" style="margin:0"></p>
-    <div class="acts"><button type="button" class="btn danger left" id="lse-del">지우기</button><button type="button" class="btn" data-close>닫기</button><button type="button" class="btn primary" id="lse-save">저장</button></div>
+    <div class="acts"><button type="button" class="btn danger left" id="lse-del">지우기</button><button type="button" class="btn" data-close>취소</button><button type="button" class="btn primary" id="lse-save">저장</button></div>
   </div>
 </div>
 <div class="overlay" id="dlg-jd" hidden>
@@ -2390,7 +2392,7 @@ body.ro .w-only{display:none!important}
     <div class="ls-bulk row" id="jd-mine" hidden><b>우리 반 시간표에서 가져오기</b><span class="hint">나의 공간 연간 시간표에서 자주 나오는 과목이에요. 전담 과목만 골라요.</span><span id="jd-subs"></span><button type="button" class="btn small primary" id="jd-take">우리 반 칸에 채우기</button></div>
     <input type="text" id="jd-paste" placeholder="여기를 누르고 시간표 표를 Ctrl+V (선택)" aria-label="시간표 붙여 넣기">
     <div id="jd-grid" class="tablewrap"></div>
-    <div class="acts"><button type="button" class="btn" data-close>닫기</button><button type="button" class="btn primary w-only" id="jd-save">저장</button></div>
+    <div class="acts"><button type="button" class="btn" data-close>취소</button><button type="button" class="btn primary w-only" id="jd-save">저장</button></div>
   </div>
 </div>
 
@@ -2420,7 +2422,7 @@ body.ro .w-only{display:none!important}
       <div class="tpl" id="nt-tpls"></div>
     </div>
     <div class="acts">
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn primary">만들기</button>
     </div>
   </form>
@@ -2445,7 +2447,7 @@ body.ro .w-only{display:none!important}
     </div>
     <div class="acts">
       <button type="button" class="btn danger left" id="tb-del">탭 지우기</button>
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn primary">저장</button>
     </div>
   </form>
@@ -2460,7 +2462,7 @@ body.ro .w-only{display:none!important}
     <div id="ex-list"></div>
     <div class="acts">
       <span class="hint left" id="ex-count"></span>
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="button" class="btn primary" id="ex-add" disabled>고른 것 넣기</button>
     </div>
   </div>
@@ -2482,7 +2484,7 @@ body.ro .w-only{display:none!important}
     <label class="f" for="at-text">사유 <input type="text" id="at-text" autocomplete="off" placeholder="예: 감기·병원 진료 / 가족여행 (제주)"></label>
     <p class="hint" id="at-note" style="margin:0"></p>
     <div class="acts">
-      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn" data-close>취소</button>
       <button type="submit" class="btn primary">저장</button>
     </div>
   </form>
@@ -2504,7 +2506,7 @@ body.ro .w-only{display:none!important}
       <span class="grow"></span><button type="button" class="btn" id="pl-run">표 읽기</button></div>
     <p class="hint" id="pl-info" style="margin:0"></p>
     <div id="pl-list"></div>
-    <div class="acts"><span class="hint grow" id="pl-count"></span><button type="button" class="btn" data-close>닫기</button><button type="button" class="btn primary" id="pl-add" disabled>명렬표에 넣기</button></div>
+    <div class="acts"><span class="hint grow" id="pl-count"></span><button type="button" class="btn" data-close>취소</button><button type="button" class="btn primary" id="pl-add" disabled>명렬표에 넣기</button></div>
   </div>
 </div>
 <div class="bdm" id="board" hidden>
@@ -2522,7 +2524,7 @@ body.ro .w-only{display:none!important}
     <a class="btn primary" id="ac-choose" target="_top" rel="noopener">다른 구글 계정 골라서 열기</a>
     <p class="hint" style="margin:0">계정 고르는 화면에 학교 계정이 없으면 "다른 계정 사용"으로 학교 계정에 로그인하세요. 로그인한 뒤에도 같은 계정으로 열리면, 아래에서 몇 번째로 로그인한 계정인지 골라 열어 보세요.</p>
     <div class="row" id="ac-nth"></div>
-    <div class="acts"><button type="button" class="btn" data-close>닫기</button></div>
+    <div class="acts"><button type="button" class="btn" data-close>취소</button></div>
   </div>
 </div>
 <div class="overlay" id="dlg-grade" hidden>
@@ -2707,7 +2709,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@32a4660f3901354c89279f98027a7e42d848cd12/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@fe2b4389e60d3576bf14c635e2945b689e5a5e40/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
