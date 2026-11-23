@@ -2050,7 +2050,7 @@ function startListening(){
   const db = S.db;
   listen(db.doc('grade/settings'), 'settings', snap => { if (snap.exists){ S.settings = Object.assign({gradeName:'3학년', classCount:4, lunchAfter:3}, snap.data()); try { localStorage.setItem('gyomu.gradeName', S.settings.gradeName || ''); } catch (e){} } renderHeader(); renderPageHead(); renderMeal(); if (S.space === 'me') renderMe(); else if (S.page === 'budget') BUD.g.render(); else if (S.page === 'roster') ROS.g.render(); });
   listen(db.collection('events'), 'events', snap => { S.events = docs(snap); renderGradeToday(); renderCal(); renderDay(); renderTasks(); if (S.space === 'me') renderToday(); gcalSoon(); });
-  listen(db.collection('tasks'), 'tasks', snap => { S.tasks = docs(snap); gcalSoon(); renderGradeToday(); renderCal(); renderDay(); renderTasks(); if (S.space === 'me'){ renderToday(); if (S.meTab === 'todo') renderTodo(); } });
+  listen(db.collection('tasks'), 'tasks', snap => { S.tasks = docs(snap); gcalSoon(); renderGradeToday(); renderCal(); renderDay(); renderTasks(); if (S.space === 'me'){ renderToday(); if (S.meTab === 'todo') renderTodo(); if (S.meTab === 'jday') renderJDay(); } });
   db.doc('daily/' + ymd(today())).onSnapshot(snap => { S.dailyToday = snap.exists ? snap.data() : null; renderGradeToday(); resolveNames(); }, () => {});
   listen(db.collection('notices'), 'notices', snap => { S.notices = docs(snap); renderNotices(); resolveNames(); });
   listen(db.collection('links'), 'links', snap => { S.links = docs(snap); renderLinks(); });
@@ -4572,6 +4572,7 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.17';
 const CHANGELOG = [
   ['2.17', '11월 23일', [
+    '전담 수업일지 "한 주 간단히" 표 맨 위에 그날 끝낼 할 일(나의 할 일·학년 할 일)이 떠요. 눌러서 끝낸 것으로 표시해요. 오늘 칸에는 지난 할 일도 빨갛게 나와요.',
     '전담 시간표·시수: 화면이 넓으면 기본 시간표 바로 옆에 반별 시수가 나란히 떠요.',
     '전담 수업일지: 한 주 보기에서 메모를 요일마다 따로 적어요 (간단히는 표 맨 아래 줄, 자세히는 날마다 맨 아래).',
     '전담 반별 명렬: 왼쪽 네모로 학생을 고르고 칸 제목 아래 "한꺼번에"로 O·X·△나 정한 말을 한 번에 넣어요 (안 고르면 모두). 새 칸을 "말로 고르기"로 만들면 잘함·보통·노력처럼 말로 눌러 넣어요.',
@@ -5222,10 +5223,14 @@ async function renderJDayWeek(){
   const noTT = !Object.values(S.jd.base).some(a => a.some(Boolean)) && !Object.keys(S.jd.weeks).length;
   if (noTT){ $('#jd-week').innerHTML = '<div class="jd-empty">먼저 <a href="#me-jtt">시간표·시수</a>에 전담 시간표를 넣어 주세요. 그러면 한 주에 들어갈 반이 여기 차례로 떠요.</div>'; return; }
   if (S.db && S.uid){ await jlLoadWeek(false); if (S.meTab !== 'jday' || JDW.view !== 'week') return; }
-  if (document.activeElement && document.activeElement.closest('#jd-week')) return;
+  if (document.activeElement && document.activeElement.closest('#jd-week textarea')) return;
   const L0 = lunchAt(), tk = ymd(today()), cl = days.map(dk => jdOff(dk) ? [] : jdDayClasses(dk));
   const maxP = Math.max(6, ...cl.map(a => a.length));
   let h = `<div class="tablewrap"><table class="pp-wk jd-wk"><thead><tr><th class="n">교시</th>${days.map(dk => { const d = fromYmd(dk), off = jdOff(dk); return `<th class="${dk === tk ? 'today' : ''} ${dk === k ? 'sel' : ''}"><button type="button" class="linkbtn" data-jd-day="${dk}" title="이날 메모로 가기">${WD[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}</button>${off ? `<small>${esc(off)}</small>` : ''}</th>`; }).join('')}</tr></thead><tbody>`;
+  /* 교시 위에 그날 끝낼 할 일 (나의 할 일 + 학년 할 일). 오늘 칸에는 지난 것도 */
+  { let todos = []; try { todos = myTodos(); } catch (e){}
+    const cell = dk => { const its = todos.filter(t => t.due === dk || (dk === tk && t.due && t.due < tk)); return its.length ? its.slice(0, 6).map(t => `<button type="button" class="jd-todo ${t.due < tk ? 'late' : ''}" data-act="todo-toggle" data-id="${esc(t.id)}" data-src="${esc(t.src)}" title="누르면 끝낸 것으로 표시해요"><span class="bx"></span>${t.src === 'grade' ? '<small>학년</small>' : ''}${esc(t.title)}</button>`).join('') + (its.length > 6 ? `<span class="hint">+${its.length - 6}개</span>` : '') : ''; };
+    if (days.some(dk => cell(dk))) h += `<tr class="jd-todo-row"><td class="n">할 일</td>${days.map(dk => `<td>${cell(dk)}</td>`).join('')}</tr>`; }
   for (let p = 0; p < maxP; p++){
     if (p === L0) h += `<tr class="lunch"><td colspan="6">점심</td></tr>`;
     h += `<tr><td class="n">${p + 1}</td>${days.map((dk, di) => {
