@@ -697,6 +697,10 @@ div.bud,div.ros{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-wi
 .bud-card dd.rest{font-weight:700;font-size:15px;font-family:var(--font)}
 .neg{color:var(--danger)!important}
 .bud-bar,.ros-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ros-cols{position:relative}.ros-cols > summary{list-style:none;cursor:pointer}.ros-cols > summary::-webkit-details-marker{display:none}
+.ros-colpick{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:250px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:10px 12px;display:grid;gap:4px}
+.ros td input{max-width:none}
+table.ros{width:auto !important;min-width:0}
 .bud-bar .seg,.ros-cls.seg{flex-wrap:wrap}
 .seg button small{opacity:.7;font-weight:400;margin-left:2px}
 .bud-paste,.ros-paste{border:1px dashed var(--line);border-radius:10px;padding:8px 12px}
@@ -2657,7 +2661,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@410d3b0b285d6d2709035d35cf6b95c260382fe4/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@424951cd26580b9e31c0529812084e276e6214ca/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
