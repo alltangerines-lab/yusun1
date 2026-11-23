@@ -1948,7 +1948,7 @@ body.ro .w-only{display:none!important}
             <button type="button" class="btn small" id="jd-next" aria-label="다음 날">›</button>
             <button type="button" class="btn small" id="jd-today">오늘</button>
             <input type="date" id="jd-date" style="width:auto" aria-label="날짜 고르기">
-            <div class="seg" role="group" aria-label="보기" id="jd-view"><button type="button" data-v="week" aria-pressed="true">한 주</button><button type="button" data-v="day" aria-pressed="false">하루 카드</button></div>
+            <div class="seg jv-seg" role="group" aria-label="보기"><button type="button" data-jv="week">한 주 간단히</button><button type="button" data-jv="detail">한 주 자세히</button><button type="button" data-jv="day">하루</button></div>
             <span class="grow"></span>
             <span class="hint" id="jd-save"></span>
           </div>
@@ -1967,14 +1967,14 @@ body.ro .w-only{display:none!important}
             <button type="button" class="btn small" id="jl-next" aria-label="다음 날">›</button>
             <button type="button" class="btn small" id="jl-today">오늘</button>
             <input type="date" id="jl-date" style="width:auto" aria-label="날짜 고르기">
-            <div class="seg" role="group" aria-label="보기" id="jl-view"><button type="button" data-v="week" aria-pressed="true">한 주</button><button type="button" data-v="day" aria-pressed="false">하루</button></div>
+            <div class="seg jv-seg" role="group" aria-label="보기"><button type="button" data-jv="week">한 주 간단히</button><button type="button" data-jv="detail">한 주 자세히</button><button type="button" data-jv="day">하루</button></div>
             <span class="grow"></span>
             <span class="hint" id="jl-save"></span>
           </div>
-          <p class="hint" style="margin:0 0 8px">반은 전담 시간표에서 가져와요. 칸을 벗어나면 저장되고, "오늘 수업"과 같은 기록이에요. <b>똑같이</b>를 누르면 그 줄 내용이 같은 학년 다른 반의 빈칸에 반마다 한 번씩 들어가요 (한 주 보기는 그 주, 하루 보기는 그날).</p>
+          <p class="hint" style="margin:0 0 8px">반은 전담 시간표에서 가져와요. 칸을 벗어나면 저장되고, "한 주 간단히"·"하루"와 같은 기록이에요. <b>똑같이</b>를 누르면 그 줄 내용이 같은 학년 다른 반의 빈칸에 반마다 한 번씩 들어가요 (한 주 보기는 그 주, 하루 보기는 그날).</p>
           <div class="attline" id="jl-ev"></div>
           <div id="jl-rows"></div>
-          <div id="jl-memo-wrap"><label class="f" for="jl-memo" style="margin-top:12px">이 날 메모</label>
+          <div id="jl-memo-wrap"><label class="f" for="jl-memo" style="margin-top:12px" id="jl-memo-lab">이 날 메모</label>
           <textarea id="jl-memo" rows="3"></textarea></div>
         </div>
 
@@ -1984,7 +1984,7 @@ body.ro .w-only{display:none!important}
             <span class="grow"></span>
             <div class="seg" role="group" aria-label="보기" id="jp-view"><button type="button" data-v="les" aria-pressed="true">차시별</button><button type="button" data-v="cal" aria-pressed="false">월별</button></div>
           </div>
-          <div id="jp-les"><details class="jt-sec" id="jl-add"><summary><b>단원·차시 목록 넣기</b> <span class="hint">넣어 두면 이 표와 "오늘 수업"에 다음 차시가 떠요 (안 넣어도 돼요)</span></summary>
+          <div id="jp-les"><details class="jt-sec" id="jl-add"><summary><b>단원·차시 목록 넣기</b> <span class="hint">넣어 두면 이 표와 수업일지에 다음 차시가 떠요 (안 넣어도 돼요)</span></summary>
             <p class="hint" style="margin:8px 0 6px">한 줄에 하나씩 적어요. <b>단원 이름 뒤에 차시 수</b>(예: "1. My Name Is Eric 4")를 쓰면 1/4 ~ 4/4 차시가 생겨요. 표에서 복사한 <b>단원 · 차시 · 학습 문제 · 쪽수</b> 칸도 그대로 들어가요.</p>
             <textarea id="jl-paste" rows="5" placeholder="1. My Name Is Eric 4&#10;2. Let's Play Soccer 4&#10;Special 1 2"></textarea>
             <div class="row" style="margin-top:6px"><span class="hint grow" id="jl-paste-info"></span><button type="button" class="btn small" id="jl-clear">이 학년 목록 다 지우기</button><button type="button" class="btn primary" id="jl-paste-go">이 학년에 넣기</button></div>
@@ -2731,7 +2731,7 @@ body.ro .w-only{display:none!important}
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.17 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@bccfec2e5b6983aa376a13feb28576ea0a10cc71/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@78b3972d3abd0a88195f811371914006dc8c76bd/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
