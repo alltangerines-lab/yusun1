@@ -2141,7 +2141,7 @@ function startPrivate(){
     listen(db.doc(PROFILE()).collection('ops'), 'mops', snap => { S.mops = docs(snap); if (S.space === 'me' && S.meTab === 'mops') renderOps(OPM); });
     listen(db.doc(PROFILE()).collection('tabs'), 'mtabs', snap => { S.mtabs = docs(snap); renderStrip(); if (inTabView() && S.tabMine) renderTabPage(); });
     listen(db.doc(PROFILE()).collection('budget'), 'mbudget', snap => { S.budM = docs(snap); if (S.space === 'me' && S.meTab === 'budget') BUD.m.render(); });
-    listen(db.doc(PROFILE()).collection('journal'), 'journal', snap => { S.journal = docs(snap); if (S.space === 'me') renderMe(); gcalSoon(); attTidySoon(); });
+    listen(db.doc(PROFILE()).collection('journal'), 'journal', snap => { S.journal = docs(snap); if (S.space === 'me') renderMe(); renderRoutine(); gcalSoon(); attTidySoon(); });
     listen(db.doc(NOTES()), 'notes', snap => {
       if (busy(NOTES())) return;
       S.notes = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {items:[]};
@@ -4579,7 +4579,8 @@ const CHANGELOG = [
   ['2.18', '11월 24일', [
     '아침 안내에서 결석한 학생 이름이 날짜 왼쪽이 아니라 오른쪽 끝에 떠요.',
     '수업자료 단원 보기를 바꿨어요. 왼쪽에 단원 제목이 차례로 있고, 단원을 누르면 오른쪽에 그 단원 자료가 떠요. 자료 넣기도 오른쪽 아래에서 바로 해요.',
-    '아침 안내 날짜 오른쪽에 지금 시각이 떠요.'
+    '아침 안내 날짜 오른쪽에 지금 시각이 떠요.',
+    '아침 안내를 먼저 열어 두었을 때 결석 이름이 안 뜨던 것을 고쳤어요. 출석부 기록이 늦게 들어와도 바로 나타나요.'
   ]],
   ['2.17', '11월 23일', [
     '전담 수업일지 "한 주 간단히" 표 맨 위에 그날 끝낼 할 일(나의 할 일·학년 할 일)이 떠요. 눌러서 끝낸 것으로 표시해요. 오늘 칸에는 지난 할 일도 빨갛게 나와요.',
