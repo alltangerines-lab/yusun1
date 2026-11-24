@@ -4580,7 +4580,8 @@ const CHANGELOG = [
     '아침 안내에서 결석한 학생 이름이 날짜 왼쪽이 아니라 오른쪽 끝에 떠요.',
     '수업자료 단원 보기를 바꿨어요. 왼쪽에 단원 제목이 차례로 있고, 단원을 누르면 오른쪽에 그 단원 자료가 떠요. 자료 넣기도 오른쪽 아래에서 바로 해요.',
     '아침 안내 날짜 오른쪽에 지금 시각이 떠요.',
-    '아침 안내를 먼저 열어 두었을 때 결석 이름이 안 뜨던 것을 고쳤어요. 출석부 기록이 늦게 들어와도 바로 나타나요.'
+    '아침 안내를 먼저 열어 두었을 때 결석 이름이 안 뜨던 것을 고쳤어요. 출석부 기록이 늦게 들어와도 바로 나타나요.',
+    '타이머 끝 소리를 조금 작게(70%) 줄였어요.'
   ]],
   ['2.17', '11월 23일', [
     '전담 수업일지 "한 주 간단히" 표 맨 위에 그날 끝낼 할 일(나의 할 일·학년 할 일)이 떠요. 눌러서 끝낸 것으로 표시해요. 오늘 칸에는 지난 할 일도 빨갛게 나와요.',
@@ -5972,9 +5973,10 @@ function timerSet(sec){ clearInterval(T.iv); T.running = false; T.total = T.rema
 let tAC = null;
 function tAudio(){ try { tAC = tAC || new (window.AudioContext || window.webkitAudioContext)(); if (tAC.state === 'suspended') tAC.resume(); } catch (e){ tAC = null; } return tAC; }
 const TSND = (() => { try { return localStorage.getItem('gyomu.timerSnd') || 'chime'; } catch (e){ return 'chime'; } })();
+const T_VOL = 0.7; /* 끝 소리 크기 (1 = 처음 크기) */
 function tone(ac, f, t, dur, vol, type){
   const o = ac.createOscillator(), g = ac.createGain(); o.type = type || 'sine'; o.frequency.value = f; o.connect(g); g.connect(ac.destination);
-  const t0 = ac.currentTime + t; g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  const t0 = ac.currentTime + t; g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol * T_VOL, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
   o.start(t0); o.stop(t0 + dur + .05);
 }
 function beep(kind){
