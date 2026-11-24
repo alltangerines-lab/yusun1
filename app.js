@@ -4194,6 +4194,9 @@ function saveRoutine(){
   queueSet(ROUTINE(), () => ({items:S.routine.items, done:S.routine.done, extra:S.routine.extra, updatedAt:Date.now()}), false);
 }
 function renderRoutine(){ if (!$('#tool-morn').hidden && !$('#tools').hidden) renderMorning(false); }
+function moClock(){ const el = $('#mo-clock'); if (!el) return; const d = new Date(), h = d.getHours();
+  el.textContent = `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`; }
+moClock(); setInterval(() => { if (!$('#tool-morn').hidden) moClock(); }, 1000);
 async function renderMorning(fetchDay){
   if (MO.view && MO.view < ymd(addDays(today(), -60))) MO.view = null;
   const k = moK(), d = fromYmd(k), isT = k === ymd(today());
@@ -4575,7 +4578,8 @@ const APP_VERSION = '2.18';
 const CHANGELOG = [
   ['2.18', '11월 24일', [
     '아침 안내에서 결석한 학생 이름이 날짜 왼쪽이 아니라 오른쪽 끝에 떠요.',
-    '수업자료 단원 보기를 바꿨어요. 왼쪽에 단원 제목이 차례로 있고, 단원을 누르면 오른쪽에 그 단원 자료가 떠요. 자료 넣기도 오른쪽 아래에서 바로 해요.'
+    '수업자료 단원 보기를 바꿨어요. 왼쪽에 단원 제목이 차례로 있고, 단원을 누르면 오른쪽에 그 단원 자료가 떠요. 자료 넣기도 오른쪽 아래에서 바로 해요.',
+    '아침 안내 날짜 오른쪽에 지금 시각이 떠요.'
   ]],
   ['2.17', '11월 23일', [
     '전담 수업일지 "한 주 간단히" 표 맨 위에 그날 끝낼 할 일(나의 할 일·학년 할 일)이 떠요. 눌러서 끝낸 것으로 표시해요. 오늘 칸에는 지난 할 일도 빨갛게 나와요.',
