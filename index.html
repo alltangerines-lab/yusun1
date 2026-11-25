@@ -28,6 +28,7 @@
   if (!g){ window.__GAS_PREVIEW = true; return; }
   window.__GAS_MODE = true;
   const run = (fn, ...a) => new Promise((res, rej) => g.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...a));
+  window.gasRun = run;
   const msg = e => String((e && e.message) || e || '');
   const errCode = e => { const m = msg(e); if (/too_large/.test(m)) return 'quota_exceeded'; if (/missing|permission|권한|access|denied|setup|허용|Exception/i.test(m)) return 'invalid_argument'; return 'unavailable'; };
   const clone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
@@ -2796,8 +2797,8 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- APP_VERSION 2.18 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@5fe4818aa34c2e80d61a2061d9fdcb1856e27bd7/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<!-- APP_VERSION 2.19 -->
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@6f14b8e32e0ba22ba46b5e00fda8086861a6def9/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
