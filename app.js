@@ -1292,7 +1292,7 @@ function lkChip(l){
   return k === 'link' && ok ? `<a class="un-chip" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-lk="${esc(l.id)}" title="${esc(l.url)}">${inner}</a>` : `<button type="button" class="un-chip k-${k}" data-lk="${esc(l.id)}">${inner}</button>`;
 }
 const lkFdoc = (fid, i) => S.db.doc(`opsfiles/${fid}_${i}`);
-async function lkDropFile(f){ for (let i = 0; i < (f.parts || 1); i++){ try { await lkFdoc(f.fid, i).delete(); } catch (e){} } }
+function lkDropFile(f){ return fileDrop(f, lkFdoc); }
 /* 둘째 칸이 주소처럼 생겼으면 링크, 아니면 줄글로 넣어요 */
 async function lkAddText(ti, ui, subj, unit){
   if (!S.canWrite){ toast('학년 공간을 고칠 권한이 없어요.'); return false; }
@@ -1333,9 +1333,7 @@ $('#lk-file').addEventListener('change', async e => {
   try {
     for (const f of ok){
       toast(`${f.name} 올리는 중…`);
-      const b64 = await readB64(f), fid = 'f' + rid(), n = Math.max(1, Math.ceil(b64.length / PART));
-      for (let i = 0; i < n; i++) await lkFdoc(fid, i).set({d:b64.slice(i * PART, (i + 1) * PART), i, n, by:S.uid});
-      out.push({fid, name:f.name, size:f.size, type:f.type || '', parts:n});
+      out.push(await fileSave(f, 'g', lkFdoc));
     }
     await S.db.collection('links').add({title:(t.ti.value.trim() || out[0].name).slice(0, 120), url:'', files:out, subj:t.subj, unit:t.unit, createdBy:S.uid, createdAt:Date.now()});
     t.ti.value = ''; toast(`파일 ${out.length}개를 올렸어요.`);
@@ -1383,13 +1381,7 @@ document.addEventListener('click', async e => {
   const g = e.target.closest('[data-lkget]');
   if (g){
     const f = (l.files || []).find(x => x.fid === g.dataset.lkget); if (!f) return;
-    g.disabled = true; toast(`${f.name} 받는 중…`);
-    try {
-      let b64 = ''; for (let i = 0; i < (f.parts || 1); i++){ const sn = await lkFdoc(f.fid, i).get(); if (!sn.exists) throw {code:'missing'}; b64 += sn.data().d || ''; }
-      const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-      await save(f.name, new Blob([u8], {type:f.type || 'application/octet-stream'}));
-    } catch (er){ toast(er && er.code === 'missing' ? '파일 일부를 찾지 못했어요. 다시 올려 주세요.' : '파일을 받지 못했어요.'); }
-    g.disabled = false;
+    await fileOpen(f, lkFdoc, g);
   }
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#lk-pop').hidden){ const id = LKP.id; closeLkPop(); const b = document.querySelector(`[data-lk="${CSS.escape(id || '')}"]`); if (b) b.focus(); } });
@@ -4574,8 +4566,11 @@ if (window.__gasNoGrade) gradePickSoon();
 
 
 /* ---------- 버전 · 바뀐 것 알림 ---------- */
-const APP_VERSION = '2.18';
+const APP_VERSION = '2.19';
 const CHANGELOG = [
+  ['2.19', '11월 25일', [
+    '수업자료·운영자료에 붙이는 파일을 이제 구글 드라이브 폴더에 저장해요. 기록 시트가 가벼워져서 열고 저장하는 게 느려지지 않아요. 파일을 누르면 드라이브에서 열려요. (예전에 올린 파일은 그대로 열려요.)'
+  ]],
   ['2.18', '11월 24일', [
     '아침 안내에서 결석한 학생 이름이 날짜 왼쪽이 아니라 오른쪽 끝에 떠요.',
     '수업자료 단원 보기를 바꿨어요. 왼쪽에 단원 제목이 차례로 있고, 단원을 누르면 오른쪽에 그 단원 자료가 떠요. 자료 넣기도 오른쪽 아래에서 바로 해요.',
@@ -5842,12 +5837,34 @@ function renderOpsFiles(C){
   opsEl(C, 'of-files').innerHTML = C.files.map((f, i) => `<span class="ofile small"><span class="nm">${esc(f.name)}</span><span class="sz">${f.pending ? '올릴 파일 · ' : ''}${fmtSize(f.size || 0)}</span><button type="button" class="x" data-ofrm="${i}" aria-label="파일 빼기">×</button></span>`).join('');
 }
 const readB64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = rej; r.readAsDataURL(f); });
-async function putFile(C, f){
-  const b64 = await readB64(f.file), fid = 'f' + rid(), n = Math.max(1, Math.ceil(b64.length / PART));
-  for (let i = 0; i < n; i++){ opsEl(C, 'of-filehint').textContent = `${f.name} 올리는 중 ${i + 1}/${n}`; await C.fdoc(fid, i).set({d:b64.slice(i * PART, (i + 1) * PART), i, n, by:S.uid}); }
-  return {fid, name:f.name, size:f.size, type:f.type, parts:n};
+/* 첨부파일: 구글 웹 앱에서는 드라이브 폴더에 올리고 기록에는 주소만 남겨요. 드라이브를 못 쓰면 예전처럼 기록 안에 나눠 넣어요. */
+async function fileSave(f, scope, fdoc, prog){
+  const b64 = await readB64(f), type = f.type || '';
+  if (window.gasRun){
+    try { if (prog) prog(`${f.name} 드라이브에 올리는 중…`); const r = await window.gasRun('fileUp', f.name, type, b64, scope); if (r && r.id) return {fid:'d' + r.id, did:r.id, name:f.name, size:f.size, type}; }
+    catch (e){ console.warn('드라이브에 못 올려서 기록 안에 넣어요', e); }
+  }
+  const fid = 'f' + rid(), n = Math.max(1, Math.ceil(b64.length / PART));
+  for (let i = 0; i < n; i++){ if (prog) prog(`${f.name} 올리는 중 ${i + 1}/${n}`); await fdoc(fid, i).set({d:b64.slice(i * PART, (i + 1) * PART), i, n, by:S.uid}); }
+  return {fid, name:f.name, size:f.size, type, parts:n};
 }
-async function dropFile(C, f){ for (let i = 0; i < (f.parts || 1); i++){ try { await C.fdoc(f.fid, i).delete(); } catch (e){} } }
+async function fileDrop(f, fdoc){
+  if (f.did){ if (window.gasRun) window.gasRun('fileDel', f.did).catch(() => {}); return; }
+  for (let i = 0; i < (f.parts || 1); i++){ try { await fdoc(f.fid, i).delete(); } catch (e){} }
+}
+/* 드라이브 파일은 새 창에서 드라이브로 열고(거기서 내려받기), 기록 안 파일은 바로 내려받아요. */
+async function fileOpen(f, fdoc, btn){
+  if (f.did){ window.open('https://drive.google.com/file/d/' + encodeURIComponent(f.did) + '/view', '_blank', 'noopener'); return; }
+  if (btn) btn.disabled = true; toast(`${f.name} 받는 중…`);
+  try {
+    let b64 = ''; for (let i = 0; i < (f.parts || 1); i++){ const sn = await fdoc(f.fid, i).get(); if (!sn.exists) throw {code:'missing'}; b64 += sn.data().d || ''; }
+    const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    await save(f.name, new Blob([u8], {type:f.type || 'application/octet-stream'}));
+  } catch (er){ toast(er && er.code === 'missing' ? '파일 일부를 찾지 못했어요. 다시 올려 주세요.' : '파일을 받지 못했어요.'); }
+  if (btn) btn.disabled = false;
+}
+function putFile(C, f){ return fileSave(f.file, C.k === 'g' ? 'g' : 'm', C.fdoc, t => { opsEl(C, 'of-filehint').textContent = t; }); }
+function dropFile(C, f){ return fileDrop(f, C.fdoc); }
 function wireOps(C){
   const noPerm = () => toast(C.k === 'g' ? '학년 공간을 고칠 권한이 없어요.' : '로그인한 상태에서만 올릴 수 있어요.');
   opsEl(C, 'ops-new').onclick = () => { if (!C.can()){ noPerm(); return; } opsFormOpen(C, null); };
@@ -5868,7 +5885,7 @@ function wireOps(C){
     const btn = opsEl(C, 'of-save'); btn.disabled = true;
     try {
       const files = [];
-      for (const f of C.files) files.push(f.pending ? await putFile(C, f) : {fid:f.fid, name:f.name, size:f.size, type:f.type, parts:f.parts});
+      for (const f of C.files) files.push(f.pending ? await putFile(C, f) : Object.assign({fid:f.fid, name:f.name, size:f.size, type:f.type}, f.did ? {did:f.did} : {parts:f.parts}));
       const prev = C.edit ? C.list().find(o => o.id === C.edit) : null;
       if (prev) (prev.files || []).filter(f => !files.some(x => x.fid === f.fid)).forEach(f => dropFile(C, f));
       const data = {title, cat:opsEl(C, 'of-cat').value.trim() || '기타', body:opsEl(C, 'of-body').value.replace(/\s+$/, ''), url, imgs:(S.stage[C.stage] || []).slice(), files, updatedAt:Date.now(), updatedBy:S.uid};
@@ -5887,14 +5904,7 @@ function wireOps(C){
     else if (b.dataset.oact === 'del'){ if (!twoStep(b, '지울까요?')) return; try { (o.files || []).forEach(f => dropFile(C, f)); await C.doc(o.id).delete(); toast('지웠어요.'); } catch (er){ wErr(er, C.shared); } }
     else if (b.dataset.oact === 'get'){
       const f = (o.files || []).find(x => x.fid === b.dataset.fid); if (!f) return;
-      b.disabled = true; toast(`${f.name} 받는 중…`);
-      try {
-        let b64 = '';
-        for (let i = 0; i < (f.parts || 1); i++){ const sn = await C.fdoc(f.fid, i).get(); if (!sn.exists) throw {code:'missing'}; b64 += sn.data().d || ''; }
-        const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-        await save(f.name, new Blob([u8], {type:f.type || 'application/octet-stream'}));
-      } catch (er){ toast(er && er.code === 'missing' ? '파일 일부를 찾지 못했어요. 다시 올려 주세요.' : '파일을 받지 못했어요.'); }
-      b.disabled = false;
+      await fileOpen(f, C.fdoc, b);
     }
   });
 }
