@@ -5842,7 +5842,7 @@ async function fileSave(f, scope, fdoc, prog){
   const b64 = await readB64(f), type = f.type || '';
   if (window.gasRun){
     try { if (prog) prog(`${f.name} 드라이브에 올리는 중…`); const r = await window.gasRun('fileUp', f.name, type, b64, scope); if (r && r.id) return {fid:'d' + r.id, did:r.id, name:f.name, size:f.size, type}; }
-    catch (e){ console.warn('드라이브에 못 올려서 기록 안에 넣어요', e); }
+    catch (e){ console.warn('드라이브에 못 올려서 기록 안에 넣어요', e); toast('드라이브에 못 올려서 예전처럼 기록 안에 넣어요. (' + String((e && e.message) || e).replace(/^.*?:\s*/, '').slice(0, 60) + ')'); }
   }
   const fid = 'f' + rid(), n = Math.max(1, Math.ceil(b64.length / PART));
   for (let i = 0; i < n; i++){ if (prog) prog(`${f.name} 올리는 중 ${i + 1}/${n}`); await fdoc(fid, i).set({d:b64.slice(i * PART, (i + 1) * PART), i, n, by:S.uid}); }
