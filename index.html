@@ -1238,6 +1238,8 @@ table.jt-base{border-collapse:collapse;font-size:13px}
 .jt-base th,.jt-base td{border:1px solid var(--line);padding:2px;text-align:center}
 .jt-base th{background:var(--surface-2);color:var(--muted);font-weight:600;padding:4px 8px}
 .jt-base input{width:64px;text-align:center;padding:4px;border:0;background:transparent}
+.jt-base tr.jt-lunch th,.jt-base tr.jt-lunch td{background:color-mix(in srgb,var(--warn) 8%,var(--surface))}
+.jt-base select{font-size:12px;padding:3px 4px;width:auto;border:0;background:transparent}
 table.jt-weeks{border-collapse:collapse;font-size:12px;white-space:nowrap}
 .jt-weeks th,.jt-weeks td{border:1px solid var(--line);padding:0;text-align:center}
 .jt-weeks th{background:var(--surface-2);color:var(--muted);font-weight:600;padding:3px 4px;position:sticky;top:0}
@@ -2138,7 +2140,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
           <section class="jt-sec">
             <div class="row"><h3 style="margin:0">주별 시간표</h3><span class="hint">기본 시간표가 학기 전체에 자동으로 들어가 있어요. 바뀐 주만 그 칸을 고치세요.</span><span class="grow"></span><button type="button" class="btn small" id="jt-refill">기본 시간표로 다시 채우기</button></div>
             <div class="jt-legend"><span><i style="background:var(--grade-soft)"></i>기본과 다른 칸</span><span><i style="background:repeating-linear-gradient(135deg,var(--surface-2) 0 4px,transparent 4px 8px)"></i>쉬는 날 (세지 않음)</span><span>확정 칸에 체크하면 그 주가 확정된 거예요</span></div>
-            <div class="jt-wrap" id="jt-weeks" style="max-height:70vh"></div>
+            <div class="jt-wrap" id="jt-weeks"></div>
           </section>
         </div>
 
@@ -2840,7 +2842,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.20 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@4bb33fe233f8eef6186c798e1e3fc97e0339abc5/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@dbd72efd0e4fe1b90e65341baa5dd6dd1c4aa3e0/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
