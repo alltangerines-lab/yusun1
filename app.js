@@ -633,7 +633,7 @@ function openLightbox(src){ if (!src) return; $('#lb-img').src = src; $('#lightb
 
 /* ---------- pages (tabs) ---------- */
 const GPAGES = [['grade','오늘','main'],['calendar','달력','calendar'],['lessons','특별수업','lessons'],['tasks','할 일','tasks'],['notices','협의·공지','notices'],['links','수업자료','links'],['ops','운영자료','ops'],['budget','예산','budget'],['roster','명부','roster']];
-const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출석부','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-roster','명부','roster'],['me-ops','자료','mops']];
+const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-roster','명부','roster'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출석부','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const JPAGES = [['me','수업일지','jday'],['me-jprog','진도표','jprog'],['me-jcls','반별 명렬','jcls'],['me-jtt','시간표·시수','jtt'],['me-todo','할 일','todo'],['me-cns','상담일지','cns'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const isJD = () => !!(S.profile && S.profile.role === 'jd');
 const curMP = () => isJD() ? JPAGES : MPAGES;
@@ -713,6 +713,13 @@ function tabItems(space){
   if (space === 'grade') items = GPAGES.map(([r, n]) => ({key:r, href:r, name:pgName('grade', r, n), base:true})).concat(sortedTabs().map(t => ({key:'t:' + t.id, href:'t-' + t.id, name:t.name || '이름 없는 탭', base:false})));
   else items = curMP().map(([r, n]) => ({key:r, href:r, name:pgName('me', r, n), base:true})).concat(sortedMTabs().map(t => ({key:'m:' + t.id, href:'m-' + t.id, name:t.name || '이름 없는 탭', base:false})));
   const pf = ((S.profile || {}).tabPrefs || {})[space === 'grade' ? 'grade' : (isJD() ? 'jd' : 'me')] || {};
+  /* 2.20: 명부를 평가 바로 뒤로 (탭 순서를 바꿔 둔 선생님도 한 번 옮겨 줘요) */
+  if (space !== 'grade' && !isJD() && pf.order && pf.order.length && !pf.v220 && S.uid){
+    const o = pf.order.filter(k => k !== 'me-roster'), at = o.indexOf('me-eval');
+    o.splice(at < 0 ? o.length : at + 1, 0, 'me-roster');
+    const tp = Object.assign({}, S.profile.tabPrefs || {}); tp.me = Object.assign({}, pf, {order:o, v220:true}); S.profile.tabPrefs = tp; saveProfile();
+    return tabItems(space);
+  }
   const ord = pf.order || [], hid = new Set(pf.hidden || []);
   const pos = k => { const i = ord.indexOf(k); return i < 0 ? 1e4 : i; };
   items.forEach((x, i) => { x.i = i; x.hidden = hid.has(x.key) && i > 0; });
@@ -721,7 +728,7 @@ function tabItems(space){
 }
 function saveTabPrefs(items){
   const k = tabPrefKey(), tp = Object.assign({}, S.profile.tabPrefs || {});
-  tp[k] = {order:items.map(x => x.key), hidden:items.filter(x => x.hidden).map(x => x.key)};
+  tp[k] = {order:items.map(x => x.key), hidden:items.filter(x => x.hidden).map(x => x.key), v220:true};
   S.profile.tabPrefs = tp; saveProfile(); renderStrip(); renderTabArrange();
 }
 /* 과목 숨기기·순서: 내 화면에만 */
@@ -4645,6 +4652,7 @@ const APP_VERSION = '2.20';
 const CHANGELOG = [
   ['2.20', '11월 26일', [
     '명렬표: 위에서 항목을 추가하는 대신 빈 칸 10개가 깔려 있어요. 칸 제목을 눌러 이름·종류(단계·제출 체크·점수·짧은 글)를 정하고, 같은 자리에서 고치거나 순서를 바꾸거나 지워요.',
+    '나의 공간 "명부" 탭을 평가와 할 일 사이로 옮겼어요.',
     '명렬표 단계 평가 기본값을 매우 잘함·잘함·보통·노력 요함으로 바꿨어요.',
     '명렬표: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
   ]],
