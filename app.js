@@ -4736,6 +4736,7 @@ const CHANGELOG = [
     '학급일지에 "행발 김하늘 친구를 잘 도와줌"처럼 적으면 학생은 김하늘로 읽고, 내용에는 "친구를 잘 도와줌"만 남겨요. 예전 행발 기록도 한 번 정리해요.',
     '전담: 시간표·시수의 기본 시간표 아래에서 요일마다 점심을 몇 교시 뒤로 할지 정해요(여러 학년을 맡아 요일마다 다를 때). 수업일지 한 주 보기와 하루 보기에 그대로 반영돼요.',
     '전담 주별 시간표가 안쪽 스크롤 없이 끝까지 쭉 보여요.',
+    '수업일지·수업 계획 한 주 보기에서 빈 시간은 연한 회색, 점심은 연한 초록으로 구분돼요.',
     '체크리스트: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
   ]],
   ['2.19', '11월 25일', [
@@ -5480,7 +5481,7 @@ async function renderJDayWeek(){
     const cell = dk => { const its = todos.filter(t => t.due === dk || (dk === tk && t.due && t.due < tk)); return its.length ? its.slice(0, 6).map(t => `<button type="button" class="jd-todo ${t.due < tk ? 'late' : ''}" data-act="todo-toggle" data-id="${esc(t.id)}" data-src="${esc(t.src)}" title="누르면 끝낸 것으로 표시해요"><span class="bx"></span>${t.src === 'grade' ? '<small>학년</small>' : ''}${esc(t.title)}</button>`).join('') + (its.length > 6 ? `<span class="hint">+${its.length - 6}개</span>` : '') : ''; };
     if (days.some(dk => cell(dk))) h += `<tr class="jd-todo-row"><td class="n">할 일</td>${days.map(dk => `<td>${cell(dk)}</td>`).join('')}</tr>`; }
   for (let p = 0; p < maxP; p++){
-    if (Ls.includes(p)) h += Ls.every(x => x === p) ? `<tr class="lunch"><td colspan="6">점심</td></tr>` : `<tr class="lunch"><td></td>${Ls.map(x => `<td>${x === p ? '점심' : ''}</td>`).join('')}</tr>`;
+    if (Ls.includes(p)) h += Ls.every(x => x === p) ? `<tr class="lunch"><td colspan="6">점심</td></tr>` : `<tr class="lunch"><td class="nl"></td>${Ls.map(x => `<td class="${x === p ? '' : 'nl'}">${x === p ? '점심' : ''}</td>`).join('')}</tr>`;
     h += `<tr><td class="n">${p + 1}</td>${days.map((dk, di) => {
       if (jdOff(dk)) return '<td class="off"></td>';
       const c = cl[di][p]; if (!c) return '<td class="empty"></td>';
