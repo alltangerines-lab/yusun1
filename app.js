@@ -1937,13 +1937,86 @@ async function printStudent(no){
     <h3 style="font-size:12pt;margin:6mm 0 2mm">누가기록 (${all.length}건)</h3>
     <table><thead><tr><th style="width:16%">날짜</th><th style="width:10%">분류</th><th>내용</th></tr></thead><tbody>${all.map(e => `<tr><td>${e.date ? mdShort(e.date) : ''}${e.end ? '~' + mdShort(e.end) : ''}</td><td>${e.cat}</td><td style="text-align:left">${esc(e.text || '')}</td></tr>`).join('') || '<tr><td colspan="3">기록 없음</td></tr>'}</tbody></table></div>`);
 }
+/* 명렬표: 칸은 늘 10개쯤 깔아 두고, 제목을 눌러 이름·종류를 정해요 */
+const SH_MIN = 10, SH_LV = '매우 잘함, 잘함, 보통, 노력 요함';
+const SH = {sel:new Set(), edit:null, arm:false};
+const shLevels = v => v.split(/[,·\/]/).map(x => x.trim()).filter(Boolean).slice(0, 8);
+function placeShPop(){
+  const pop = $('#sh-pop'), btn = $(`#sheet [data-shh="${SH.edit === 'new' ? 'new' : CSS.escape(SH.edit)}"]`);
+  if (!btn){ pop.hidden = true; return; }
+  pop.hidden = false;
+  const p = $('#p-sheet').getBoundingClientRect(), b = btn.getBoundingClientRect();
+  const w = pop.offsetWidth || 320;
+  pop.style.left = Math.max(0, Math.min(b.left - p.left, p.width - w)) + 'px';
+  pop.style.top = (b.bottom - p.top + 4) + 'px';
+}
+function openShPop(id){
+  if (!S.uid){ toast('로그인한 상태로 열어야 쓸 수 있어요.'); return; }
+  SH.edit = id; SH.arm = false;
+  const it = id === 'new' ? null : (S.sheet.items || []).find(x => x.id === id);
+  $('#shp-name').value = it ? it.name : '';
+  $('#shp-type').value = it ? it.type : 'level';
+  $('#shp-levels').value = it && it.levels ? it.levels.join(', ') : SH_LV;
+  $('#shp-group').value = it ? (it.group || '') : '';
+  $('#shp-lvwrap').hidden = $('#shp-type').value !== 'level';
+  $('#shp-del').hidden = !it; $('#shp-move').hidden = !it;
+  $('#shp-del').textContent = '칸 지우기'; $('#shp-save').textContent = '저장';
+  renderSheet(); $('#shp-name').focus(); $('#shp-name').select();
+}
+function closeShPop(){ if (!SH.edit) return; SH.edit = null; SH.arm = false; $('#sh-pop').hidden = true; renderSheet(); }
+$('#shp-type').addEventListener('change', e => { $('#shp-lvwrap').hidden = e.target.value !== 'level'; SH.arm = false; $('#shp-save').textContent = '저장'; });
+$('#shp-cancel').onclick = closeShPop;
+$('#shp-save').onclick = () => {
+  const name = $('#shp-name').value.trim().slice(0, 40); if (!name){ toast('칸 제목을 적어 주세요.'); $('#shp-name').focus(); return; }
+  const type = $('#shp-type').value, group = $('#shp-group').value.trim().slice(0, 30);
+  const levels = type === 'level' ? shLevels($('#shp-levels').value) : null;
+  if (type === 'level' && levels.length < 2){ toast('단계를 두 개 이상 쉼표로 적어 주세요.'); $('#shp-levels').focus(); return; }
+  S.sheet.items = S.sheet.items || []; S.sheet.values = S.sheet.values || {};
+  if (SH.edit === 'new'){
+    const item = {id:'i' + Date.now().toString(36), name, type, createdAt:Date.now()};
+    if (group) item.group = group; if (levels) item.levels = levels;
+    S.sheet.items.push(item);
+  } else {
+    const it = S.sheet.items.find(x => x.id === SH.edit); if (!it){ closeShPop(); return; }
+    const vals = S.sheet.values[it.id] || {}, hasVals = Object.keys(vals).length > 0;
+    if (type !== it.type && hasVals && !SH.arm){ SH.arm = true; $('#shp-save').textContent = '적은 것 지우고 바꾸기'; toast('종류를 바꾸면 이 칸에 적은 것이 지워져요. 한 번 더 누르면 바꿔요.'); return; }
+    if (type !== it.type) delete S.sheet.values[it.id];
+    it.name = name; it.type = type;
+    if (group) it.group = group; else delete it.group;
+    if (levels) it.levels = levels; else delete it.levels;
+  }
+  SH.edit = null; $('#sh-pop').hidden = true; saveSheet(); renderSheet(); toast('칸을 저장했어요.');
+};
+$('#shp-del').onclick = () => {
+  const id = SH.edit; if (!id || id === 'new') return;
+  if (!twoStep($('#shp-del'), '정말 지울까요? (적은 것도 지워져요)')) return;
+  S.sheet.items = S.sheet.items.filter(x => x.id !== id); delete S.sheet.values[id];
+  SH.edit = null; $('#sh-pop').hidden = true; saveSheet(); renderSheet(); toast('칸을 지웠어요.');
+};
+$('#shp-move').addEventListener('click', e => {
+  const b = e.target.closest('[data-shmv]'); if (!b) return;
+  const a = S.sheet.items, i = a.findIndex(x => x.id === SH.edit); if (i < 0) return;
+  const [it] = a.splice(i, 1), m = b.dataset.shmv;
+  a.splice(m === 'first' ? 0 : m === 'last' ? a.length : Math.max(0, Math.min(a.length, i + Number(m))), 0, it);
+  saveSheet(); renderSheet();
+});
+$('#sh-pop').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')){ e.preventDefault(); $('#shp-save').click(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && SH.edit) closeShPop(); });
+document.addEventListener('mousedown', e => { if (!SH.edit || !e.target.isConnected) return; if (e.target.closest('#sh-pop, [data-shh]')) return; closeShPop(); });
+function shBulk(id, val){
+  const roster = S.profile.roster || [], who = SH.sel.size ? roster.filter(r => SH.sel.has(r.no)) : roster;
+  const it = (S.sheet.items || []).find(x => x.id === id); if (!it || !who.length) return;
+  const m = S.sheet.values[id] = S.sheet.values[id] || {};
+  who.forEach(r => { if (val === '__clear' || val === '') delete m[r.no]; else m[r.no] = val === '__on' ? true : it.type === 'score' ? Number(val) : val; });
+  saveSheet(); renderSheet();
+  toast(`${SH.sel.size ? who.length + '명' : '모두'}에게 ${val === '__clear' || val === '' ? '비웠어요' : val === '__on' ? '✓를 넣었어요' : `"${val}"을(를) 넣었어요`}.`);
+}
 function renderSheet(){
   renderPlanBox();
   $('#sh-groups').innerHTML = [...new Set((S.sheet.items || []).map(it => it.group).filter(Boolean))].map(g => `<option value="${esc(g)}">`).join('');
   const roster = S.profile.roster || [], items = S.sheet.items || [], vals = S.sheet.values || {};
   $('#sh-missing').checked = S.onlyMissing;
   if (!roster.length){ $('#sheet').innerHTML = '<p class="empty">명렬표를 쓰려면 먼저 "명부"를 넣어 주세요.</p>'; return; }
-  if (!items.length){ $('#sheet').innerHTML = '<p class="empty">위에서 항목을 추가하면 우리 반 명단으로 표가 만들어져요.</p>'; return; }
   const has = (it, no) => { const v = (vals[it.id] || {})[no]; return it.type === 'check' ? v === true : (v !== undefined && v !== null && v !== '' && v !== false); };
   let rows = roster;
   if (S.onlyMissing) rows = roster.filter(r => items.some(it => !has(it, r.no)));
@@ -1956,20 +2029,26 @@ function renderSheet(){
       const nums = got.map(r => Number(vals[it.id][r.no])).filter(n => !isNaN(n));
       if (nums.length) stat = `평균 ${Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10} · 최고 ${Math.max(...nums)} · 최저 ${Math.min(...nums)}`;
     }
-    const armed = S.armed === 'item:' + it.id;
-    return `<th>${esc(it.name)}<button type="button" class="xbtn" data-act="item-del" data-id="${it.id}" aria-label="${esc(it.name)} 항목 지우기" style="${armed ? 'color:var(--danger);font-weight:700' : ''}">${armed ? '지우기?' : '×'}</button>
-      <span class="stat">${{check:'제출', score:'점수', level:'단계', text:'글'}[it.type] || ''} · ${stat}</span></th>`;
-  }).join('');
-  const body = rows.map(r => `<tr><td class="mono">${r.no}</td><td class="name">${esc(r.name || '')}</td>${items.map(it => {
+    const bulk = it.type === 'check' ? `<select class="sh-bulk" data-shbulk="${it.id}" aria-label="${esc(it.name)} 한꺼번에"><option value="">한꺼번에 ▾</option><option value="__on">✓ 냈어요</option><option value="__clear">비우기</option></select>`
+      : it.type === 'level' ? `<select class="sh-bulk" data-shbulk="${it.id}" aria-label="${esc(it.name)} 한꺼번에"><option value="">한꺼번에 ▾</option>${(it.levels || []).map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}<option value="__clear">비우기</option></select>`
+      : `<input class="sh-bulk" data-shbulkt="${it.id}" ${it.type === 'score' ? 'inputmode="decimal"' : ''} placeholder="한꺼번에 쓰기" aria-label="${esc(it.name)} 한꺼번에 쓰기">`;
+    return `<th class="sh-col${SH.edit === it.id ? ' on' : ''}"><button type="button" class="sh-hbtn" data-shh="${it.id}" title="눌러서 칸 제목·종류 고치기">${esc(it.name)}<span class="ed" aria-hidden="true">✎</span></button>
+      <span class="stat">${it.type === 'check' ? '' : ({score:'점수', level:'단계', text:'글'}[it.type] || '') + ' · '}${stat}</span>${bulk}</th>`;
+  }).join('') + Array.from({length:Math.max(1, SH_MIN - items.length)}, (_, i) => `<th class="sh-col sh-blank${SH.edit === 'new' && i === 0 ? ' on' : ''}"><button type="button" class="sh-hbtn" data-shh="new" title="눌러서 새 칸 만들기">${i === 0 ? '+ 칸 제목' : ''}</button></th>`).join('');
+  const blanks = '<td class="sh-empty"></td>'.repeat(Math.max(1, SH_MIN - items.length));
+  const body = rows.map(r => `<tr class="${SH.sel.has(r.no) ? 'picked' : ''}"><td class="sel"><input type="checkbox" data-shsel="${r.no}" ${SH.sel.has(r.no) ? 'checked' : ''} aria-label="${esc(r.name || r.no + '번')} 고르기"></td><td class="mono">${r.no}</td><td class="name">${esc(r.name || '')}</td>${items.map(it => {
     const v = (vals[it.id] || {})[r.no];
     if (it.type === 'check') return `<td class="subm"><div class="row"><button type="button" class="tick" data-act="tick" data-item="${it.id}" data-no="${r.no}" aria-label="${r.no}번 ${esc(it.name)} 제출">${v === true ? '✓' : ''}</button>${v === true ? '' : `<input type="text" class="why" id="why-${it.id}-${r.no}" data-item="${it.id}" data-no="${r.no}" data-why="1" value="${esc(typeof v === 'string' ? v : '')}" placeholder="미제출 사유" aria-label="${r.no}번 미제출 사유">`}</div></td>`;
     if (it.type === 'level') return `<td><select class="lv" id="lv-${it.id}-${r.no}" data-item="${it.id}" data-no="${r.no}" aria-label="${r.no}번 ${esc(it.name)}"><option value=""></option>${(it.levels || []).map(l => `<option ${v === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></td>`;
     return `<td><input class="${it.type === 'text' ? 'txt' : ''}" ${it.type === 'score' ? 'type="number" inputmode="decimal"' : 'type="text"'} data-item="${it.id}" data-no="${r.no}" value="${esc(v ?? '')}" aria-label="${r.no}번 ${esc(it.name)}"></td>`;
-  }).join('')}</tr>`).join('');
+  }).join('')}${blanks}</tr>`).join('');
   const grs = [...new Set(items.filter(it => it.type === 'score' && it.group).map(it => it.group))];
   const avgHead = grs.map(g => { const al = roster.map(r => groupAverages(r.no).find(x => x.g === g)).filter(x => x && x.avg !== null).map(x => x.avg); return `<th class="avg">${esc(g)} 평균<span class="stat">반 ${al.length ? Math.round(al.reduce((a, b) => a + b, 0) / al.length * 10) / 10 : '—'}</span></th>`; }).join('');
   const body2 = grs.length ? rows.map((r, ri) => body.split('</tr>')[ri] + grs.map(g => { const x = groupAverages(r.no).find(y => y.g === g); return `<td class="avg">${x && x.avg !== null ? x.avg : ''}</td>`; }).join('') + '</tr>').join('') : body;
-  $('#sheet').innerHTML = `<div class="tablewrap"><table class="sheet"><thead><tr><th>번호</th><th>이름</th>${head}${avgHead}</tr></thead><tbody>${body2 || `<tr><td colspan="${items.length + 2}" class="hint">모두 냈어요.</td></tr>`}</tbody></table></div>`;
+  const allOn = rows.length && rows.every(r => SH.sel.has(r.no));
+  $('#sheet').innerHTML = (SH.sel.size ? `<p class="hint" style="margin:0 0 6px"><b>${SH.sel.size}명</b> 골랐어요. "한꺼번에"는 이 학생들에게만 들어가요. <button type="button" class="btn small" id="sh-sel-clear">고르기 풀기</button></p>` : '')
+    + `<div class="tablewrap"><table class="sheet"><thead><tr><th class="sel"><input type="checkbox" id="sh-sel-all" ${allOn ? 'checked' : ''} aria-label="모두 고르기"></th><th>번호</th><th>이름</th>${head}${avgHead}</tr></thead><tbody>${body2 || `<tr><td colspan="${items.length + 4}" class="hint">모두 냈어요.</td></tr>`}</tbody></table></div>`;
+  if (SH.edit) placeShPop();
 }
 function renderRoster(){
   if (ROS.m) ROS.m.render();
@@ -2585,20 +2664,16 @@ async function addEntryFrom(stageName, inputSel, opts){
 $('#cns-form').addEventListener('submit', ev => { ev.preventDefault(); addEntryFrom('cns', '#cns-input', {cat:$('#cns-cat').value}); });
 $('#stu-form').addEventListener('submit', ev => { ev.preventDefault(); if (S.selStu === null) return; addEntryFrom('stu', '#stu-input', {student:S.selStu}); });
 
-$('#sh-form').addEventListener('submit', ev => {
-  ev.preventDefault();
-  const name = $('#sh-name').value.trim(); if (!name){ toast('항목 이름을 적어 주세요.'); return; }
-  if (!S.uid){ toast('로그인한 상태로 열어야 쓸 수 있어요.'); return; }
-  const type = $('#sh-type').value;
-  const item = {id:'i' + Date.now().toString(36), name, type, createdAt:Date.now()};
-  const grp = $('#sh-group').value.trim(); if (grp) item.group = grp;
-  if (type === 'level'){ item.levels = $('#sh-levels').value.split(/[,·\/]/).map(x => x.trim()).filter(Boolean).slice(0, 8); if (item.levels.length < 2){ toast('단계를 두 개 이상 쉼표로 적어 주세요. 예: 상, 중, 하'); return; } }
-  S.sheet.items.push(item);
-  $('#sh-name').value = ''; renderSheet(); saveSheet();
-});
 $('#sh-missing').addEventListener('change', e => { S.onlyMissing = e.target.checked; renderSheet(); });
-$('#sh-type').addEventListener('change', e => { $('#sh-levels').hidden = e.target.value !== 'level'; });
+$('#sheet').addEventListener('click', e => {
+  const h = e.target.closest('[data-shh]'); if (h){ SH.edit === h.dataset.shh ? closeShPop() : openShPop(h.dataset.shh); return; }
+  if (e.target.id === 'sh-sel-clear'){ SH.sel.clear(); renderSheet(); }
+});
 $('#sheet').addEventListener('change', e => {
+  if (e.target.id === 'sh-sel-all'){ const rs = S.profile.roster || []; if (e.target.checked) rs.forEach(r => SH.sel.add(r.no)); else SH.sel.clear(); renderSheet(); return; }
+  if (e.target.matches('[data-shsel]')){ const no = Number(e.target.dataset.shsel); e.target.checked ? SH.sel.add(no) : SH.sel.delete(no); renderSheet(); return; }
+  const bk = e.target.closest('[data-shbulk], [data-shbulkt]');
+  if (bk){ const id = bk.dataset.shbulk || bk.dataset.shbulkt, v = bk.value.trim().slice(0, 60); if (bk.dataset.shbulk && !v) return; if (bk.dataset.shbulkt && !v) return; shBulk(id, v); return; }
   const inp = e.target.closest('input[data-item], select[data-item]'); if (!inp) return;
   const it = inp.dataset.item, no = inp.dataset.no, v = inp.value.trim();
   S.sheet.values[it] = S.sheet.values[it] || {};
@@ -4566,8 +4641,13 @@ if (window.__gasNoGrade) gradePickSoon();
 
 
 /* ---------- 버전 · 바뀐 것 알림 ---------- */
-const APP_VERSION = '2.19';
+const APP_VERSION = '2.20';
 const CHANGELOG = [
+  ['2.20', '11월 26일', [
+    '명렬표: 위에서 항목을 추가하는 대신 빈 칸 10개가 깔려 있어요. 칸 제목을 눌러 이름·종류(단계·제출 체크·점수·짧은 글)를 정하고, 같은 자리에서 고치거나 순서를 바꾸거나 지워요.',
+    '명렬표 단계 평가 기본값을 매우 잘함·잘함·보통·노력 요함으로 바꿨어요.',
+    '명렬표: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
+  ]],
   ['2.19', '11월 25일', [
     '수업자료·운영자료에 붙이는 파일을 이제 구글 드라이브 폴더에 저장해요. 기록 시트가 가벼워져서 열고 저장하는 게 느려지지 않아요. 파일을 누르면 드라이브에서 열려요. (예전에 올린 파일은 그대로 열려요.)'
   ]],
