@@ -1182,6 +1182,28 @@ table.pp-wk{border-collapse:collapse;width:100%;min-width:720px;table-layout:fix
 .ev-t td.el{min-width:220px}
 .ev-t td.tg{width:1%;white-space:nowrap}
 .ev-t td.tg .chip{font-size:11px;margin:1px}
+.ev-t th.rs,.ev-t td.rs{width:1%;white-space:nowrap}
+.ev-t td.rs .evn{display:block;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:3px;text-align:center}
+.ev-t td.rs .evn.ok{color:var(--ok)} .ev-t td.rs .evn.late{color:var(--danger);font-weight:700}
+.ev-res{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start;padding:4px 0}
+@media (max-width:900px){.ev-res{grid-template-columns:minmax(0,1fr)}}
+.ev-res-l{display:grid;gap:8px;min-width:0}
+.ev-res-r{display:grid;gap:10px;font-size:13px;position:sticky;top:8px;background:var(--surface-2);border-radius:8px;padding:10px 12px}
+.ev-res-r p{margin:2px 0 0;white-space:pre-wrap}
+table.ev-rt{border-collapse:collapse;width:100%;font-size:13px}
+.ev-rt th,.ev-rt td{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left}
+.ev-rt th{background:var(--surface-2);font-size:12px;color:var(--muted)}
+.ev-rt td.mono{width:36px;text-align:center;color:var(--muted)} .ev-rt td.nm{width:1%;white-space:nowrap;font-weight:600}
+.ev-rt th.sel,.ev-rt td.sel{width:28px}
+.ev-rt tr.picked td{background:var(--accent-soft)}
+.lvbs{display:flex;gap:4px;flex-wrap:wrap}
+.lvb{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px;font-size:12.5px;color:var(--muted);cursor:pointer}
+.lvb[aria-pressed="true"].l0{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.lvb[aria-pressed="true"].l1{background:var(--c-cns);border-color:var(--c-cns);color:var(--surface)}
+.lvb[aria-pressed="true"].l2{background:var(--warn);border-color:var(--warn);color:var(--surface)}
+.lvb[aria-pressed="true"].l3,.lvb[aria-pressed="true"].l4{background:var(--danger);border-color:var(--danger);color:var(--surface)}
+.ev-bulk{width:auto;font-size:12.5px;padding:3px 6px}
+.ev-sc{width:90px;padding:4px 6px}
 .ev-open > td{background:var(--surface);padding:12px 14px 14px}
 .ev-det{display:grid;gap:10px;font-size:13.5px}
 .ev-det b{font-size:12.5px;color:var(--muted)}
@@ -2210,17 +2232,17 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
         </div>
 
         <div class="panel" id="p-sheet" hidden>
-          <p class="hint" style="margin:0 0 10px">날짜에 매이지 않는 기록표예요. 독서록 제출, 단원평가 점수처럼 기간을 두고 채우는 것을 적어요.</p>
+          <p class="hint" style="margin:0 0 10px">날짜에 매이지 않는 기록표예요. 독서록 제출, 가정통신문 회신처럼 기간을 두고 채우는 것을 적어요.</p>
           <div class="row" id="sh-form" style="margin-bottom:10px">
-            <span class="hint grow">칸 제목을 눌러 이름과 종류(제출 체크·점수·단계·짧은 글)를 정해요. 왼쪽 네모로 학생을 고르고 제목 아래 "한꺼번에"로 한 번에 넣어요.</span>
+            <span class="hint grow">칸 제목을 눌러 이름과 종류(제출 체크·짧은 글)를 정해요. 왼쪽 네모로 학생을 고르고 제목 아래 "한꺼번에"로 한 번에 넣어요. 학급일지 학생 표의 체크 칸을 쓴 날은 여기에 날짜 칸으로 저절로 생겨요. 단계·점수 평가는 <a href="#me-eval" style="color:var(--accent);font-weight:600">평가</a> 탭에서 해요.</span>
             <datalist id="sh-level-presets"><option value="매우 잘함, 잘함, 보통, 노력 요함"><option value="잘함, 보통, 노력 요함"><option value="상, 중, 하"><option value="수, 우, 미, 양, 가"></datalist>
             <datalist id="sh-groups"></datalist>
-            <button type="button" class="btn small" id="open-plan">평가 계획 붙여넣기</button>
+            <button type="button" class="btn small" id="open-plan" hidden>평가 계획 붙여넣기</button>
             <label class="row hint" for="sh-missing"><input type="checkbox" id="sh-missing"> 아직 안 낸 학생만</label>
           </div>
           <div class="sh-pop" id="sh-pop" hidden role="dialog" aria-label="칸 정하기">
             <label class="f">칸 제목<input type="text" id="shp-name" placeholder="예: 3단원 평가, 독서록" autocomplete="off"></label>
-            <label class="f">종류<select id="shp-type"><option value="level">단계 평가</option><option value="check">제출 체크 (미제출 사유)</option><option value="score">점수</option><option value="text">짧은 글</option></select></label>
+            <label class="f">종류<select id="shp-type"><option value="check">제출 체크 (미제출 사유)</option><option value="text">짧은 글</option></select></label>
             <label class="f" id="shp-lvwrap"><span>단계 <span class="hint">쉼표로 나눠요</span></span><input type="text" id="shp-levels" list="sh-level-presets" value="매우 잘함, 잘함, 보통, 노력 요함"></label>
             <label class="f"><span>묶음 <span class="hint">같은 묶음 점수는 평균을 내요 (없어도 돼요)</span></span><input type="text" id="shp-group" list="sh-groups" placeholder="예: 수학 단원평가"></label>
             <div class="row" id="shp-move"><span class="hint">자리</span><button type="button" class="btn small mv" data-shmv="first" aria-label="맨 앞으로">⇤</button><button type="button" class="btn small mv" data-shmv="-1" aria-label="앞으로">←</button><button type="button" class="btn small mv" data-shmv="1" aria-label="뒤로">→</button><button type="button" class="btn small mv" data-shmv="last" aria-label="맨 뒤로">⇥</button></div>
@@ -2818,7 +2840,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.20 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@6a52e635fd9789fb17fbafb44b1690913cd715ad/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@3d18d56efad397db84d0108d9f5c54b02d6b17de/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
