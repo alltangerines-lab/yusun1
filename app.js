@@ -4722,8 +4722,12 @@ if (window.__gasNoGrade) gradePickSoon();
 
 
 /* ---------- 버전 · 바뀐 것 알림 ---------- */
-const APP_VERSION = '2.20';
+const APP_VERSION = '2.21';
 const CHANGELOG = [
+  ['2.21', '11월 27일', [
+    '뽑기: 결과를 이름으로 보일지 번호로 보일지 골라요 ("이름으로 / 번호로").',
+    '뽑기: 아래 "이미 뽑힌 학생"이 크게 보여요. 가장 최근에 뽑힌 학생이 맨 앞이에요.'
+  ]],
   ['2.20', '11월 26일', [
     '체크리스트(예전 명렬표): 위에서 항목을 추가하는 대신 빈 칸 10개가 깔려 있어요. 칸 제목을 눌러 이름·종류(단계·제출 체크·점수·짧은 글)를 정하고, 같은 자리에서 고치거나 순서를 바꾸거나 지워요.',
     '나의 공간 "학생명부" 탭을 평가와 할 일 사이로 옮겼어요.',
@@ -6278,8 +6282,17 @@ document.addEventListener('click', e => {
   const no = +b.dataset.out, now = isOut(no), ab = absentToday().has(no);
   if (now){ TOUT.off.delete(no); if (ab) TOUT.on.add(no); } else { TOUT.on.delete(no); if (!ab) TOUT.off.add(no); }
   toutSave();
-  if (T.pool){ T.pool = T.pool.filter(x => !isOut(x.no)); if (now){ const r = rosterForTools().find(x => x.no === no); if (r && !T.pool.some(x => x.no === no) && !(T.hist || []).includes(r.name)) T.pool.push(r); } }
+  if (T.pool){ T.pool = T.pool.filter(x => !isOut(x.no)); if (now){ const r = rosterForTools().find(x => x.no === no); if (r && !T.pool.some(x => x.no === no) && !(T.hist || []).some(h => h.no === r.no)) T.pool.push(r); } }
   renderOut(); pickInfo();
+});
+/* 뽑기 결과: 이름으로 / 번호로 */
+let PSHOW = (() => { try { return localStorage.getItem('gyomu.pickShow') === 'no' ? 'no' : 'name'; } catch (e){ return 'name'; } })();
+const pLab = x => PSHOW === 'no' ? `${x.no}번` : (x.name || `${x.no}번`);
+function pickShowSync(){ $$('#pick-show [data-ps]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ps === PSHOW))); }
+pickShowSync();
+$('#pick-show').addEventListener('click', e => {
+  const b = e.target.closest('[data-ps]'); if (!b) return; PSHOW = b.dataset.ps; try { localStorage.setItem('gyomu.pickShow', PSHOW); } catch (er){}
+  pickShowSync(); if (T.last && T.last.length) $('#pick-face').innerHTML = T.last.map(x => `<span>${esc(pLab(x))}</span>`).join(''); pickInfo();
 });
 function poolFor(sx){ const all = rosterForTools().filter(r => !isOut(r.no)); if (sx === 'all') return all; return all.filter(r => r.sex === sx); }
 function pickInfo(){
@@ -6287,8 +6300,9 @@ function pickInfo(){
   if (!T.pool) T.pool = all.slice();
   T.pool = T.pool.filter(x => !isOut(x.no));
   const noSex = sx !== 'all' && !rosterForTools().some(r => r.sex);
-  $('#pick-info').textContent = noSex ? '명부에 성별이 없어요. 명부 탭에서 성별을 넣으면 여자만·남자만 뽑을 수 있어요.' : (S.profile.roster || []).length ? `남은 학생 ${T.pool.length}명 / ${all.length}명${sx !== 'all' ? ` (${sx}자만)` : ''}` : `명단이 없어서 1~24번으로 뽑아요. 명부 탭에서 바꿀 수 있어요.`;
-  $('#pick-hist').innerHTML = T.hist.map(h => `<span class="chip">${esc(h)}</span>`).join('');
+  $('#pick-info').textContent = noSex ? '명부에 성별이 없어요. 학생명부 탭에서 성별을 넣으면 여자만·남자만 뽑을 수 있어요.' : (S.profile.roster || []).length ? `남은 학생 ${T.pool.length}명 / ${all.length}명${sx !== 'all' ? ` (${sx}자만)` : ''}` : `명단이 없어서 1~24번으로 뽑아요. 학생명부 탭에서 바꿀 수 있어요.`;
+  T.hist = (T.hist || []).filter(h => h && typeof h === 'object');
+  $('#pick-hist').innerHTML = T.hist.length ? `<span class="pk-t">이미 뽑힌 학생</span>${T.hist.map(h => `<span class="pk">${esc(pLab(h))}</span>`).join('')}` : '';
 }
 $('#pick-go').onclick = () => {
   const norep = $('#pick-norep').checked, sx = sxOf('pick-sx');
@@ -6300,18 +6314,18 @@ $('#pick-go').onclick = () => {
   const face = $('#pick-face'); face.classList.toggle('many', n > 1); face.style.setProperty('--n', n);
   let k = 0;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const show = list => { face.innerHTML = list.map(x => `<span>${esc(x.name)}</span>`).join(''); };
+  const show = list => { face.innerHTML = list.map(x => `<span>${esc(pLab(x))}</span>`).join(''); };
   const finish = () => {
     const got = shuffle(src).slice(0, n);
     show(got);
     if (norep) T.pool = T.pool.filter(x => !got.some(g => g.no === x.no));
-    T.hist = got.map(g => g.name).concat(T.hist).slice(0, 40); pickInfo();
+    T.last = got; T.hist = got.map(g => ({no:g.no, name:g.name})).concat(T.hist).slice(0, 40); pickInfo();
     if (want > n) toast(`남은 학생이 ${n}명뿐이라 ${n}명만 뽑았어요.`);
   };
   if (reduce){ finish(); return; }
   const iv = setInterval(() => { show(shuffle(src).slice(0, n)); if (++k > 12){ clearInterval(iv); finish(); } }, 60);
 };
-$('#pick-reset').onclick = () => { T.pool = null; T.hist = []; $('#pick-face').textContent = '?'; $('#pick-face').classList.remove('many'); pickInfo(); };
+$('#pick-reset').onclick = () => { T.pool = null; T.hist = []; T.last = null; $('#pick-face').textContent = '?'; $('#pick-face').classList.remove('many'); pickInfo(); };
 /* 주사위 */
 const DICE = {left:null, hist:[]};
 const PIPS = {1:[5], 2:[1, 9], 3:[1, 5, 9], 4:[1, 3, 7, 9], 5:[1, 3, 5, 7, 9], 6:[1, 3, 4, 6, 7, 9]};
