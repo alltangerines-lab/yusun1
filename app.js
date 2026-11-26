@@ -187,6 +187,17 @@ function mkDate(m, d, base){
   return dt;
 }
 /* 명부 이름으로 학생 찾기: 성까지 쓴 이름, 그리고 반에서 겹치지 않는 이름(성 뺀 것) */
+/* 행발: 학생으로 읽힌 이름은 내용에서 빼요 ("김하늘은 친구를…" → "친구를…") */
+function hbStrip(text, nos){
+  const ro = S.profile.roster || [];
+  let t = ' ' + String(text || '') + ' ';
+  nos.forEach(no => {
+    const r = ro.find(x => x.no === no); if (!r || !r.name || r.name.length < 2) return;
+    const alts = [r.name]; if (r.name.length >= 3 && !ro.some(x => x !== r && x.name && x.name.slice(1) === r.name.slice(1))) alts.push(r.name.slice(1));
+    alts.forEach(n => { t = t.replace(new RegExp('(^|[^가-힣])' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(이)?(은|는|이|가|의|도|를|을|에게|한테)?(?=[^가-힣]|$)', 'g'), '$1'); });
+  });
+  return t.replace(/\s*,\s*(,\s*)+/g, ', ').replace(/^[\s,·:]+/, '').replace(/\s{2,}/g, ' ').trim();
+}
 function namesIn(s){
   const ro = (S.profile.roster || []).filter(r => r.name && r.name.length >= 2);
   const out = [];
@@ -261,6 +272,7 @@ function parseLine(raw, opts = {}){
   let text = s.replace(/\s+/g, ' ').trim().replace(/^까지\s*/, '').replace(/^[,·]\s*/, '');
   const lead = text.match(/^(출결|상담|생활|행발|행동발달|학부모|수업|할일|할 일|메모)\s*[:·]?\s+/);
   if (lead){ const c = lead[1] === '행동발달' ? '행발' : lead[1] === '할 일' ? '할일' : lead[1]; tags.unshift(c); text = text.slice(lead[0].length); }
+  if (tags.includes('행발') && students.length) text = hbStrip(text, students);
   if (end && date && end <= date) end = null;
   if (every && !date) date = new Date(base.getFullYear(), base.getMonth(), base.getDate());
   return { date: date ? ymd(date) : null, end: end ? ymd(end) : null, time, tags, who, students, text, prio,
@@ -309,6 +321,11 @@ function attTidySoon(){
   setTimeout(async () => {
     for (const e of (S.journal || []).filter(x => x.cat === '출결' && x.att && ATT_LABEL_RE.test(x.text || ''))){
       const t = attClean(e.text); if (t === e.text) continue;
+      try { await S.db.doc(PROFILE()).collection('journal').doc(e.id).update({text:t}); } catch (er){ break; }
+    }
+    /* 예전 행발 기록도 내용에 남은 학생 이름을 빼요 */
+    for (const e of (S.journal || []).filter(x => x.cat === '행발' && (x.students || []).length && x.text)){
+      const t = hbStrip(e.text, e.students); if (!t || t === e.text) continue;
       try { await S.db.doc(PROFILE()).collection('journal').doc(e.id).update({text:t}); } catch (er){ break; }
     }
   }, 1500);
@@ -4716,6 +4733,7 @@ const CHANGELOG = [
     '평가 탭: 평가 줄 끝 "결과 넣기"를 누르면 우리 반 명단이 펼쳐져서 매우 잘함·잘함·보통·노력 요함을 눌러 넣어요. 옆에 성취기준·성취수준이 같이 보이고, 고른 학생(안 고르면 모두)에게 한꺼번에 넣을 수도 있어요. 시기가 지났는데 다 못 넣은 평가는 빨갛게 보여요.',
     '체크리스트에 있던 단계·점수 칸은 결과와 함께 평가 탭으로 옮겨져요. 체크리스트에는 제출 체크·짧은 글만 남아요.',
     '학급일지 학생 표의 체크 칸을 쓰면 체크리스트에 그 날짜 칸이 저절로 생겨요(체크했거나 칸 이름을 적은 날만). 체크리스트에서 고쳐도 학급일지에 같이 보여요.',
+    '학급일지에 "행발 김하늘 친구를 잘 도와줌"처럼 적으면 학생은 김하늘로 읽고, 내용에는 "친구를 잘 도와줌"만 남겨요. 예전 행발 기록도 한 번 정리해요.',
     '체크리스트: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
   ]],
   ['2.19', '11월 25일', [
