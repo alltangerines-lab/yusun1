@@ -429,6 +429,20 @@ table.sheet{border-collapse:collapse;width:100%;font-size:13px;font-variant-nume
 .sheet .tick{border:0;background:none;width:100%;min-height:26px;color:var(--ok);font-weight:700;font-size:15px}
 .sheet .tick:empty::after{content:"·";color:var(--muted)}
 .sheet .xbtn{border:0;background:none;color:var(--muted);font-size:12px;padding:0 0 0 4px}
+#p-sheet{position:relative}
+.sheet th.sel,.sheet td.sel{width:30px;padding:2px 4px}
+.sheet tr.picked td{background:var(--accent-soft)}
+.sheet th.sh-col{min-width:96px;max-width:170px;white-space:normal}
+.sheet th.sh-col .stat{font-size:11px;line-height:1.35}
+.sheet .sh-hbtn{border:0;background:none;font:inherit;font-weight:700;color:var(--fg);padding:2px 4px;border-radius:6px;cursor:pointer;display:inline-flex;gap:4px;align-items:center;min-height:24px;min-width:72px;justify-content:center}
+.sheet .sh-hbtn:hover{background:var(--accent-soft);color:var(--accent)}
+.sheet .sh-hbtn .ed{font-size:11px;color:var(--muted);font-weight:400}
+.sheet th.sh-blank{background:color-mix(in srgb,var(--surface-2) 55%,var(--surface))}
+.sheet th.sh-blank .sh-hbtn{color:var(--muted);font-weight:500;font-size:12px;width:100%}
+.sheet th.sh-col.on{box-shadow:inset 0 0 0 2px var(--accent)}
+.sheet td.sh-empty{background:color-mix(in srgb,var(--surface-2) 35%,var(--surface))}
+.sheet .sh-bulk{display:block;margin:4px auto 0;font-size:11.5px;padding:2px 4px;width:104px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--fg);font-weight:400;text-align:left}
+.sh-pop{position:absolute;z-index:30;width:320px;max-width:calc(100vw - 32px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:12px;display:grid;gap:8px}
 .privacy{font-size:12.5px;background:var(--accent-soft);color:var(--fg);border-radius:8px;padding:10px 12px}
 
 /* overlays */
@@ -2191,21 +2205,21 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 
         <div class="panel" id="p-sheet" hidden>
           <p class="hint" style="margin:0 0 10px">날짜에 매이지 않는 기록표예요. 독서록 제출, 단원평가 점수처럼 기간을 두고 채우는 것을 적어요.</p>
-          <form class="row" id="sh-form" style="margin-bottom:10px">
-            <input type="text" id="sh-name" class="grow" placeholder="항목 이름 (예: 3단원 평가)" autocomplete="off">
-            <select id="sh-type" style="width:auto" aria-label="항목 종류">
-              <option value="check">제출 체크 (미제출 사유)</option>
-              <option value="score">점수</option>
-              <option value="level">단계 평가</option>
-              <option value="text">짧은 글</option>
-            </select>
-            <input type="text" id="sh-levels" list="sh-level-presets" hidden placeholder="단계 (쉼표로)" value="상, 중, 하" style="width:200px" aria-label="평가 단계">
-            <datalist id="sh-level-presets"><option value="상, 중, 하"><option value="잘함, 보통, 노력 요함"><option value="매우 잘함, 잘함, 보통, 노력 요함"><option value="수, 우, 미, 양, 가"></datalist>
-            <input type="text" id="sh-group" list="sh-groups" placeholder="묶음 (예: 수학 단원평가)" style="width:170px" aria-label="묶음"><datalist id="sh-groups"></datalist>
-            <button class="btn primary small" type="submit">항목 추가</button>
+          <div class="row" id="sh-form" style="margin-bottom:10px">
+            <span class="hint grow">칸 제목을 눌러 이름과 종류(제출 체크·점수·단계·짧은 글)를 정해요. 왼쪽 네모로 학생을 고르고 제목 아래 "한꺼번에"로 한 번에 넣어요.</span>
+            <datalist id="sh-level-presets"><option value="매우 잘함, 잘함, 보통, 노력 요함"><option value="잘함, 보통, 노력 요함"><option value="상, 중, 하"><option value="수, 우, 미, 양, 가"></datalist>
+            <datalist id="sh-groups"></datalist>
             <button type="button" class="btn small" id="open-plan">평가 계획 붙여넣기</button>
             <label class="row hint" for="sh-missing"><input type="checkbox" id="sh-missing"> 아직 안 낸 학생만</label>
-          </form>
+          </div>
+          <div class="sh-pop" id="sh-pop" hidden role="dialog" aria-label="칸 정하기">
+            <label class="f">칸 제목<input type="text" id="shp-name" placeholder="예: 3단원 평가, 독서록" autocomplete="off"></label>
+            <label class="f">종류<select id="shp-type"><option value="level">단계 평가</option><option value="check">제출 체크 (미제출 사유)</option><option value="score">점수</option><option value="text">짧은 글</option></select></label>
+            <label class="f" id="shp-lvwrap"><span>단계 <span class="hint">쉼표로 나눠요</span></span><input type="text" id="shp-levels" list="sh-level-presets" value="매우 잘함, 잘함, 보통, 노력 요함"></label>
+            <label class="f"><span>묶음 <span class="hint">같은 묶음 점수는 평균을 내요 (없어도 돼요)</span></span><input type="text" id="shp-group" list="sh-groups" placeholder="예: 수학 단원평가"></label>
+            <div class="row" id="shp-move"><span class="hint">자리</span><button type="button" class="btn small mv" data-shmv="first" aria-label="맨 앞으로">⇤</button><button type="button" class="btn small mv" data-shmv="-1" aria-label="앞으로">←</button><button type="button" class="btn small mv" data-shmv="1" aria-label="뒤로">→</button><button type="button" class="btn small mv" data-shmv="last" aria-label="맨 뒤로">⇥</button></div>
+            <div class="row"><button type="button" class="btn small danger" id="shp-del">칸 지우기</button><span class="grow"></span><button type="button" class="btn small" id="shp-cancel">취소</button><button type="button" class="btn small primary" id="shp-save">저장</button></div>
+          </div>
           <details class="planbox" id="plan-box" open hidden><summary>평가 계획 <span class="hint" id="plan-sum"></span></summary><div id="plan-table"></div><p class="hint" style="margin:6px 0 0">평가일이 지나도 다 채우지 못한 평가는 빨갛게 보여요. 평가일은 나의 공간 "오늘"과 학급일지에 떠요.</p></details>
           <div id="sheet"></div>
         </div>
@@ -2591,7 +2605,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
     <p class="hint" style="margin:0">학교 평가 계획표(한글·엑셀·스프레드시트)에서 과목·영역·평가 내용·시기 칸을 제목 줄까지 복사해 붙여 주세요. 칸이 합쳐져 비어 있는 과목·영역은 윗줄 것을 이어 써요.</p>
     <textarea id="pl-text" rows="6" placeholder="과목	영역	평가 내용	평가 시기&#10;국어	듣기·말하기	인물의 마음을 짐작하며 말하기	9/15"></textarea>
     <div class="row"><label class="hint" for="pl-type">항목 종류</label><select id="pl-type" style="width:auto"><option value="level">단계 평가</option><option value="score">점수</option><option value="check">제출 체크</option></select>
-      <input type="text" id="pl-levels" value="잘함, 보통, 노력 요함" list="sh-level-presets" style="width:220px" aria-label="평가 단계">
+      <input type="text" id="pl-levels" value="매우 잘함, 잘함, 보통, 노력 요함" list="sh-level-presets" style="width:220px" aria-label="평가 단계">
       <span class="grow"></span><button type="button" class="btn" id="pl-run">표 읽기</button></div>
     <p class="hint" id="pl-info" style="margin:0"></p>
     <div id="pl-list"></div>
@@ -2797,8 +2811,8 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- APP_VERSION 2.19 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@f60ccc1a6d9b88a580c2fc062bd977beb61448ad/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<!-- APP_VERSION 2.20 -->
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@717a8d6d745e6e555fe1e1123f3086acf7575c25/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
