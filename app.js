@@ -1658,7 +1658,7 @@ function renderDayBoard(){
     $('#plan').innerHTML = h + '</tbody>';
   }
   if (act !== $('#day-memo')) $('#day-memo').value = d.memo || '';
-  if (act !== $('#chk-name')) $('#chk-name').value = d.checkName || '';
+  if (act !== $('#chk-name')){ const di = dayChkItem(k); $('#chk-name').value = di ? (di.named ? di.name : '') : (d.checkName || ''); }
   const list = S.journal.filter(e => covers(e, k) && !(e.cat === '할일' && e.date !== k)).sort((a, b) => (a.cat === '할일') - (b.cat === '할일') || byTime(a, b));
   const att = list.filter(e => e.att);
   $('#j-att').innerHTML = att.length ? att.map(e => `<span class="chip red">${esc((e.students || []).map(stuName).join(', ') || '학생')} · ${attLabel(e.att)}</span>`).join('') : '';
@@ -1668,9 +1668,9 @@ function renderDayBoard(){
   if (!roster.length){ $('#stu-table').innerHTML = '<p class="empty">"명부" 탭에서 명단을 넣으면 학생 표가 생겨요.</p>'; return; }
   const attBy = {};
   att.forEach(e => (e.students || []).forEach(n => { attBy[n] = (attBy[n] ? attBy[n] + ', ' : '') + attLabel(e.att); }));
-  const checks = d.checks || {};
+  const dItem = dayChkItem(k), checks = dItem ? (S.sheet.values[dItem.id] || {}) : (d.checks || {});
   const attIx = attIndex();
-  const cn = d.checkName || '과제';
+  const cn = (dItem && dItem.named && dItem.name) || d.checkName || '과제';
   const done = roster.filter(r => checks[r.no]).length;
   $('#stu-table').innerHTML = `<div class="tablewrap"><table class="sheet"><thead><tr><th>번호</th><th>이름</th><th>출결</th><th>${esc(cn)}<span class="stat">${done}/${roster.length}</span></th></tr></thead><tbody>${roster.map(r => `<tr>
     <td class="mono">${r.no}</td><td class="name">${esc(r.name || '')}</td>
@@ -1881,7 +1881,7 @@ function renderStu(){
     ${stuRosBox(info)}
     <div class="stu-cards">
       <section class="sc"><h4>출결 <small>${card.sy}</small></h4>${card.attHtml}</section>
-      <section class="sc"><h4>평가·제출 <small>체크리스트</small></h4>${card.evalHtml}</section>
+      <section class="sc"><h4>평가·제출 <small>평가 · 체크리스트</small></h4>${card.evalHtml}</section>
       <section class="sc"><h4>누가기록 <small>${all.length}건</small></h4><div class="tally">${CATS.filter(c => catT[c]).map(c => `<span class="pill" ${catStyle(c)}>${c} ${catT[c]}</span>`).join('') || '<span class="hint">아직 없어요.</span>'}</div>
         <p class="hint" style="margin:6px 0 0">학급일지에 "${esc(info.name || no + '번')} …"처럼 이름이나 번호를 넣어 적으면 자동으로 여기 모여요.</p></section>
     </div>
@@ -1922,7 +1922,7 @@ function studentSummary(no){
   days.sort((a, b) => a[0] < b[0] ? 1 : -1);
   const attHtml = `<div class="atot">${ATT_COLS.map((c, i) => `<span class="${tot[i] ? 'has' : ''}"><b>${tot[i]}</b>${c[2]}</span>`).join('')}</div>` +
     (days.length ? `<ul class="mini">${days.slice(0, 6).map(([d, a]) => `<li><span class="mono">${mdShort(d)}</span> ${esc(attLabel(a))}${a.e.text ? ' · ' + esc(a.e.text) : ''}</li>`).join('')}${days.length > 6 ? `<li class="hint">외 ${days.length - 6}일 (출결 탭에서 모두 보기)</li>` : ''}</ul>` : '<p class="hint" style="margin:4px 0 0">개근 중이에요.</p>');
-  const items = (S.sheet && S.sheet.items) || [], vals = (S.sheet && S.sheet.values) || {};
+  const sd = sumData(), items = sd.items, vals = sd.values;
   const rows = items.map(it => {
     const v = (vals[it.id] || {})[no];
     let out = '', cls = '';
@@ -1935,7 +1935,7 @@ function studentSummary(no){
   const groupsOrder = [...new Set(items.map(it => it.group || ''))];
   const rowsArr = items.map((it, i) => ({it, html:rows.split('</li>')[i] + '</li>'}));
   const grouped = groupsOrder.map(g => { const rs = rowsArr.filter(x => (x.it.group || '') === g).map(x => x.html).join(''); const av = ga.find(x => x.g === g); return (g ? `<li class="gh"><span>${esc(g)}</span>${av ? `<span>평균 <b>${av.avg}</b></span>` : '<span></span>'}</li>` : '') + rs; }).join('');
-  const evalHtml = items.length ? `<ul class="evl">${grouped}</ul>` : '<p class="hint">체크리스트에 평가·수합 항목을 만들면 이 학생 결과가 여기 모여요.</p>';
+  const evalHtml = items.length ? `<ul class="evl">${grouped}</ul>` : '<p class="hint">평가 탭에서 결과를 넣거나 체크리스트에 칸을 만들면 이 학생 결과가 여기 모여요.</p>';
   return {sy:sy.label, attHtml, evalHtml, tot};
 }
 const STUNOTES = () => `data/users/${S.uid}/stunotes`;
@@ -1978,7 +1978,7 @@ function openShPop(id){
   SH.edit = id; SH.arm = false;
   const it = id === 'new' ? null : (S.sheet.items || []).find(x => x.id === id);
   $('#shp-name').value = it ? it.name : '';
-  $('#shp-type').value = it ? it.type : 'level';
+  $('#shp-type').value = it && (it.type === 'check' || it.type === 'text') ? it.type : 'check';
   $('#shp-levels').value = it && it.levels ? it.levels.join(', ') : SH_LV;
   $('#shp-group').value = it ? (it.group || '') : '';
   $('#shp-lvwrap').hidden = $('#shp-type').value !== 'level';
@@ -2004,7 +2004,7 @@ $('#shp-save').onclick = () => {
     const vals = S.sheet.values[it.id] || {}, hasVals = Object.keys(vals).length > 0;
     if (type !== it.type && hasVals && !SH.arm){ SH.arm = true; $('#shp-save').textContent = '적은 것 지우고 바꾸기'; toast('종류를 바꾸면 이 칸에 적은 것이 지워져요. 한 번 더 누르면 바꿔요.'); return; }
     if (type !== it.type) delete S.sheet.values[it.id];
-    it.name = name; it.type = type;
+    it.name = name; it.type = type; if (it.day) it.named = true;
     if (group) it.group = group; else delete it.group;
     if (levels) it.levels = levels; else delete it.levels;
   }
@@ -2055,7 +2055,7 @@ function renderSheet(){
     const bulk = it.type === 'check' ? `<select class="sh-bulk" data-shbulk="${it.id}" aria-label="${esc(it.name)} 한꺼번에"><option value="">한꺼번에 ▾</option><option value="__on">✓ 냈어요</option><option value="__clear">비우기</option></select>`
       : it.type === 'level' ? `<select class="sh-bulk" data-shbulk="${it.id}" aria-label="${esc(it.name)} 한꺼번에"><option value="">한꺼번에 ▾</option>${(it.levels || []).map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}<option value="__clear">비우기</option></select>`
       : `<input class="sh-bulk" data-shbulkt="${it.id}" ${it.type === 'score' ? 'inputmode="decimal"' : ''} placeholder="한꺼번에 쓰기" aria-label="${esc(it.name)} 한꺼번에 쓰기">`;
-    return `<th class="sh-col${SH.edit === it.id ? ' on' : ''}"><button type="button" class="sh-hbtn" data-shh="${it.id}" title="눌러서 칸 제목·종류 고치기">${esc(it.name)}<span class="ed" aria-hidden="true">✎</span></button>
+    return `<th class="sh-col${SH.edit === it.id ? ' on' : ''}"><button type="button" class="sh-hbtn" data-shh="${it.id}" title="눌러서 칸 제목·종류 고치기">${it.day ? `<small class="mono">${mdShort(it.day)}</small> ` : ''}${esc(it.name)}<span class="ed" aria-hidden="true">✎</span></button>
       <span class="stat">${it.type === 'check' ? '' : ({score:'점수', level:'단계', text:'글'}[it.type] || '') + ' · '}${stat}</span>${bulk}</th>`;
   }).join('') + Array.from({length:Math.max(1, SH_MIN - items.length)}, (_, i) => `<th class="sh-col sh-blank${SH.edit === 'new' && i === 0 ? ' on' : ''}"><button type="button" class="sh-hbtn" data-shh="new" title="눌러서 새 칸 만들기">${i === 0 ? '+ 칸 제목' : ''}</button></th>`).join('');
   const blanks = '<td class="sh-empty"></td>'.repeat(Math.max(1, SH_MIN - items.length));
@@ -2207,6 +2207,7 @@ function startPrivate(){
     listen(db.doc(EVP()), 'evalplan', snap => {
       if (busy(EVP())) return;
       S.ev = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {imgs:[]}; if (!Array.isArray(S.ev.imgs)) S.ev.imgs = []; if (!Array.isArray(S.ev.items)) S.ev.items = [];
+      S.evLoaded = true; migSheetToEval();
       if (S.space === 'me' && S.meTab === 'eval' && !(document.activeElement && document.activeElement.closest('#ev-form'))) renderEval();
     });
     listen(db.doc(JDP()), 'jd', snap => {
@@ -2255,6 +2256,8 @@ function startPrivate(){
       if (busy(SHEET())) return;
       S.sheet = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {items:[], values:{}};
       if (!S.sheet.items) S.sheet.items = []; if (!S.sheet.values) S.sheet.values = {};
+      S.sheetLoaded = true; migSheetToEval();
+      if (S.space === 'me' && S.meTab === 'day') renderDayBoard();
       if (S.space === 'me' && S.meTab === 'sheet' && !(document.activeElement && document.activeElement.closest('#sheet'))) renderSheet();
     });
 }
@@ -2466,9 +2469,10 @@ document.addEventListener('click', async ev => {
     inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); renderJPreview();
     inp.scrollIntoView({block:'center', behavior:'smooth'});
   } else if (act === 'day-check'){
-    S.day.checks = Object.assign({}, S.day.checks);
-    if (S.day.checks[a.dataset.no]) delete S.day.checks[a.dataset.no]; else S.day.checks[a.dataset.no] = true;
-    renderDayBoard(); saveDay();
+    if (!S.uid) return;
+    const it = dayChkItem(S.jDate, true), m = S.sheet.values[it.id] = Object.assign({}, S.sheet.values[it.id]), no = a.dataset.no;
+    if (m[no] === true) delete m[no]; else m[no] = true;
+    dayChkTidy(S.jDate); saveSheet(); renderDayBoard();
   } else if (act === 'note-del'){
     const gone = S.notes.items.find(n => n.id === id);
     S.notes.items = S.notes.items.filter(n => n.id !== id);
@@ -2803,7 +2807,31 @@ $('#plan').addEventListener('change', e => {
   S.day.plan = plan; saveDay();
 });
 $('#day-memo').addEventListener('change', e => { if (!S.uid) return; S.day.memo = e.target.value; saveDay(); });
-$('#chk-name').addEventListener('change', e => { if (!S.uid) return; S.day.checkName = e.target.value.trim(); saveDay(); renderDayBoard(); });
+$('#chk-name').addEventListener('change', e => {
+  if (!S.uid) return; const v = e.target.value.trim().slice(0, 30), k = S.jDate;
+  if (v){ const it = dayChkItem(k, true); it.name = v; it.named = true; }
+  else { const it = dayChkItem(k); if (it){ it.named = false; it.name = '과제'; } }
+  if (S.day.checkName){ S.day.checkName = ''; saveDay(); }
+  dayChkTidy(k); saveSheet(); renderDayBoard();
+});
+/* 학급일지 학생 표의 체크 칸 = 체크리스트의 그날 칸. 뭔가 체크했거나 이름을 적은 날만 남아요. */
+function dayChkItem(k, make){
+  S.sheet.items = S.sheet.items || []; S.sheet.values = S.sheet.values || {};
+  let it = S.sheet.items.find(x => x.day === k);
+  if (!it && S.day && S.jDate === k && ((S.day.checks && Object.keys(S.day.checks).length) || S.day.checkName)){
+    /* 예전 방식으로 그날 문서에만 있던 체크를 옮겨 와요 */
+    it = {id:'d' + k.replace(/-/g, ''), name:S.day.checkName || '과제', named:!!S.day.checkName, type:'check', day:k, createdAt:Date.now()};
+    S.sheet.items.push(it); S.sheet.values[it.id] = Object.assign({}, S.day.checks || {});
+    S.day.checks = {}; S.day.checkName = ''; saveDay(); saveSheet();
+  }
+  if (!it && make){ it = {id:'d' + k.replace(/-/g, ''), name:'과제', named:false, type:'check', day:k, createdAt:Date.now()}; S.sheet.items.push(it); }
+  return it || null;
+}
+function dayChkTidy(k){
+  const it = S.sheet.items.find(x => x.day === k); if (!it) return;
+  const has = Object.values(S.sheet.values[it.id] || {}).some(v => v === true || (typeof v === 'string' && v));
+  if (!has && !it.named){ S.sheet.items = S.sheet.items.filter(x => x !== it); delete S.sheet.values[it.id]; }
+}
 $('#note-add').onclick = () => {
   if (!S.uid){ toast('로그인한 상태로 열어야 메모를 쓸 수 있어요.'); return; }
   const id = 'n' + Date.now().toString(36);
@@ -4175,11 +4203,11 @@ $('#plan-box').addEventListener('change', e => { const el = e.target.closest('[d
 $('#plan-box').addEventListener('focusout', () => setTimeout(() => { if (!($('#plan-box').contains(document.activeElement))) renderPlanBox(); }, 0));
 $('#open-plan').onclick = () => { PLAN.rows = []; renderPlanPreview(); $('#pl-info').textContent = ''; openDlg('#dlg-plan'); };
 $('#pl-type').addEventListener('change', e => { $('#pl-levels').hidden = e.target.value !== 'level'; });
-function planOn(k){ return (S.sheet.items || []).filter(it => it.date === k); }
+function planOn(k){ return (S.sheet.items || []).filter(it => it.date === k).concat(evItems().filter(x => x.date === k && !x.done).map(x => ({name:evName(x)}))); }
 function groupAverages(no){
-  const vals = S.sheet.values || {}, out = [];
+  const sd = sumData(), vals = sd.values, out = [];
   const groups = {};
-  (S.sheet.items || []).filter(it => it.type === 'score' && it.group).forEach(it => { (groups[it.group] = groups[it.group] || []).push(it); });
+  sd.items.filter(it => it.type === 'score' && it.group).forEach(it => { (groups[it.group] = groups[it.group] || []).push(it); });
   Object.entries(groups).forEach(([g, its]) => {
     const ns = its.map(it => Number((vals[it.id] || {})[no])).filter((n, i) => { const v = (vals[its[i].id] || {})[no]; return v !== undefined && v !== '' && !isNaN(n); });
     out.push({g, its, avg:ns.length ? Math.round(ns.reduce((a, b) => a + b, 0) / ns.length * 10) / 10 : null, n:ns.length});
@@ -4685,6 +4713,9 @@ const CHANGELOG = [
     '"명렬표" 탭 이름을 "체크리스트"로 바꿨어요 (학급 명부와 헷갈리지 않게).',
     '"명부"와 "학생별"을 "학생명부" 탭 하나로 합쳤어요. 처음엔 명부 전체 표가 보이고, 줄 끝 "카드 ›"를 누르면 그 학생 카드로 가요. 카드 맨 위에서 명부 칸(생년월일·보호자·주소 등)을 바로 고치고, 보호자 연락처는 눌러야 보여요. "← 명부 전체 표"로 돌아와요.',
     '체크리스트 단계 평가 기본값을 매우 잘함·잘함·보통·노력 요함으로 바꿨어요.',
+    '평가 탭: 평가 줄 끝 "결과 넣기"를 누르면 우리 반 명단이 펼쳐져서 매우 잘함·잘함·보통·노력 요함을 눌러 넣어요. 옆에 성취기준·성취수준이 같이 보이고, 고른 학생(안 고르면 모두)에게 한꺼번에 넣을 수도 있어요. 시기가 지났는데 다 못 넣은 평가는 빨갛게 보여요.',
+    '체크리스트에 있던 단계·점수 칸은 결과와 함께 평가 탭으로 옮겨져요. 체크리스트에는 제출 체크·짧은 글만 남아요.',
+    '학급일지 학생 표의 체크 칸을 쓰면 체크리스트에 그 날짜 칸이 저절로 생겨요(체크했거나 칸 이름을 적은 날만). 체크리스트에서 고쳐도 학급일지에 같이 보여요.',
     '체크리스트: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
   ]],
   ['2.19', '11월 25일', [
@@ -4957,10 +4988,33 @@ $('#pp-date').addEventListener('change', e => { if (e.target.value) ppGo(e.targe
 const EVP = () => `data/users/${S.uid}/evalplan`;
 S.ev = {imgs:[], items:[]};
 const evSave = () => { if (!S.uid) return; queueSet(EVP(), () => ({imgs:(S.ev.imgs || []).slice(), items:JSON.parse(JSON.stringify(S.ev.items || [])), updatedAt:Date.now()}), false); };
-const EV = {subj:'all', when:'all', open:null, edit:null, sort:'subj', showDone:false};
+const EV = {subj:'all', when:'all', open:null, edit:null, sort:'subj', showDone:false, res:null, sel:new Set()};
 try { const v = localStorage.getItem('evSort'); if (v === 'subj' || v === 'when') EV.sort = v; } catch (e){}
 const EV_LV = ['매우 잘함', '잘함', '보통', '노력 요함'];
 const evItems = () => (S.ev.items || []);
+const evLvNames = x => x.lvNames && x.lvNames.length ? x.lvNames : (x.levels || []).length ? x.levels.map(l => l[0]) : EV_LV;
+const evName = x => { const e = x.elem || x.unit || x.name0 || '평가', sj = x.subj && x.subj !== '기타' && !e.startsWith(x.subj) ? x.subj + ' ' : ''; return (sj + e).trim().slice(0, 40); };
+const evResN = x => Object.values(x.res || {}).filter(v => v !== '' && v != null).length;
+/* 학생 카드 '평가·제출'에 체크리스트 칸과 결과를 넣은 평가를 같이 보여 줘요 */
+function sumData(){
+  const items = ((S.sheet && S.sheet.items) || []).slice(), values = Object.assign({}, (S.sheet && S.sheet.values) || {});
+  evItems().forEach((x, i) => { if (!evResN(x)) return; const id = 'ev' + i; items.push({id, name:(x.subj && (x.elem || '').startsWith(x.subj) ? (x.elem || '').slice(x.subj.length).trim() : (x.elem || x.unit || x.name0 || '평가')).slice(0, 40) || evName(x), type:x.rt || 'level', group:x.subj || '', levels:evLvNames(x)}); values[id] = x.res; });
+  return {items, values};
+}
+/* 예전 체크리스트의 단계·점수 칸은 평가로 옮겨요 (적은 결과도 같이) */
+function migSheetToEval(){
+  if (!S.uid || !S.sheetLoaded || !S.evLoaded || S.arc) return;
+  const mv = (S.sheet.items || []).filter(t => t.type === 'level' || t.type === 'score'); if (!mv.length) return;
+  mv.forEach(t => {
+    const m = t.date ? fromYmd(t.date).getMonth() + 1 : null;
+    S.ev.items.push({subj:t.subj || t.group || '기타', when:m ? m + '월' : '', date:t.date || '', unit:t.area || '', elem:t.content || t.name, method:'', levels:[], lvText:'', lvNames:t.type === 'level' ? (t.levels || EV_LV) : undefined, rt:t.type, res:Object.assign({}, (S.sheet.values || {})[t.id] || {}), name0:t.name, done:false, doneAt:null});
+    delete S.sheet.values[t.id];
+  });
+  S.sheet.items = S.sheet.items.filter(t => !mv.includes(t));
+  saveSheet(); evSave();
+  toast(`체크리스트의 평가 칸 ${mv.length}개를 평가 탭으로 옮겼어요.`);
+  if (S.space === 'me' && S.meTab === 'eval') renderEval();
+}
 const evMonth = it => { const m = String(it.when || '').match(/(\d{1,2})\s*월/); return m ? +m[1] : null; };
 const evTags = it => (String(it.method || '').match(/\[([^\]]+)\]/g) || []).map(x => x.slice(1, -1)).filter((x, i, a) => a.indexOf(x) === i);
 function renderEval(){
@@ -4991,22 +5045,42 @@ function renderEval(){
   list.forEach((x, k) => { x._first = k === 0 || (list[k - 1].subj || '기타') !== (x.subj || '기타'); });
   if (!all.length && EV.edit == null){ $('#ev-table').innerHTML = '<div class="jd-empty">평가 계획 한글 파일(.hwpx)을 가져오면 과목·시기·평가 요소가 표로 정리돼요. 위 "한글 파일(.hwpx)에서 가져오기"를 눌러 주세요.<br><small>.hwp 파일이면 한글에서 "다른 이름으로 저장 → HWPX"로 저장한 뒤 올려 주세요.</small></div>'; return; }
   let k0 = 0;
-  let h = '<div class="tablewrap"><table class="ev-t"><thead><tr><th class="ck" aria-label="끝냄"></th><th class="n">시기</th><th>과목</th><th>단원</th><th>평가 요소</th><th>방법</th></tr></thead><tbody>';
-  if (EV.edit === -1) h += `<tr class="ev-open"><td colspan="6">${evForm({})}</td></tr>`;
+  let h = '<div class="tablewrap"><table class="ev-t"><thead><tr><th class="ck" aria-label="끝냄"></th><th class="n">시기</th><th>과목</th><th>단원</th><th>평가 요소</th><th>방법</th><th class="rs">결과</th></tr></thead><tbody>';
+  if (EV.edit === -1) h += `<tr class="ev-open"><td colspan="7">${evForm({})}</td></tr>`;
+  const nR = (S.profile.roster || []).length;
   list.forEach(x => {
     const m = evMonth(x), now = m === cm;
-    h += `<tr class="ev-row ${x.done ? 'done' : ''} ${now ? 'now' : ''} ${EV.sort === 'subj' && x._first && k0++ ? 'grp' : ''} ${EV.open === x._i ? 'on' : ''}" data-evi="${x._i}" tabindex="0"><td class="ck"><button type="button" class="chk ${x.done ? 'on' : ''}" data-evck="${x._i}" aria-label="${x.done ? '안 끝낸 평가로 되돌리기' : '평가 끝냄'}"></button></td><td class="n">${esc(x.when || '')}</td><td class="sj">${EV.sort === 'subj' && x._first === false ? '' : esc(x.subj || '')}</td><td class="u">${esc(x.unit || '')}</td><td class="el">${esc(x.elem || '')}</td><td class="tg">${evTags(x).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</td></tr>`;
+    h += `<tr class="ev-row ${x.done ? 'done' : ''} ${now ? 'now' : ''} ${EV.sort === 'subj' && x._first && k0++ ? 'grp' : ''} ${EV.open === x._i ? 'on' : ''}" data-evi="${x._i}" tabindex="0"><td class="ck"><button type="button" class="chk ${x.done ? 'on' : ''}" data-evck="${x._i}" aria-label="${x.done ? '안 끝낸 평가로 되돌리기' : '평가 끝냄'}"></button></td><td class="n">${esc(x.when || '')}</td><td class="sj">${EV.sort === 'subj' && x._first === false ? '' : esc(x.subj || '')}</td><td class="u">${esc(x.unit || '')}</td><td class="el">${esc(x.elem || '')}</td><td class="tg">${evTags(x).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</td><td class="rs">${(() => { const n = evResN(x), full = nR && n >= nR, late = !full && !x.done && evMonth(x) != null && mo(x) < mo({when:cm + '월'}); return `<button type="button" class="btn small ${EV.res === x._i ? 'primary' : ''}" data-evres="${x._i}">${n ? '결과' : '결과 넣기'}</button>${nR ? `<span class="evn ${full ? 'ok' : late ? 'late' : ''}">${n}/${nR}</span>` : ''}`; })()}</td></tr>`;
     if (EV.open === x._i){
-      h += `<tr class="ev-open"><td colspan="6">${EV.edit === x._i ? evForm(x) : `<div class="ev-det">
+      h += `<tr class="ev-open"><td colspan="7">${EV.edit === x._i ? evForm(x) : EV.res === x._i ? evResHtml(x) : `<div class="ev-det">
         ${x.std ? `<div><b>성취기준</b><p>${esc(x.std)}</p></div>` : ''}
         ${x.method ? `<div><b>수업·평가 방법</b><p>${esc(x.method)}</p></div>` : ''}
         ${(x.levels || []).length ? `<div><b>성취수준</b><table class="ev-lv">${x.levels.map(([n, t]) => `<tr><th>${esc(n)}</th><td>${esc(t)}</td></tr>`).join('')}</table></div>` : x.lvText ? `<div><b>성취수준</b><p>${esc(x.lvText)}</p></div>` : ''}
         <div class="row"><span class="grow"></span><button type="button" class="btn small" data-evedit="${x._i}">고치기</button><button type="button" class="btn small" data-evrm="${x._i}">지우기</button></div></div>`}</td></tr>`;
     }
   });
-  if (!list.length && EV.edit !== -1) h += `<tr><td colspan="6" class="hint" style="text-align:center;padding:14px">${EV.when === 'now' ? '이번 달 남은 평가가 없어요.' : doneN && !EV.showDone ? '남은 평가가 없어요. 다 끝냈어요!' : '해당하는 평가가 없어요.'}</td></tr>`;
+  if (!list.length && EV.edit !== -1) h += `<tr><td colspan="7" class="hint" style="text-align:center;padding:14px">${EV.when === 'now' ? '이번 달 남은 평가가 없어요.' : doneN && !EV.showDone ? '남은 평가가 없어요. 다 끝냈어요!' : '해당하는 평가가 없어요.'}</td></tr>`;
   $('#ev-table').innerHTML = h + '</tbody></table></div>';
 }
+function evResHtml(x){
+  const roster = S.profile.roster || [], lv = evLvNames(x), res = x.res || {}, sc = x.rt === 'score';
+  if (!roster.length) return '<p class="empty">학생명부에 우리 반 명단을 넣으면 여기서 결과를 넣어요.</p>';
+  const allOn = roster.every(r => EV.sel.has(r.no));
+  const cnt = lv.map(l => `${esc(l)} ${roster.filter(r => res[r.no] === l).length}`).join(' · ');
+  const bulk = sc ? `<input type="text" inputmode="decimal" class="ev-bulk" data-evbulkt placeholder="한꺼번에 점수" aria-label="한꺼번에 점수">`
+    : `<select class="ev-bulk" data-evbulk aria-label="한꺼번에 넣기"><option value="">한꺼번에 ▾</option>${lv.map(l => `<option>${esc(l)}</option>`).join('')}<option value="__clear">비우기</option></select>`;
+  return `<div class="ev-res"><div class="ev-res-l">
+    <div class="row"><b>${esc(evName(x))}</b><span class="hint">${evResN(x)}/${roster.length}명${sc ? '' : ' · ' + cnt}</span><span class="grow"></span>${bulk}<span class="hint">${EV.sel.size ? `고른 ${EV.sel.size}명에게` : '안 고르면 모두에게'}</span><button type="button" class="btn small" data-evresx>닫기</button></div>
+    <div class="tablewrap"><table class="ev-rt"><thead><tr><th class="sel"><input type="checkbox" data-evselall ${allOn ? 'checked' : ''} aria-label="모두 고르기"></th><th>번호</th><th>이름</th><th>${sc ? '점수' : '결과'}</th></tr></thead><tbody>
+    ${roster.map(r => `<tr class="${EV.sel.has(r.no) ? 'picked' : ''}"><td class="sel"><input type="checkbox" data-evsel="${r.no}" ${EV.sel.has(r.no) ? 'checked' : ''} aria-label="${esc(r.name || r.no + '번')} 고르기"></td><td class="mono">${r.no}</td><td class="nm">${esc(r.name || '')}</td><td>${sc
+      ? `<input type="text" inputmode="decimal" class="ev-sc" data-evsc="${r.no}" value="${esc(res[r.no] ?? '')}" aria-label="${esc(r.name || '')} 점수">`
+      : `<div class="lvbs">${lv.map((l, j) => `<button type="button" class="lvb l${j}" data-evlv="${esc(l)}" data-no="${r.no}" aria-pressed="${res[r.no] === l}">${esc(l)}</button>`).join('')}</div>`}</td></tr>`).join('')}
+    </tbody></table></div></div>
+    <div class="ev-res-r">${x.std ? `<div><b>성취기준</b><p>${esc(x.std)}</p></div>` : ''}
+      ${(x.levels || []).length ? `<div><b>성취수준</b><table class="ev-lv">${x.levels.map(([n, t]) => `<tr><th>${esc(n)}</th><td>${esc(t)}</td></tr>`).join('')}</table></div>` : x.lvText ? `<div><b>성취수준</b><p>${esc(x.lvText)}</p></div>` : '<p class="hint">평가 계획에 성취수준을 적어 두면 여기 같이 보여요. (줄을 눌러 "고치기")</p>'}
+      ${x.method ? `<div><b>수업·평가 방법</b><p>${esc(x.method)}</p></div>` : ''}</div></div>`;
+}
+function evSetRes(x, nos, v){ x.res = Object.assign({}, x.res); nos.forEach(no => { if (v === '' || v === '__clear' || v == null) delete x.res[no]; else x.res[no] = v; }); evSave(); renderEval(); }
 function evForm(x){
   const F = (f, n, ta, ph) => `<label class="f" for="evf-${f}">${n}${ta ? `<textarea id="evf-${f}" rows="2" placeholder="${ph || ''}">${esc(x[f] || '')}</textarea>` : `<input id="evf-${f}" value="${esc(x[f] || '')}" placeholder="${ph || ''}">`}</label>`;
   const lv = x.levels && x.levels.length ? x.levels : EV_LV.map(n => [n, '']);
@@ -5027,6 +5101,12 @@ $('#ev-sort').addEventListener('click', e => { const b = e.target.closest('[data
 $('#ev-when').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; EV.when = b.dataset.v; renderEval(); });
 $('#ev-new').onclick = () => { if (!S.uid) return; EV.edit = -1; EV.open = null; renderEval(); const f = $('#evf-subj'); if (f){ if (EV.subj !== 'all') f.value = EV.subj; f.focus(); } };
 $('#ev-table').addEventListener('click', e => {
+  const rb = e.target.closest('[data-evres]');
+  if (rb){ const i = +rb.dataset.evres; if (EV.res === i){ EV.res = null; EV.open = null; } else { EV.res = i; EV.open = i; EV.edit = null; EV.sel.clear(); } renderEval(); return; }
+  if (e.target.closest('[data-evresx]')){ EV.res = null; EV.open = null; renderEval(); return; }
+  const lb = e.target.closest('[data-evlv]');
+  if (lb){ if (!S.uid) return; const x = S.ev.items[EV.res]; if (!x) return; const no = +lb.dataset.no; evSetRes(x, [no], (x.res || {})[no] === lb.dataset.evlv ? '' : lb.dataset.evlv); return; }
+  if (e.target.closest('.ev-res')) return;
   const ck = e.target.closest('[data-evck]');
   if (ck){ if (!S.uid) return; const it = S.ev.items[+ck.dataset.evck]; if (!it) return; it.done = !it.done; it.doneAt = it.done ? Date.now() : null; if (it.done && EV.open === +ck.dataset.evck) EV.open = null; evSave(); renderEval(); if (it.done) toast(`${it.subj} 평가를 끝냈어요.${EV.showDone ? '' : ' 목록에서 숨겼어요.'}`); return; }
   if (e.target.closest('[data-evcancel]')){ EV.edit = null; renderEval(); return; }
@@ -5036,7 +5116,20 @@ $('#ev-table').addEventListener('click', e => {
   const r = e.target.closest('[data-evi]'); if (!r) return;
   const i = +r.dataset.evi; EV.open = EV.open === i ? null : i; EV.edit = null; renderEval();
 });
-$('#ev-table').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-evi]')){ e.preventDefault(); e.target.click(); } });
+$('#ev-table').addEventListener('change', e => {
+  const x = S.ev.items[EV.res]; if (!x || !S.uid) return;
+  const roster = S.profile.roster || [];
+  if (e.target.matches('[data-evselall]')){ if (e.target.checked) roster.forEach(r => EV.sel.add(r.no)); else EV.sel.clear(); renderEval(); return; }
+  if (e.target.matches('[data-evsel]')){ const no = +e.target.dataset.evsel; e.target.checked ? EV.sel.add(no) : EV.sel.delete(no); renderEval(); return; }
+  if (e.target.matches('[data-evbulk], [data-evbulkt]')){
+    let v = e.target.value.trim(); if (!v) return;
+    if (e.target.matches('[data-evbulkt]')){ v = Number(v); if (isNaN(v)){ toast('숫자로 적어 주세요.'); return; } }
+    const who = (EV.sel.size ? roster.filter(r => EV.sel.has(r.no)) : roster).map(r => r.no);
+    evSetRes(x, who, v); toast(`${EV.sel.size ? who.length + '명' : '모두'}에게 ${v === '__clear' ? '비웠어요' : `"${v}"을(를) 넣었어요`}.`); return;
+  }
+  if (e.target.matches('[data-evsc]')){ const v = e.target.value.trim(); if (v && isNaN(Number(v))){ toast('숫자로 적어 주세요.'); return; } evSetRes(x, [+e.target.dataset.evsc], v === '' ? '' : Number(v)); }
+});
+$('#ev-table').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-evsc]')){ e.target.blur(); return; } if (e.key === 'Enter' && e.target.matches('[data-evi]')){ e.preventDefault(); e.target.click(); } });
 $('#ev-table').addEventListener('submit', e => {
   e.preventDefault(); if (!S.uid) return;
   const g = id => ($('#evf-' + id) || {}).value || '';
