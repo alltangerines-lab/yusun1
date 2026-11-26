@@ -633,7 +633,7 @@ function openLightbox(src){ if (!src) return; $('#lb-img').src = src; $('#lightb
 
 /* ---------- pages (tabs) ---------- */
 const GPAGES = [['grade','오늘','main'],['calendar','달력','calendar'],['lessons','특별수업','lessons'],['tasks','할 일','tasks'],['notices','협의·공지','notices'],['links','수업자료','links'],['ops','운영자료','ops'],['budget','예산','budget'],['roster','명부','roster']];
-const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-roster','명부','roster'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출석부','att'],['me-sheet','체크리스트','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-ops','자료','mops']];
+const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-roster','학생명부','roster'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출석부','att'],['me-sheet','체크리스트','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const JPAGES = [['me','수업일지','jday'],['me-jprog','진도표','jprog'],['me-jcls','반별 명렬','jcls'],['me-jtt','시간표·시수','jtt'],['me-todo','할 일','todo'],['me-cns','상담일지','cns'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const isJD = () => !!(S.profile && S.profile.role === 'jd');
 const curMP = () => isJD() ? JPAGES : MPAGES;
@@ -711,7 +711,7 @@ const tabPrefKey = () => S.space === 'grade' ? 'grade' : (isJD() ? 'jd' : 'me');
 function tabItems(space){
   let items;
   if (space === 'grade') items = GPAGES.map(([r, n]) => ({key:r, href:r, name:pgName('grade', r, n), base:true})).concat(sortedTabs().map(t => ({key:'t:' + t.id, href:'t-' + t.id, name:t.name || '이름 없는 탭', base:false})));
-  else items = curMP().map(([r, n]) => ({key:r, href:r, name:pgName('me', r, n), base:true})).concat(sortedMTabs().map(t => ({key:'m:' + t.id, href:'m-' + t.id, name:t.name || '이름 없는 탭', base:false})));
+  else items = curMP().filter(x => x[0] !== 'me-stu').map(([r, n]) => ({key:r, href:r, name:pgName('me', r, n), base:true})).concat(sortedMTabs().map(t => ({key:'m:' + t.id, href:'m-' + t.id, name:t.name || '이름 없는 탭', base:false})));
   const pf = ((S.profile || {}).tabPrefs || {})[space === 'grade' ? 'grade' : (isJD() ? 'jd' : 'me')] || {};
   /* 2.20: 명부를 평가 바로 뒤로 (탭 순서를 바꿔 둔 선생님도 한 번 옮겨 줘요) */
   if (space !== 'grade' && !isJD() && pf.order && pf.order.length && !pf.v220 && S.uid){
@@ -771,7 +771,7 @@ $('#dlg-tabs').addEventListener('click', e => {
 function renderStrip(){
   const cur = S.route;
   const {items, custom} = tabItems(S.space);
-  const isCur = x => cur === x.href || (x.href === 'links' && /^links-/.test(cur));
+  const isCur = x => cur === x.href || (x.href === 'links' && /^links-/.test(cur)) || (x.href === 'me-roster' && cur === 'me-stu');
   const sp = S.space === 'grade' ? 'grade' : 'me';
   let h = '', prevBase = true;
   items.filter(x => !x.hidden || isCur(x)).forEach(x => {
@@ -1837,9 +1837,23 @@ function renderTT(){
   }
   $('#tt').innerHTML = h + '</tbody>';
 }
+/* 학생 카드 맨 위: 이 학생 명부 칸 (명부 탭의 칸 정리를 따라요). 보호자 연락처는 눌러야 보여요. */
+const STUR = {show:null};
+function stuRosBox(info){
+  if (!info || info.no == null) return '';
+  const cols = (ROS.m && ROS.m.cols ? ROS.m.cols() : ROS_F.map(([f, n]) => ({f, n, ex:-1}))).filter(c => c.f !== 'no' && c.f !== 'name');
+  if (!cols.length) return '';
+  const dis = S.uid ? '' : 'disabled';
+  const cell = c => {
+    const v = c.ex < 0 ? info[c.f] : (info.x || {})[c.n];
+    if (c.f === 'phone' && v && STUR.show !== info.no) return `<div class="f"><span>${esc(c.n)}</span><button type="button" class="btn small sr-show" data-srshow="${info.no}">•••• 눌러서 보기</button></div>`;
+    return `<label class="f"><span>${esc(c.n)}</span><input type="text" data-srf="${esc(c.ex < 0 ? c.f : 'x:' + c.n)}" data-no="${info.no}" value="${esc(v ?? '')}" autocomplete="off" ${dis}></label>`;
+  };
+  return `<section class="sc stu-ros"><h4>명부 <small>여기서 바로 고쳐요 · 칸은 명부 표의 "칸 정리"를 따라요</small></h4><div class="sr-grid">${cols.map(cell).join('')}</div></section>`;
+}
 function renderStu(){
   const roster = S.profile.roster || [];
-  if (!roster.length){ $('#stu-form').hidden = true; $('#stu-grid').innerHTML = ''; $('#stu-detail').innerHTML = '<p class="empty">"명부" 탭에서 명단을 넣으면 학생마다 기록이 모여요.</p>'; return; }
+  if (!roster.length){ $('#stu-form').hidden = true; $('#stu-grid').innerHTML = ''; $('#stu-detail').innerHTML = '<p class="empty">"학생명부" 탭에서 명단을 넣으면 학생마다 기록이 모여요.</p>'; return; }
   const counts = {};
   S.journal.forEach(e => (e.students || []).forEach(n => { counts[n] = (counts[n] || 0) + 1; }));
   const fix = relinkCandidates();
@@ -1852,6 +1866,7 @@ function renderStu(){
   if (S.selStu !== null) $('#stu-input').placeholder = `${stuName(S.selStu)} 기록 적기 (예: 쉬는 시간 다툼 후 화해함)`;
   if (S.selStu === null){ $('#stu-detail').innerHTML = '<p class="hint">학생을 누르면 그 학생의 기록이 날짜순으로 모이고, 바로 적을 수 있어요.</p>'; return; }
   const no = S.selStu, info = (S.profile.roster || []).find(r => r.no === no) || {};
+  if (STUR.show !== null && STUR.show !== no) STUR.show = null;
   const all = S.journal.filter(e => (e.students || []).includes(no)).sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : -byTime(a, b));
   const catT = {}; all.forEach(e => { catT[e.cat] = (catT[e.cat] || 0) + 1; });
   const cat = S.stuCat || 'all';
@@ -1862,7 +1877,8 @@ function renderStu(){
   const card = studentSummary(no);
   const hb = ((S.stuNotes || {}).hb || {})[no] || '';
   const head = `<div class="stu-head"><div class="nm"><button type="button" class="btn small" data-stu-nav="-1" aria-label="이전 학생">‹</button><strong>${esc(stuName(no))}</strong><button type="button" class="btn small" data-stu-nav="1" aria-label="다음 학생">›</button></div>
-    <span class="facts">${facts.map(esc).join(' · ') || '<span class="hint">명부에 생년월일·연락처를 넣으면 여기 보여요.</span>'}</span><span class="grow"></span><button type="button" class="btn small gas-only" id="stu-print">학생 카드 인쇄</button></div>
+    <span class="grow"></span><button type="button" class="btn small gas-only" id="stu-print">학생 카드 인쇄</button></div>
+    ${stuRosBox(info)}
     <div class="stu-cards">
       <section class="sc"><h4>출결 <small>${card.sy}</small></h4>${card.attHtml}</section>
       <section class="sc"><h4>평가·제출 <small>체크리스트</small></h4>${card.evalHtml}</section>
@@ -2669,6 +2685,18 @@ async function addEntryFrom(stageName, inputSel, opts){
   $(inputSel).value = ''; S.stage[stageName] = []; renderStage(stageName); toast(`${fmtMD(entry.date)} ${cat} 기록으로 적었어요.`);
 }
 $('#cns-form').addEventListener('submit', ev => { ev.preventDefault(); addEntryFrom('cns', '#cns-input', {cat:$('#cns-cat').value}); });
+$('#p-stu').addEventListener('click', e => { const b = e.target.closest('[data-srshow]'); if (!b) return; STUR.show = +b.dataset.srshow; renderStu(); setTimeout(() => { const el = $('#p-stu [data-srf="phone"]'); if (el) el.focus(); }, 0); });
+$('#p-stu').addEventListener('change', e => {
+  const el = e.target.closest('[data-srf]'); if (!el || !S.uid) return;
+  const no = +el.dataset.no, f = el.dataset.srf; let v = el.value.trim();
+  const list = (S.profile.roster || []).map(x => Object.assign({}, x, x.x ? {x:Object.assign({}, x.x)} : {}));
+  const s0 = list.find(x => x.no === no); if (!s0) return;
+  if (f === 'birth') v = normBirth(v); else if (f === 'phone') v = normPhone(v); else if (f === 'sex') v = normSex(v);
+  if (f.startsWith('x:')){ s0.x = s0.x || {}; if (v) s0.x[f.slice(2)] = v; else delete s0.x[f.slice(2)]; }
+  else if (v) s0[f] = v; else delete s0[f];
+  S.profile.roster = list; saveProfile(); renderHeader(); rosterAutoSync('mine');
+  el.value = v; toast('명부에 저장했어요.');
+});
 $('#stu-form').addEventListener('submit', ev => { ev.preventDefault(); if (S.selStu === null) return; addEntryFrom('stu', '#stu-input', {student:S.selStu}); });
 
 $('#sh-missing').addEventListener('change', e => { S.onlyMissing = e.target.checked; renderSheet(); });
@@ -3849,7 +3877,7 @@ function makeRoster(key){
     const vc = vcols(extra), ws = vc.map(c => colW(students, c));
     const head = vc.map((c, i) => c.ex < 0 ? `<th data-col="${i}" title="눌러서 열 전체 고르기">${c.n}</th>` : `<th class="ex" data-col="${i}">${esc(c.n)}${can() ? `<button type="button" class="x" data-b="delcol" data-ex="${c.ex}" aria-label="${esc(c.n)} 열 지우기">×</button>` : ''}</th>`).join('');
     const cell = (s, f, v, cls, r, c) => `<td class="${cls || ''}" data-r="${r}" data-c="${c}"><input type="text" id="rf-${key}-${s.id}-${f}" data-id="${esc(s.id)}" data-f="${esc(f)}" data-r="${r}" data-c="${c}" value="${esc(v ?? '')}" aria-label="${esc(s.name || s.no || '')} ${esc(f)}" autocomplete="off" style="width:${ws[c]}ch;min-width:0" ${dis}></td>`;
-    const body = students.map((s, r) => `<tr>${vc.map((c, i) => cell(s, c.f, c.ex < 0 ? s[c.f] : (s.x || {})[c.n], c.ex < 0 ? 'f-' + c.f : '', r, i)).join('')}<td class="act">${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(s.id)}" aria-label="학생 지우기">×</button>` : ''}</td></tr>`).join('');
+    const body = students.map((s, r) => `<tr>${vc.map((c, i) => cell(s, c.f, c.ex < 0 ? s[c.f] : (s.x || {})[c.n], c.ex < 0 ? 'f-' + c.f : '', r, i)).join('')}<td class="act">${g ? '' : `<button type="button" class="btn small" data-b="card" data-no="${esc(s.no ?? '')}" aria-label="${esc(s.name || '')} 학생 카드 보기">카드 ›</button>`}${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(s.id)}" aria-label="학생 지우기">×</button>` : ''}</td></tr>`).join('');
     st.rows = students.length; st.cols = vc.length;
     $('.ros-table', root).innerHTML = students.length ? `<div class="tablewrap"><table class="ros"><thead><tr>${head}<th></th></tr></thead><tbody>${body}</tbody></table></div>`
       : `<p class="empty">${g ? clsLabel(curCls() + '반') + ' 명부가 비어 있어요. ' : '아직 명부가 없어요. '}스프레드시트에서 복사해 "붙여넣기"에 넣거나 "+ 학생 추가"를 눌러 주세요.</p>`;
@@ -3903,6 +3931,7 @@ function makeRoster(key){
       for (let n = 1; n <= nCls(); n++) get(n).students.forEach(s => rows.push([clsLabel(n + '반'), ...rowOf(s, ex)]));
       save(`${S.settings.gradeName || ''}_학년명부.csv`, csv(rows)); return;
     }
+    if (act === 'card'){ const no = Number(b.dataset.no); if (!isFinite(no) || b.dataset.no === ''){ toast('번호를 먼저 적어 주세요.'); return; } S.selStu = no; S.stuCat = 'all'; go('me-stu'); window.scrollTo(0, 0); return; }
     if (!can()){ toast(g ? '학년 공간을 고칠 권한이 없어요.' : '로그인한 상태로 열어야 적을 수 있어요.'); return; }
     if (act === 'add'){
       const d = get(); const no = d.students.reduce((a, s) => Math.max(a, +s.no || 0), 0) + 1;
@@ -4062,7 +4091,7 @@ function makeRoster(key){
     setSel(q.r0, q.c0, q.r0 + rows.length - 1, q.c0 + Math.max(...rows.map(r => r.length)) - 1);
     toast(`${rows.length}줄을 붙여 넣었어요.${added ? ` 새 학생 ${added}명이 생겼어요.` : ''}`);
   });
-  return {render};
+  return {render, cols:() => vcols(get().extra)};
 }
 
 /* ================= 평가 계획 · 묶음 평균 ================= */
@@ -4652,8 +4681,9 @@ const APP_VERSION = '2.20';
 const CHANGELOG = [
   ['2.20', '11월 26일', [
     '체크리스트(예전 명렬표): 위에서 항목을 추가하는 대신 빈 칸 10개가 깔려 있어요. 칸 제목을 눌러 이름·종류(단계·제출 체크·점수·짧은 글)를 정하고, 같은 자리에서 고치거나 순서를 바꾸거나 지워요.',
-    '나의 공간 "명부" 탭을 평가와 할 일 사이로 옮겼어요.',
+    '나의 공간 "학생명부" 탭을 평가와 할 일 사이로 옮겼어요.',
     '"명렬표" 탭 이름을 "체크리스트"로 바꿨어요 (학급 명부와 헷갈리지 않게).',
+    '"명부"와 "학생별"을 "학생명부" 탭 하나로 합쳤어요. 처음엔 명부 전체 표가 보이고, 줄 끝 "카드 ›"를 누르면 그 학생 카드로 가요. 카드 맨 위에서 명부 칸(생년월일·보호자·주소 등)을 바로 고치고, 보호자 연락처는 눌러야 보여요. "← 명부 전체 표"로 돌아와요.',
     '체크리스트 단계 평가 기본값을 매우 잘함·잘함·보통·노력 요함으로 바꿨어요.',
     '체크리스트: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
   ]],
