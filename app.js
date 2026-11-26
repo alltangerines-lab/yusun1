@@ -633,7 +633,7 @@ function openLightbox(src){ if (!src) return; $('#lb-img').src = src; $('#lightb
 
 /* ---------- pages (tabs) ---------- */
 const GPAGES = [['grade','오늘','main'],['calendar','달력','calendar'],['lessons','특별수업','lessons'],['tasks','할 일','tasks'],['notices','협의·공지','notices'],['links','수업자료','links'],['ops','운영자료','ops'],['budget','예산','budget'],['roster','명부','roster']];
-const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-roster','명부','roster'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출석부','att'],['me-sheet','명렬표','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-ops','자료','mops']];
+const MPAGES = [['me','학급일지','day'],['me-plan','수업 계획','plan'],['me-eval','평가','eval'],['me-roster','명부','roster'],['me-todo','할 일','todo'],['me-stu','학생별','stu'],['me-cns','상담일지','cns'],['me-att','출석부','att'],['me-sheet','체크리스트','sheet'],['me-tt','시간표','tt'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const JPAGES = [['me','수업일지','jday'],['me-jprog','진도표','jprog'],['me-jcls','반별 명렬','jcls'],['me-jtt','시간표·시수','jtt'],['me-todo','할 일','todo'],['me-cns','상담일지','cns'],['me-budget','예산','budget'],['me-ops','자료','mops']];
 const isJD = () => !!(S.profile && S.profile.role === 'jd');
 const curMP = () => isJD() ? JPAGES : MPAGES;
@@ -1865,7 +1865,7 @@ function renderStu(){
     <span class="facts">${facts.map(esc).join(' · ') || '<span class="hint">명부에 생년월일·연락처를 넣으면 여기 보여요.</span>'}</span><span class="grow"></span><button type="button" class="btn small gas-only" id="stu-print">학생 카드 인쇄</button></div>
     <div class="stu-cards">
       <section class="sc"><h4>출결 <small>${card.sy}</small></h4>${card.attHtml}</section>
-      <section class="sc"><h4>평가·제출 <small>명렬표</small></h4>${card.evalHtml}</section>
+      <section class="sc"><h4>평가·제출 <small>체크리스트</small></h4>${card.evalHtml}</section>
       <section class="sc"><h4>누가기록 <small>${all.length}건</small></h4><div class="tally">${CATS.filter(c => catT[c]).map(c => `<span class="pill" ${catStyle(c)}>${c} ${catT[c]}</span>`).join('') || '<span class="hint">아직 없어요.</span>'}</div>
         <p class="hint" style="margin:6px 0 0">학급일지에 "${esc(info.name || no + '번')} …"처럼 이름이나 번호를 넣어 적으면 자동으로 여기 모여요.</p></section>
     </div>
@@ -1919,7 +1919,7 @@ function studentSummary(no){
   const groupsOrder = [...new Set(items.map(it => it.group || ''))];
   const rowsArr = items.map((it, i) => ({it, html:rows.split('</li>')[i] + '</li>'}));
   const grouped = groupsOrder.map(g => { const rs = rowsArr.filter(x => (x.it.group || '') === g).map(x => x.html).join(''); const av = ga.find(x => x.g === g); return (g ? `<li class="gh"><span>${esc(g)}</span>${av ? `<span>평균 <b>${av.avg}</b></span>` : '<span></span>'}</li>` : '') + rs; }).join('');
-  const evalHtml = items.length ? `<ul class="evl">${grouped}</ul>` : '<p class="hint">명렬표에 평가·수합 항목을 만들면 이 학생 결과가 여기 모여요.</p>';
+  const evalHtml = items.length ? `<ul class="evl">${grouped}</ul>` : '<p class="hint">체크리스트에 평가·수합 항목을 만들면 이 학생 결과가 여기 모여요.</p>';
   return {sy:sy.label, attHtml, evalHtml, tot};
 }
 const STUNOTES = () => `data/users/${S.uid}/stunotes`;
@@ -1944,7 +1944,7 @@ async function printStudent(no){
     <h3 style="font-size:12pt;margin:6mm 0 2mm">누가기록 (${all.length}건)</h3>
     <table><thead><tr><th style="width:16%">날짜</th><th style="width:10%">분류</th><th>내용</th></tr></thead><tbody>${all.map(e => `<tr><td>${e.date ? mdShort(e.date) : ''}${e.end ? '~' + mdShort(e.end) : ''}</td><td>${e.cat}</td><td style="text-align:left">${esc(e.text || '')}</td></tr>`).join('') || '<tr><td colspan="3">기록 없음</td></tr>'}</tbody></table></div>`);
 }
-/* 명렬표: 칸은 늘 10개쯤 깔아 두고, 제목을 눌러 이름·종류를 정해요 */
+/* 체크리스트: 칸은 늘 10개쯤 깔아 두고, 제목을 눌러 이름·종류를 정해요 */
 const SH_MIN = 10, SH_LV = '매우 잘함, 잘함, 보통, 노력 요함';
 const SH = {sel:new Set(), edit:null, arm:false};
 const shLevels = v => v.split(/[,·\/]/).map(x => x.trim()).filter(Boolean).slice(0, 8);
@@ -2023,7 +2023,7 @@ function renderSheet(){
   $('#sh-groups').innerHTML = [...new Set((S.sheet.items || []).map(it => it.group).filter(Boolean))].map(g => `<option value="${esc(g)}">`).join('');
   const roster = S.profile.roster || [], items = S.sheet.items || [], vals = S.sheet.values || {};
   $('#sh-missing').checked = S.onlyMissing;
-  if (!roster.length){ $('#sheet').innerHTML = '<p class="empty">명렬표를 쓰려면 먼저 "명부"를 넣어 주세요.</p>'; return; }
+  if (!roster.length){ $('#sheet').innerHTML = '<p class="empty">체크리스트를 쓰려면 먼저 "명부"를 넣어 주세요.</p>'; return; }
   const has = (it, no) => { const v = (vals[it.id] || {})[no]; return it.type === 'check' ? v === true : (v !== undefined && v !== null && v !== '' && v !== false); };
   let rows = roster;
   if (S.onlyMissing) rows = roster.filter(r => items.some(it => !has(it, r.no)));
@@ -4118,7 +4118,7 @@ $('#pl-add').onclick = () => {
     S.sheet.items.push(it); n++;
   });
   saveSheet(); renderSheet(); closeDlgs(); PLAN.rows = []; $('#pl-text').value = ''; renderPlanPreview();
-  toast(`평가 항목 ${n}개를 명렬표에 넣었어요.`);
+  toast(`평가 항목 ${n}개를 체크리스트에 넣었어요.`);
 };
 function renderPlanBox(){
   const items = (S.sheet.items || []).filter(it => it.plan || it.date || it.subj);
@@ -4168,7 +4168,7 @@ async function loadDailyAll(){
 function runSearch(){
   const q = $('#sr-input').value.trim();
   const box = $('#sr-results');
-  if (q.length < 1){ box.innerHTML = '<p class="hint">학급일지·상담·출결 사유·할 일·메모·공지·일정·명부·행발·명렬표·예산을 한 번에 찾아요.</p>'; return; }
+  if (q.length < 1){ box.innerHTML = '<p class="hint">학급일지·상담·출결 사유·할 일·메모·공지·일정·명부·행발·체크리스트·예산을 한 번에 찾아요.</p>'; return; }
   const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
   const hit = s => { s = String(s || '').toLowerCase(); return terms.every(t => s.includes(t)); };
   const mark = s => { let h = esc(String(s || '')); terms.forEach(t => { const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); h = h.replace(re, m => `<mark>${m}</mark>`); }); return h; };
@@ -4181,7 +4181,7 @@ function runSearch(){
   (S.profile.roster || []).forEach(r => { const s = [r.no + '번', r.name, r.birth, r.prev, r.guardian, r.phone, r.addr, r.note, ...Object.values(r.x || {})].join(' '); if (hit(s)) add('우리 반 명부', '', stuName(r.no), [r.birth, r.prev, r.phone, r.note].filter(Boolean).join(' · '), {t:'stu', no:r.no}); });
   Object.entries(S.rosG || {}).forEach(([c, d]) => (d.students || []).forEach(r => { const s = [r.name, r.birth, r.prev, r.guardian, r.phone, r.note, ...Object.values(r.x || {})].join(' '); if (hit(s)) add('학년 명부', '', `${c.slice(1)}반 ${r.no ?? ''}번 ${r.name || ''}`, [r.prev, r.phone, r.note].filter(Boolean).join(' · '), {t:'ros', c:+c.slice(1)}); }));
   const items = S.sheet.items || [], vals = S.sheet.values || {};
-  items.forEach(it => { if (hit(it.name + ' ' + (it.content || ''))) add('명렬표', it.date || '', it.name, [it.subj, it.area, it.content].filter(Boolean).join(' · '), {t:'sheet'}); Object.entries(vals[it.id] || {}).forEach(([no, v]) => { if (typeof v === 'string' && v && hit(`${v} ${it.name} ${stuName(+no)}`)) add('명렬표', '', `${it.name} · ${stuName(+no)}`, v, {t:'sheet'}); }); });
+  items.forEach(it => { if (hit(it.name + ' ' + (it.content || ''))) add('체크리스트', it.date || '', it.name, [it.subj, it.area, it.content].filter(Boolean).join(' · '), {t:'sheet'}); Object.entries(vals[it.id] || {}).forEach(([no, v]) => { if (typeof v === 'string' && v && hit(`${v} ${it.name} ${stuName(+no)}`)) add('체크리스트', '', `${it.name} · ${stuName(+no)}`, v, {t:'sheet'}); }); });
   S.events.forEach(e => { if (hit(e.title + ' ' + (e.who || ''))) add('학년 일정', e.date, e.title, e.who && e.who !== '전체' ? e.who : '', {t:'gday', k:e.date}); });
   S.tasks.forEach(t => { if (hit(t.title + ' ' + (t.note || ''))) add('학년 할 일', t.due || '', t.title, t.note || '', {t:'tasks'}); });
   S.notices.forEach(n => { if (hit(n.title + ' ' + (n.body || ''))) add('협의·공지', n.date || (n.createdAt ? ymd(new Date(n.createdAt)) : ''), n.title, n.body, {t:'notices'}); });
@@ -4192,7 +4192,7 @@ function runSearch(){
   SR.list = R;
   if (!R.length){ box.innerHTML = `<p class="empty">"${esc(q)}"(이)가 들어간 기록이 없어요.${SR.loading ? '' : ''}</p>`; return; }
   R.sort((a, b) => (b.date || '') < (a.date || '') ? -1 : (b.date || '') > (a.date || '') ? 1 : 0);
-  const order = ['학급일지', '상담', '출결', '내 할 일', '행발', '우리 반 명부', '명렬표', '메모장', '학년 일정', '학년 할 일', '일일계획·알림장', '협의·공지', '학년 명부', '학년 예산', '내 예산', '수업자료', '운영자료', '학년 문구', '내 문구'];
+  const order = ['학급일지', '상담', '출결', '내 할 일', '행발', '우리 반 명부', '체크리스트', '메모장', '학년 일정', '학년 할 일', '일일계획·알림장', '협의·공지', '학년 명부', '학년 예산', '내 예산', '수업자료', '운영자료', '학년 문구', '내 문구'];
   const by = {}; R.forEach((r, i) => { r.i = i; (by[r.group] = by[r.group] || []).push(r); });
   box.innerHTML = `<p class="hint" style="margin:0 0 6px">${R.length}건</p>` + order.filter(g => by[g]).map(g => `<div class="sr-g"><h4>${g} <span>${by[g].length}</span></h4>${by[g].slice(0, 30).map(r => `<button type="button" class="sr-item" data-sr="${r.i}"><span class="d mono">${r.date ? mdShort(r.date) : ''}</span><span class="t"><b>${mark(r.title)}</b>${r.body ? `<span>${mark(cut(r.body))}</span>` : ''}</span></button>`).join('')}${by[g].length > 30 ? `<p class="hint">외 ${by[g].length - 30}건 · 검색어를 더 적어 주세요</p>` : ''}</div>`).join('');
 }
@@ -4651,10 +4651,11 @@ if (window.__gasNoGrade) gradePickSoon();
 const APP_VERSION = '2.20';
 const CHANGELOG = [
   ['2.20', '11월 26일', [
-    '명렬표: 위에서 항목을 추가하는 대신 빈 칸 10개가 깔려 있어요. 칸 제목을 눌러 이름·종류(단계·제출 체크·점수·짧은 글)를 정하고, 같은 자리에서 고치거나 순서를 바꾸거나 지워요.',
+    '체크리스트(예전 명렬표): 위에서 항목을 추가하는 대신 빈 칸 10개가 깔려 있어요. 칸 제목을 눌러 이름·종류(단계·제출 체크·점수·짧은 글)를 정하고, 같은 자리에서 고치거나 순서를 바꾸거나 지워요.',
     '나의 공간 "명부" 탭을 평가와 할 일 사이로 옮겼어요.',
-    '명렬표 단계 평가 기본값을 매우 잘함·잘함·보통·노력 요함으로 바꿨어요.',
-    '명렬표: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
+    '"명렬표" 탭 이름을 "체크리스트"로 바꿨어요 (학급 명부와 헷갈리지 않게).',
+    '체크리스트 단계 평가 기본값을 매우 잘함·잘함·보통·노력 요함으로 바꿨어요.',
+    '체크리스트: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
   ]],
   ['2.19', '11월 25일', [
     '수업자료·운영자료에 붙이는 파일을 이제 구글 드라이브 폴더에 저장해요. 기록 시트가 가벼워져서 열고 저장하는 게 느려지지 않아요. 파일을 누르면 드라이브에서 열려요. (예전에 올린 파일은 그대로 열려요.)'
@@ -7025,7 +7026,7 @@ const NY_G = [
 const NY_M = [
   ['journal', '학급일지 기록', '상담·출결·행발·할 일 기록', true],
   ['days', '날짜별 학급일지 칸', '그날 계획·메모 칸', true],
-  ['students', '우리 반 학생', '명부·학생별 행발 모음·명렬표·자리', true],
+  ['students', '우리 반 학생', '명부·학생별 행발 모음·체크리스트·자리', true],
   ['tt', '시간표·수업 계획', '', true],
   ['mbudget', '학급 예산', '', true],
   ['notes', '메모', '', false],
