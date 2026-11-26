@@ -4734,6 +4734,8 @@ const CHANGELOG = [
     '체크리스트에 있던 단계·점수 칸은 결과와 함께 평가 탭으로 옮겨져요. 체크리스트에는 제출 체크·짧은 글만 남아요.',
     '학급일지 학생 표의 체크 칸을 쓰면 체크리스트에 그 날짜 칸이 저절로 생겨요(체크했거나 칸 이름을 적은 날만). 체크리스트에서 고쳐도 학급일지에 같이 보여요.',
     '학급일지에 "행발 김하늘 친구를 잘 도와줌"처럼 적으면 학생은 김하늘로 읽고, 내용에는 "친구를 잘 도와줌"만 남겨요. 예전 행발 기록도 한 번 정리해요.',
+    '전담: 시간표·시수의 기본 시간표 아래에서 요일마다 점심을 몇 교시 뒤로 할지 정해요(여러 학년을 맡아 요일마다 다를 때). 수업일지 한 주 보기와 하루 보기에 그대로 반영돼요.',
+    '전담 주별 시간표가 안쪽 스크롤 없이 끝까지 쭉 보여요.',
     '체크리스트: 왼쪽 네모로 학생을 고르고(맨 위 네모는 모두) 칸 제목 아래 "한꺼번에"로 ✓나 단계, 점수를 한 번에 넣어요. 안 고르면 모두에게 들어가요.'
   ]],
   ['2.19', '11월 25일', [
@@ -5265,6 +5267,9 @@ function jdWeeks(){
   return out;
 }
 const jdInTerm = k => k >= S.jd.from && k <= S.jd.to;
+/* 전담 점심: 요일마다 따로 (여러 학년을 맡으면 요일마다 다를 수 있어요). 안 정하면 학년 설정을 따라요. */
+const jdLunch = wd => { const v = +((S.jd.lunch || {})[wd]); return v >= 1 && v <= 5 ? v : lunchAt(); };
+const jdLunchK = k => jdLunch(fromYmd(k).getDay());
 /* 주별 반 시수: {mon: {cls: n}} — 학기 밖 날, 쉬는 날은 세지 않아요 */
 function jdCount(){
   const per = {}, all = new Set();
@@ -5290,6 +5295,7 @@ function renderJTT(){
   // 기본 시간표
   let b = '<table class="jt-base"><thead><tr><th></th>' + [1, 2, 3, 4, 5].map(w => `<th>${WD[w]}</th>`).join('') + '</tr></thead><tbody>';
   for (let p = 0; p < 6; p++){ b += `<tr><th>${p + 1}교시</th>` + [1, 2, 3, 4, 5].map(w => `<td><input id="jb-${w}-${p}" data-jb="${w},${p}" value="${esc(S.jd.base[w][p])}" aria-label="${WD[w]}요일 ${p + 1}교시 반"></td>`).join('') + '</tr>'; }
+  b += `<tr class="jt-lunch"><th>점심</th>` + [1, 2, 3, 4, 5].map(w => `<td><select data-jlunch="${w}" aria-label="${WD[w]}요일 점심">${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${jdLunch(w) === n ? 'selected' : ''}>${n}교시 뒤</option>`).join('')}</select></td>`).join('') + '</tr>';
   $('#jt-base').innerHTML = b + '</tbody></table>';
   renderJTTWeeks(); renderJTTSum();
 }
@@ -5373,6 +5379,10 @@ function jdGridFromClip(cd){
   rows = rows.filter(r => r.some(Boolean));
   return rows.length > 1 || (rows[0] && rows[0].length > 1) ? rows : null;
 }
+$('#jt-base').addEventListener('change', e => {
+  const el = e.target.closest('[data-jlunch]'); if (!el || !S.uid) return;
+  S.jd.lunch = Object.assign({}, S.jd.lunch, {[el.dataset.jlunch]:+el.value}); jdSave(); toast(`${WD[+el.dataset.jlunch]}요일 점심을 ${el.value}교시 뒤로 했어요.`);
+});
 $('#jt-base').addEventListener('paste', e => {
   const el = e.target.closest('[data-jb]'); if (!el || !S.uid) return;
   const g = jdGridFromClip(e.clipboardData); if (!g) return;
@@ -5462,7 +5472,7 @@ async function renderJDayWeek(){
   if (noTT){ $('#jd-week').innerHTML = '<div class="jd-empty">먼저 <a href="#me-jtt">시간표·시수</a>에 전담 시간표를 넣어 주세요. 그러면 한 주에 들어갈 반이 여기 차례로 떠요.</div>'; return; }
   if (S.db && S.uid){ await jlLoadWeek(false); if (S.meTab !== 'jday' || JDW.view !== 'week') return; }
   if (document.activeElement && document.activeElement.closest('#jd-week textarea')) return;
-  const L0 = lunchAt(), tk = ymd(today()), cl = days.map(dk => jdOff(dk) ? [] : jdDayClasses(dk));
+  const tk = ymd(today()), cl = days.map(dk => jdOff(dk) ? [] : jdDayClasses(dk)), Ls = days.map(jdLunchK);
   const maxP = Math.max(6, ...cl.map(a => a.length));
   let h = `<div class="tablewrap"><table class="pp-wk jd-wk"><thead><tr><th class="n">교시</th>${days.map(dk => { const d = fromYmd(dk), off = jdOff(dk); return `<th class="${dk === tk ? 'today' : ''} ${dk === k ? 'sel' : ''}"><button type="button" class="linkbtn" data-jd-day="${dk}" title="이날 메모로 가기">${WD[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}</button>${off ? `<small>${esc(off)}</small>` : ''}</th>`; }).join('')}</tr></thead><tbody>`;
   /* 교시 위에 그날 끝낼 할 일 (나의 할 일 + 학년 할 일). 오늘 칸에는 지난 것도 */
@@ -5470,7 +5480,7 @@ async function renderJDayWeek(){
     const cell = dk => { const its = todos.filter(t => t.due === dk || (dk === tk && t.due && t.due < tk)); return its.length ? its.slice(0, 6).map(t => `<button type="button" class="jd-todo ${t.due < tk ? 'late' : ''}" data-act="todo-toggle" data-id="${esc(t.id)}" data-src="${esc(t.src)}" title="누르면 끝낸 것으로 표시해요"><span class="bx"></span>${t.src === 'grade' ? '<small>학년</small>' : ''}${esc(t.title)}</button>`).join('') + (its.length > 6 ? `<span class="hint">+${its.length - 6}개</span>` : '') : ''; };
     if (days.some(dk => cell(dk))) h += `<tr class="jd-todo-row"><td class="n">할 일</td>${days.map(dk => `<td>${cell(dk)}</td>`).join('')}</tr>`; }
   for (let p = 0; p < maxP; p++){
-    if (p === L0) h += `<tr class="lunch"><td colspan="6">점심</td></tr>`;
+    if (Ls.includes(p)) h += Ls.every(x => x === p) ? `<tr class="lunch"><td colspan="6">점심</td></tr>` : `<tr class="lunch"><td></td>${Ls.map(x => `<td>${x === p ? '점심' : ''}</td>`).join('')}</tr>`;
     h += `<tr><td class="n">${p + 1}</td>${days.map((dk, di) => {
       if (jdOff(dk)) return '<td class="off"></td>';
       const c = cl[di][p]; if (!c) return '<td class="empty"></td>';
@@ -5645,7 +5655,7 @@ async function renderJLes(noFetch){
     if (document.activeElement !== $('#jl-memo')) $('#jl-memo').value = d.memo || '';
     const cls = jdDayClasses(k);
     if (!cls.some(Boolean)){ $('#jl-rows').innerHTML = `<div class="jd-empty">${off ? `${esc(off)}이라 수업이 없어요.` : '이 날은 들어가는 수업이 없어요.'}</div>`; return; }
-    const L0 = lunchAt(); let h = '';
+    const L0 = jdLunchK(k); let h = '';
     cls.forEach((c, p) => {
       if (p === L0) h += '<tr class="lunch"><td colspan="8">점심</td></tr>';
       if (!c){ h += `<tr class="none"><td class="n">${p + 1}</td><td class="s" colspan="7" style="color:var(--muted)">—</td></tr>`; return; }
