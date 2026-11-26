@@ -536,6 +536,10 @@ table.plan{border-collapse:collapse;width:100%;font-size:13px}
 .big-btn{font-size:17px;padding:10px 26px}
 .pick-face{font-size:clamp(56px,14vw,160px);font-weight:700;letter-spacing:-.02em;text-align:center;min-height:1.2em;color:var(--accent)}
 .pick-hist{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:720px}
+.pick-hist.pk-big{gap:10px;max-width:1100px;align-items:center}
+.pick-hist.pk-big .pk-t{flex-basis:100%;text-align:center;font-size:15px;color:var(--muted);font-weight:600}
+.pick-hist.pk-big .pk{font-size:clamp(20px,2.4vw,30px);font-weight:700;padding:6px 18px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.pick-hist.pk-big .pk:nth-child(2){border-color:var(--accent);color:var(--accent)}
 .board{background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:6px 40px;font-weight:600;font-size:13px}
 .seats{display:grid;grid-template-columns:repeat(var(--cols,6),minmax(0,1fr));gap:8px;width:min(100%,960px)}
 .seat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 4px;text-align:center;font-weight:600;font-size:clamp(12px,1.6vw,17px);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2777,6 +2781,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
   <div class="tool" id="tool-pick" hidden>
     <div class="row center tool-opts"><div class="seg" role="group" aria-label="누구에서" id="pick-sx"><button type="button" data-sx="all" aria-pressed="true">모두</button><button type="button" data-sx="여" aria-pressed="false">여자만</button><button type="button" data-sx="남" aria-pressed="false">남자만</button></div>
       <label class="hint row" for="pick-n" style="gap:4px">한 번에 <input type="number" id="pick-n" value="1" min="1" max="30" style="width:64px"> 명</label>
+      <div class="seg" role="group" aria-label="결과 보이기" id="pick-show"><button type="button" data-ps="name" aria-pressed="true">이름으로</button><button type="button" data-ps="no" aria-pressed="false">번호로</button></div>
     </div>
     <details class="tool-out" id="pick-out"><summary class="hint"></summary><p class="hint" style="margin:4px 0 6px">누르면 빼고, 다시 누르면 넣어요. 오늘 결석으로 적힌 학생은 저절로 빠져요. 내일이 되면 다시 모두 들어가요.</p><div class="out-chips"></div></details>
     <div class="pick-face" id="pick-face">?</div>
@@ -2786,7 +2791,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
       <button type="button" class="btn" id="pick-reset">다시 처음부터</button>
     </div>
     <p class="hint center-text" id="pick-info"></p>
-    <div class="pick-hist" id="pick-hist"></div>
+    <div class="pick-hist pk-big" id="pick-hist"></div>
   </div>
   <div class="tool" id="tool-dice" hidden>
     <div class="row center tool-opts">
@@ -2842,8 +2847,8 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- APP_VERSION 2.20 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@ab96616571e20816ef17f715f7ed9bdb5cac04a2/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<!-- APP_VERSION 2.21 -->
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@7da8d1a7b4385a1e8d1960fb5b1a95aaebc94b10/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
