@@ -1145,8 +1145,9 @@ table.pp-wk{border-collapse:collapse;width:100%;min-width:720px;table-layout:fix
 .pp-wk thead th.today{color:var(--accent)}.pp-wk thead th small{display:block;color:var(--holiday);font-weight:400}
 .pp-wk th.n,.pp-wk td.n{width:44px;text-align:center;font-family:var(--mono);color:var(--muted)}
 .pp-wk td.off{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 6px,transparent 6px,transparent 12px)}
-.pp-wk td.empty{background:var(--surface-2)}
-.pp-wk tr.lunch td{background:var(--surface-2);text-align:center;color:var(--muted);font-size:12px;padding:2px}
+.pp-wk td.empty{background:color-mix(in srgb,var(--surface-2) 60%,var(--surface))}
+.pp-wk tr.lunch td{background:color-mix(in srgb,var(--ok) 13%,var(--surface));text-align:center;color:var(--ok);font-weight:600;font-size:12px;padding:3px 2px;letter-spacing:.2em}
+.pp-wk tr.lunch td.nl{background:var(--surface)}
 .pp-wk .pw-s{font-weight:700;font-size:13px;margin-bottom:2px}
 .pp-wk thead th.sel{box-shadow:inset 0 -3px 0 var(--accent)}
 .jd-wk td.done{background:color-mix(in srgb,var(--ok) 8%,var(--surface))}
@@ -2842,7 +2843,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.20 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@dbd72efd0e4fe1b90e65341baa5dd6dd1c4aa3e0/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@ab96616571e20816ef17f715f7ed9bdb5cac04a2/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
