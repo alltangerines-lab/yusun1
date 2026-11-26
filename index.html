@@ -808,6 +808,12 @@ button.x.armed,button.rt-del.armed{color:var(--danger)!important;font-size:12px!
 .stu-link{border:0;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:12px;padding:1px 8px;border-radius:999px;cursor:pointer}
 .stu-link:hover{text-decoration:underline}
 .stu-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:12px}
+.stu-back{display:block;text-align:center;margin-bottom:8px;text-decoration:none}
+.sc.stu-ros{margin-bottom:12px}
+.sr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 14px;margin-top:6px}
+.sr-grid .f{display:grid;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
+.sr-grid input{padding:5px 8px;font-size:13px;font-weight:400}
+.sr-grid .sr-show{justify-self:start;font-weight:400}
 .stu-head .nm{display:flex;gap:6px;align-items:center}
 .stu-head .nm strong{font-size:18px}
 .stu-head .facts{font-size:13px;color:var(--muted)}
@@ -2137,7 +2143,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
         <div class="panel" id="p-stu" hidden>
           <div class="relink" id="stu-relink" hidden></div>
           <div class="stu-wrap">
-          <nav class="stu-side" aria-label="학생 목록"><div class="stu-grid" id="stu-grid"></div></nav>
+          <nav class="stu-side" aria-label="학생 목록"><a class="btn small primary stu-back" href="#me-roster">← 명부 전체 표</a><div class="stu-grid" id="stu-grid"></div></nav>
           <div class="stu-main">
           <form class="quick" id="stu-form" hidden style="margin-bottom:12px">
             <div class="line">
@@ -2812,7 +2818,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.20 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@6f8fa0b3c695002d4f42d3bdcc441d4af54872ae/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@6a52e635fd9789fb17fbafb44b1690913cd715ad/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
