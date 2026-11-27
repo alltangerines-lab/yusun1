@@ -504,7 +504,12 @@ table.plan{border-collapse:collapse;width:100%;font-size:13px}
 .plan td:first-child,.plan th:first-child{text-align:center;width:40px;font-family:var(--mono)}
 .plan input{border:0;border-radius:6px;padding:5px 6px;background:transparent;min-width:70px}
 .plan input:hover,.plan input:focus{background:var(--surface-2)}
-.plan .lunch td{background:var(--surface-2);color:var(--muted);font-size:12px;text-align:center}
+.plan .lunch td{background:color-mix(in srgb,var(--ok) 13%,var(--surface));color:var(--ok);font-weight:600;font-size:12px;text-align:center;letter-spacing:.2em}
+#plan th{text-align:center}
+#plan th:nth-child(2),#plan tr:not(.lunch) td:nth-child(2){width:96px}
+#plan th:nth-child(3),#plan tr:not(.lunch) td:nth-child(3){width:50%}
+#plan td input{width:100%;min-width:0}
+#plan tr:not(.lunch) td:nth-child(2) input{text-align:center;font-weight:600}
 .sheet .att{border:0;background:none;width:100%;min-height:26px;font-size:12px;font-weight:600;color:var(--danger)}
 .sheet .att:empty::after{content:"·";color:var(--muted);font-weight:400}
 
@@ -2848,7 +2853,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.21 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@7da8d1a7b4385a1e8d1960fb5b1a95aaebc94b10/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b7b5b577a42761a88c3141e10751bbcd5e781f3c/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
