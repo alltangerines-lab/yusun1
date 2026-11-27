@@ -824,6 +824,18 @@ button.x.armed,button.rt-del.armed{color:var(--danger)!important;font-size:12px!
 .stu-link:hover{text-decoration:underline}
 .stu-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:12px}
 .stu-back{display:block;text-align:center;margin-bottom:8px;text-decoration:none}
+#p-roster.split{display:grid;grid-template-columns:minmax(0,auto) minmax(460px,1fr);gap:18px;align-items:start}
+#p-roster.split .ros-right{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:12px;background:var(--surface);box-shadow:var(--shadow)}
+#p-roster .ros-right #p-stu{padding:14px}
+#p-roster .ros-right .stu-wrap{grid-template-columns:minmax(0,1fr)}
+#p-roster .ros-right .stu-side{position:static;max-height:none}
+#p-roster .ros-right .stu-grid{display:none}
+#p-roster .ros-right .stu-back{display:inline-block;margin:0 0 8px auto;float:right}
+@media (max-width:1199px){#p-roster.split{grid-template-columns:minmax(0,1fr)}#p-roster.split .ros-right{position:static;max-height:none}}
+.ros td.nmb{padding:0}
+.ros .ros-nm{border:0;background:none;font:inherit;font-weight:700;color:var(--accent);padding:5px 8px;width:100%;text-align:center;cursor:pointer;border-radius:5px}
+.ros .ros-nm:hover{background:var(--accent-soft);text-decoration:underline}
+.ros tr.sel td{background:var(--accent-soft)}
 .sc.stu-ros{margin-bottom:12px}
 .sr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 14px;margin-top:6px}
 .sr-grid .f{display:grid;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
@@ -2183,7 +2195,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
         <div class="panel" id="p-stu" hidden>
           <div class="relink" id="stu-relink" hidden></div>
           <div class="stu-wrap">
-          <nav class="stu-side" aria-label="학생 목록"><a class="btn small primary stu-back" href="#me-roster">← 명부 전체 표</a><div class="stu-grid" id="stu-grid"></div></nav>
+          <nav class="stu-side" aria-label="학생 목록"><button type="button" class="btn small stu-back" id="stu-close">카드 닫기 ×</button><div class="stu-grid" id="stu-grid"></div></nav>
           <div class="stu-main">
           <form class="quick" id="stu-form" hidden style="margin-bottom:12px">
             <div class="line">
@@ -2859,7 +2871,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.21 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@df4c143af525f8690692216d3e4d004fd00b38f0/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@999dd2adfb12cba1e3a447068668f911ecce6797/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
