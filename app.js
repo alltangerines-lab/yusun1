@@ -1858,7 +1858,7 @@ function renderTT(){
 const STUR = {show:null};
 function stuRosBox(info){
   if (!info || info.no == null) return '';
-  const cols = (ROS.m && ROS.m.cols ? ROS.m.cols() : ROS_F.map(([f, n]) => ({f, n, ex:-1}))).filter(c => c.f !== 'no' && c.f !== 'name');
+  const cols = (ROS.m && ROS.m.cols ? ROS.m.cols() : ROS_F.map(([f, n]) => ({f, n, ex:-1})));
   if (!cols.length) return '';
   const dis = S.uid ? '' : 'disabled';
   const cell = c => {
@@ -2099,8 +2099,23 @@ function renderRosterQuick(){
   $('#r-class').innerHTML = classOptions(S.profile.myClass, false);
   $('#r-text').value = (S.profile.roster || []).map(r => [r.no, r.name, r.sex].filter(Boolean).join(' ')).join('\n');
 }
+/* 학생명부: 표에서 이름을 누르면 오른쪽에 그 학생 카드 (예전 '학생별' 화면은 여기로 합쳐져요) */
+const RC = {open:false};
+function rosSplitSetup(){
+  const pr = $('#p-roster'); if (!pr || pr.dataset.split) return; pr.dataset.split = '1';
+  const left = document.createElement('div'); left.className = 'ros-left';
+  while (pr.firstChild) left.appendChild(pr.firstChild);
+  const right = document.createElement('div'); right.className = 'ros-right';
+  right.appendChild($('#p-stu'));
+  pr.append(left, right);
+}
+function rosOpenCard(no){ S.selStu = no; S.stuCat = 'all'; RC.open = true; if (S.meTab !== 'roster') go('me-roster'); else renderMe();
+  setTimeout(() => { const rr = $('#p-roster .ros-right'); if (rr && window.innerWidth < 1200) rr.scrollIntoView({block:'start', behavior:'smooth'}); }, 50); }
+const stuShown = () => S.space === 'me' && S.meTab === 'roster' && RC.open && S.selStu != null;
 function renderMe(){
   if (isJD() && (S.meTab === 'jday' || S.meTab === 'jles')) S.meTab = JV.v === 'detail' ? 'jles' : 'jday';
+  if (S.meTab === 'stu' && !isJD()){ S.meTab = 'roster'; RC.open = S.selStu != null; }
+  rosSplitSetup();
   $$('.jv-seg [data-jv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.jv === JV.v));
   renderHeader();
   $('#me-off').hidden = S.privateOk || !S.privateOffMsg;
@@ -2108,10 +2123,11 @@ function renderMe(){
   if (S.privateOffMsg) $('#me-off-text').textContent = S.privateOffMsg;
   $$('#me-tabs button').forEach(b => { b.setAttribute('aria-selected', b.dataset.tab === S.meTab); const m = MPAGES.find(x => x[2] === b.dataset.tab); if (m){ if (!b.dataset.def) b.dataset.def = b.textContent; b.textContent = (S.profile.pageNames || {})[m[0]] || b.dataset.def; } });
   ['day', 'plan', 'todo', 'stu', 'cns', 'att', 'sheet', 'tt', 'budget', 'roster', 'mops', 'jday', 'jtt', 'jles', 'jprog', 'jcls', 'eval', 'ctab'].forEach(t => { $('#p-' + t).hidden = S.meTab !== t; });
+  $('#p-stu').hidden = !stuShown(); $('#p-roster').classList.toggle('split', stuShown());
   placeStuCol();
   $('#me-top').hidden = S.meTab !== 'day';
   renderToday(); renderNotes(); renderCats(); renderJPreview(); renderStage('j'); renderStage('cns'); renderStage('stu');
-  ({day:renderDayBoard, plan:renderPlanPage, todo:renderTodo, stu:renderStu, cns:renderCns, att:renderAtt, sheet:renderSheet, tt:renderTT, budget:() => BUD.m && BUD.m.render(), roster:renderRoster, mops:() => renderOps(OPM), jday:renderJDay, jtt:renderJTT, jles:renderJLes, jprog:renderJProg, jcls:renderJCls, eval:renderEval, ctab:() => { placeTabCard(); renderTabPage(); }})[S.meTab]();
+  ({day:renderDayBoard, plan:renderPlanPage, todo:renderTodo, stu:renderStu, cns:renderCns, att:renderAtt, sheet:renderSheet, tt:renderTT, budget:() => BUD.m && BUD.m.render(), roster:() => { renderRoster(); if (stuShown()) renderStu(); }, mops:() => renderOps(OPM), jday:renderJDay, jtt:renderJTT, jles:renderJLes, jprog:renderJProg, jcls:renderJCls, eval:renderEval, ctab:() => { placeTabCard(); renderTabPage(); }})[S.meTab]();
 }
 function renderAll(){ renderGrade(); if (S.space === 'me') renderMe(); }
 
@@ -2219,7 +2235,7 @@ function startPrivate(){
       if (busy(STUNOTES())) return;
       S.stuNotes = snap.exists ? JSON.parse(JSON.stringify(snap.data())) : {hb:{}};
       if (!S.stuNotes.hb) S.stuNotes.hb = {};
-      if (S.space === 'me' && S.meTab === 'stu' && !(document.activeElement && document.activeElement.id === 'stu-hb')) renderStu();
+      if (stuShown() && !(document.activeElement && document.activeElement.id === 'stu-hb')) renderStu();
     });
     listen(db.doc(EVP()), 'evalplan', snap => {
       if (busy(EVP())) return;
@@ -2345,7 +2361,7 @@ document.addEventListener('click', async ev => {
   const cat = ev.target.closest('#j-cats button'); if (cat){ S.jForced = S.jForced === cat.dataset.cat ? null : cat.dataset.cat; renderCats(); renderJPreview(); $('#j-input').focus(); return; }
   const stu = ev.target.closest('#stu-grid button'); if (stu){ S.selStu = +stu.dataset.stu; S.stuCat = 'all'; renderStu(); return; }
   const cb = ev.target.closest('[data-cal]'); if (cb){ cb.disabled = true; gcalToggle(cb.dataset.cal).finally(() => { cb.disabled = false; }); return; }
-  const os = ev.target.closest('[data-open-stu]'); if (os){ S.selStu = +os.dataset.openStu; S.stuCat = 'all'; if (S.route === 'me-stu') renderStu(); else go('me-stu'); window.scrollTo(0, 0); return; }
+  const os = ev.target.closest('[data-open-stu]'); if (os){ rosOpenCard(+os.dataset.openStu); return; }
   const sc = ev.target.closest('[data-stu-cat]'); if (sc){ S.stuCat = sc.dataset.stuCat; renderStu(); return; }
   const sn = ev.target.closest('[data-stu-nav]'); if (sn){ const ro = S.profile.roster || []; const i = ro.findIndex(r => r.no === S.selStu); const nx = ro[(i + (+sn.dataset.stuNav) + ro.length) % ro.length]; if (nx){ S.selStu = nx.no; renderStu(); } return; }
   if (ev.target.closest('#stu-print')){ printStudent(S.selStu); return; }
@@ -2706,17 +2722,19 @@ async function addEntryFrom(stageName, inputSel, opts){
   $(inputSel).value = ''; S.stage[stageName] = []; renderStage(stageName); toast(`${fmtMD(entry.date)} ${cat} 기록으로 적었어요.`);
 }
 $('#cns-form').addEventListener('submit', ev => { ev.preventDefault(); addEntryFrom('cns', '#cns-input', {cat:$('#cns-cat').value}); });
+$('#stu-close').onclick = () => { RC.open = false; renderMe(); };
 $('#p-stu').addEventListener('click', e => { const b = e.target.closest('[data-srshow]'); if (!b) return; STUR.show = +b.dataset.srshow; renderStu(); setTimeout(() => { const el = $('#p-stu [data-srf="phone"]'); if (el) el.focus(); }, 0); });
 $('#p-stu').addEventListener('change', e => {
   const el = e.target.closest('[data-srf]'); if (!el || !S.uid) return;
   const no = +el.dataset.no, f = el.dataset.srf; let v = el.value.trim();
   const list = (S.profile.roster || []).map(x => Object.assign({}, x, x.x ? {x:Object.assign({}, x.x)} : {}));
   const s0 = list.find(x => x.no === no); if (!s0) return;
+  if (f === 'no'){ const n = parseInt(v, 10); if (!(n > 0) || list.some(x => x !== s0 && x.no === n)){ toast(n > 0 ? `${n}번은 이미 있어요.` : '번호를 숫자로 적어 주세요.'); el.value = s0.no; return; } s0.no = n; list.sort((a, b) => (a.no || 999) - (b.no || 999)); S.profile.roster = list; S.selStu = n; saveProfile(); renderMe(); rosterAutoSync('mine'); toast('번호를 바꿨어요.'); return; }
   if (f === 'birth') v = normBirth(v); else if (f === 'phone') v = normPhone(v); else if (f === 'sex') v = normSex(v);
   if (f.startsWith('x:')){ s0.x = s0.x || {}; if (v) s0.x[f.slice(2)] = v; else delete s0.x[f.slice(2)]; }
   else if (v) s0[f] = v; else delete s0[f];
   S.profile.roster = list; saveProfile(); renderHeader(); rosterAutoSync('mine');
-  el.value = v; toast('명부에 저장했어요.');
+  el.value = v; toast('명부에 저장했어요.'); if (ROS.m) ROS.m.render();
 });
 $('#stu-form').addEventListener('submit', ev => { ev.preventDefault(); if (S.selStu === null) return; addEntryFrom('stu', '#stu-input', {student:S.selStu}); });
 
@@ -3928,8 +3946,8 @@ function makeRoster(key){
     const dis = can() ? '' : 'disabled';
     const vc = vcols(extra), ws = vc.map(c => colW(students, c));
     const head = vc.map((c, i) => c.ex < 0 ? `<th data-col="${i}" title="눌러서 열 전체 고르기">${c.n}</th>` : `<th class="ex" data-col="${i}">${esc(c.n)}${can() ? `<button type="button" class="x" data-b="delcol" data-ex="${c.ex}" aria-label="${esc(c.n)} 열 지우기">×</button>` : ''}</th>`).join('');
-    const cell = (s, f, v, cls, r, c) => `<td class="${cls || ''}" data-r="${r}" data-c="${c}"><input type="text" id="rf-${key}-${s.id}-${f}" data-id="${esc(s.id)}" data-f="${esc(f)}" data-r="${r}" data-c="${c}" value="${esc(v ?? '')}" aria-label="${esc(s.name || s.no || '')} ${esc(f)}" autocomplete="off" style="width:${ws[c]}ch;min-width:0;text-align:${ws[c] <= 16 ? 'center' : 'left'}" ${dis}></td>`;
-    const body = students.map((s, r) => `<tr>${vc.map((c, i) => cell(s, c.f, c.ex < 0 ? s[c.f] : (s.x || {})[c.n], c.ex < 0 ? 'f-' + c.f : '', r, i)).join('')}<td class="act">${g ? '' : `<button type="button" class="btn small" data-b="card" data-no="${esc(s.no ?? '')}" aria-label="${esc(s.name || '')} 학생 카드 보기">카드 ›</button>`}${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(s.id)}" aria-label="학생 지우기">×</button>` : ''}</td></tr>`).join('');
+    const cell = (s, f, v, cls, r, c) => (!g && f === 'name') ? `<td class="${cls || ''} nmb" data-r="${r}" data-c="${c}"><button type="button" class="ros-nm" data-b="card" data-no="${esc(s.no ?? '')}" title="눌러서 오른쪽에 학생 카드 보기" style="min-width:${ws[c]}ch">${esc(v || '') || '<span class="hint">이름 없음</span>'}</button></td>` : `<td class="${cls || ''}" data-r="${r}" data-c="${c}"><input type="text" id="rf-${key}-${s.id}-${f}" data-id="${esc(s.id)}" data-f="${esc(f)}" data-r="${r}" data-c="${c}" value="${esc(v ?? '')}" aria-label="${esc(s.name || s.no || '')} ${esc(f)}" autocomplete="off" style="width:${ws[c]}ch;min-width:0;text-align:${ws[c] <= 16 ? 'center' : 'left'}" ${dis}></td>`;
+    const body = students.map((s, r) => `<tr class="${!g && RC.open && S.selStu === s.no ? 'sel' : ''}">${vc.map((c, i) => cell(s, c.f, c.ex < 0 ? s[c.f] : (s.x || {})[c.n], c.ex < 0 ? 'f-' + c.f : '', r, i)).join('')}<td class="act">${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(s.id)}" aria-label="학생 지우기">×</button>` : ''}</td></tr>`).join('');
     st.rows = students.length; st.cols = vc.length;
     $('.ros-table', root).innerHTML = students.length ? `<div class="tablewrap"><table class="ros"><thead><tr>${head}<th></th></tr></thead><tbody>${body}</tbody></table></div>`
       : `<p class="empty">${g ? clsLabel(curCls() + '반') + ' 명부가 비어 있어요. ' : '아직 명부가 없어요. '}스프레드시트에서 복사해 "붙여넣기"에 넣거나 "+ 학생 추가"를 눌러 주세요.</p>`;
@@ -3983,7 +4001,7 @@ function makeRoster(key){
       for (let n = 1; n <= nCls(); n++) get(n).students.forEach(s => rows.push([clsLabel(n + '반'), ...rowOf(s, ex)]));
       save(`${S.settings.gradeName || ''}_학년명부.csv`, csv(rows)); return;
     }
-    if (act === 'card'){ const no = Number(b.dataset.no); if (!isFinite(no) || b.dataset.no === ''){ toast('번호를 먼저 적어 주세요.'); return; } S.selStu = no; S.stuCat = 'all'; go('me-stu'); window.scrollTo(0, 0); return; }
+    if (act === 'card'){ const no = Number(b.dataset.no); if (!isFinite(no) || b.dataset.no === ''){ toast('번호를 먼저 적어 주세요.'); return; } if (RC.open && S.selStu === no){ RC.open = false; renderMe(); return; } rosOpenCard(no); return; }
     if (!can()){ toast(g ? '학년 공간을 고칠 권한이 없어요.' : '로그인한 상태로 열어야 적을 수 있어요.'); return; }
     if (act === 'add'){
       const d = get(); const no = d.students.reduce((a, s) => Math.max(a, +s.no || 0), 0) + 1;
@@ -4284,7 +4302,7 @@ $('#sr-results').addEventListener('click', e => {
   const r = SR.list[+b.dataset.sr]; if (!r) return; const g = r.go;
   closeDlgs();
   if (g.t === 'j'){ if (g.e.cat === '할일') go('me-todo'); else { go('me'); if (g.e.date) setJDate(g.e.date); } }
-  else if (g.t === 'stu'){ S.selStu = g.no; S.stuCat = 'all'; go('me-stu'); renderStu(); }
+  else if (g.t === 'stu'){ rosOpenCard(g.no); }
   else if (g.t === 'me') go('me');
   else if (g.t === 'sheet') go('me-sheet');
   else if (g.t === 'ros'){ go('roster'); setTimeout(() => { const c = $(`#ros-g [data-cls="${g.c}"]`); if (c) c.click(); }, 0); }
@@ -4734,6 +4752,7 @@ const CHANGELOG = [
   ['2.21', '11월 27일', [
     '뽑기: 결과를 이름으로 보일지 번호로 보일지 골라요 ("이름으로 / 번호로").',
     '뽑기: 아래 "이미 뽑힌 학생"이 크게 보여요. 가장 최근에 뽑힌 학생이 맨 앞이에요.',
+    '학생명부: 표에서 학생 이름을 누르면 표 오른쪽에 그 학생 카드가 떠요(다시 누르거나 "카드 닫기"로 닫아요). 이름·번호는 카드 맨 위 명부 칸에서 고쳐요.',
     '출석부 위에 이번 달 한 줄 통계가 떠요 (질병결석 2명 · 3일처럼). 칸에 마우스를 올리면 누구인지 보여요.',
     '출석부 대장 정리: 결석신고서 관리대장은 "완결"을 빼고 "나이스" 칸을 "제출 완료"로 바꿨어요. 교외체험학습 대장은 장소·활동내용·완결·나이스를 빼고 짧은 "내용"과 "보고서 제출" 체크만 남겼어요. 내용 칸에는 "체험학습"이라는 말을 다시 적지 않아요.',
     '학생 이름·번호처럼 짧은 칸은 가운데 정렬로 맞췄어요 (학생명부, 학급일지 학생 표, 출석부, 체크리스트, 평가 결과, 반별 명렬). 주소처럼 긴 칸은 왼쪽 그대로예요.',
