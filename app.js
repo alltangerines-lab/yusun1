@@ -3114,6 +3114,7 @@ function renderAtt(){
     const ix = attIndex();
     const dayCount = {};
     let h = `<div class="tablewrap"><table class="attg"><thead><tr><th>학생</th>${sch.map(k => { const d = fromYmd(k); return `<th class="${k === tk ? 'today' : ''}">${d.getDate()}<small>${WD[d.getDay()]}</small></th>`; }).join('')}${ATT_COLS.map((c, i) => `<th class="st ${i === 0 ? 'st0' : ''}" title="${c[2]}">${c[1] ? c[1] + '<br>' + c[0] : c[0]}</th>`).join('')}</tr></thead><tbody>`;
+    const sum = ATT_COLS.map(() => ({days:0, who:[]}));
     roster.forEach(r => {
       const tot = ATT_COLS.map(() => 0);
       h += `<tr><td class="nm"><span class="mono">${r.no}</span>${esc(r.name || '')}</td>`;
@@ -3123,7 +3124,12 @@ function renderAtt(){
         h += `<td><button type="button" data-act="att-cell" data-no="${r.no}" data-date="${k}" class="${a ? 'mk-' + a.reason : ''}" ${a ? `data-tip="${esc(`${r.no}번 ${r.name || ''} · ${fmtMD(k)}\n${attLabel(a)}${a.e.text ? '\n사유: ' + a.e.text.replace(/\s+/g, ' ').slice(0, 120) : ''}`)}"` : ''} aria-label="${r.no}번 ${fromYmd(k).getDate()}일 ${a ? esc(attLabel(a)) : '출석'}">${a ? ATT_MARK[a.kind] || '·' : ''}</button></td>`;
       });
       h += tot.map((n, i) => `<td class="tot ${n ? 'has' : ''} ${i === 0 ? 'st0' : ''}">${n || ''}</td>`).join('') + '</tr>';
+      tot.forEach((n, i) => { if (n){ sum[i].days += n; sum[i].who.push(`${r.no}번 ${r.name || ''} ${n}${ATT_COLS[i][0] === '결석' ? '일' : '번'}`); } });
     });
+    /* 이번 달 한 줄 통계: 종류마다 몇 명, 며칠 */
+    const clean = roster.length - new Set(sum.flatMap(x => x.who.map(w => w.split('번')[0]))).size;
+    const chips = sum.map((x, i) => x.who.length ? `<span class="att-st mk-${ATT_COLS[i][1] || ''}" data-tip="${esc(x.who.join('\n'))}"><b>${ATT_COLS[i][2]}</b> ${x.who.length}명 · ${x.days}${ATT_COLS[i][0] === '결석' ? '일' : '번'}</span>` : '').join('');
+    h = `<div class="att-sum"><span class="hint">이번 달</span>${chips || '<span class="hint">결석·지각·조퇴·결과가 한 번도 없어요.</span>'}<span class="att-st ok"><b>기록 없는 학생</b> ${clean}명</span></div>` + h;
     h += `</tbody><tfoot><tr><td class="nm">결석 인원</td>${sch.map(k => `<td>${dayCount[k] || ''}</td>`).join('')}<td colspan="${ATT_COLS.length}"></td></tr></tfoot></table></div>`;
     $('#att-grid').innerHTML = h;
   }
@@ -4728,6 +4734,7 @@ const CHANGELOG = [
   ['2.21', '11월 27일', [
     '뽑기: 결과를 이름으로 보일지 번호로 보일지 골라요 ("이름으로 / 번호로").',
     '뽑기: 아래 "이미 뽑힌 학생"이 크게 보여요. 가장 최근에 뽑힌 학생이 맨 앞이에요.',
+    '출석부 위에 이번 달 한 줄 통계가 떠요 (질병결석 2명 · 3일처럼). 칸에 마우스를 올리면 누구인지 보여요.',
     '출석부 대장 정리: 결석신고서 관리대장은 "완결"을 빼고 "나이스" 칸을 "제출 완료"로 바꿨어요. 교외체험학습 대장은 장소·활동내용·완결·나이스를 빼고 짧은 "내용"과 "보고서 제출" 체크만 남겼어요. 내용 칸에는 "체험학습"이라는 말을 다시 적지 않아요.',
     '학생 이름·번호처럼 짧은 칸은 가운데 정렬로 맞췄어요 (학생명부, 학급일지 학생 표, 출석부, 체크리스트, 평가 결과, 반별 명렬). 주소처럼 긴 칸은 왼쪽 그대로예요.',
     '학급일지 수업 계획 표: 과목 칸을 좁히고 주제 칸을 넓혔어요. 위쪽 칸 이름은 가운데로 맞췄어요.'
