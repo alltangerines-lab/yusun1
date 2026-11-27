@@ -3149,20 +3149,21 @@ function ledgerRows(type){
 }
 const stuNm = no => { const r = (S.profile.roster || []).find(x => x.no === no); return r ? r.name || '' : ''; };
 const entryDays = e => e.end ? schoolDaysBetween(e.date, e.end).length : 1;
+const tripTitle = t => String(t || '').replace(/(교외\s*)?체험\s*학습(\s*신청)?/g, '').replace(/^[\s,·:-]+|[\s,·:-]+$/g, '').replace(/\s{2,}/g, ' ');
 function renderLedgers(){
   const ae0 = document.activeElement; if (ae0 && ae0.closest('.ledger') && ae0.matches('input[type="text"], textarea')) return;
-  const f = (e, k, ph) => `<input type="text" id="lf-${e.id}-${k}" data-led-e="${e.id}" data-led-f="${k}" value="${esc((e.doc || {})[k] ?? (k === 'reason' || k === 'title' ? e.text || '' : ''))}" placeholder="${ph}" aria-label="${ph}">`;
+  const f = (e, k, ph) => `<input type="text" id="lf-${e.id}-${k}" data-led-e="${e.id}" data-led-f="${k}" value="${esc((e.doc || {})[k] ?? (k === 'reason' ? e.text || '' : k === 'title' ? tripTitle(e.text) : ''))}" placeholder="${ph}" aria-label="${ph}">`;
   const ck = (e, k = 'done', l = '서류 완결') => `<input type="checkbox" id="lf-${e.id}-${k}" data-led-e="${e.id}" data-led-f="${k}" ${(e.doc || {})[k] ? 'checked' : ''} aria-label="${l}">`;
   const abs = ledgerRows('abs');
-  $('#led-abs').innerHTML = abs.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>기간</th><th>일수</th><th>종류</th><th>사유(질병명)</th><th>증빙서류</th><th>완결</th><th>나이스</th><th>신고서</th></tr></thead><tbody>${abs.map(({e, no}) => `<tr>
+  $('#led-abs').innerHTML = abs.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>기간</th><th>일수</th><th>종류</th><th>사유(질병명)</th><th>증빙서류</th><th>제출 완료</th><th>신고서</th></tr></thead><tbody>${abs.map(({e, no}) => `<tr>
     <td class="n">${no}</td><td>${esc(stuNm(no))}</td><td class="n">${mdShort(e.date)}${e.end ? '~' + mdShort(e.end) : ''}</td><td class="n">${entryDays(e)}</td><td>${esc(e.att.reason)}결석</td>
-    <td>${f(e, 'reason', '사유')}</td><td>${f(e, 'proof', '진단서·처방전·학부모 의견서')}</td><td class="ck">${ck(e)}</td><td class="ck">${ck(e, 'neis', '나이스 입력')}</td>
+    <td>${f(e, 'reason', '사유')}</td><td>${f(e, 'proof', '진단서·처방전·학부모 의견서')}</td><td class="ck">${ck(e, 'neis', '제출 완료')}</td>
     <td class="n"><button type="button" class="btn small gas-only" data-act="led-form" data-id="${e.id}" data-no="${no}">인쇄</button>${e.att.reason === '출석인정' ? `<button type="button" class="btn small" data-act="led-move" data-id="${e.id}" data-trip="1" title="교외체험학습이면 체험학습 대장으로 옮겨요">체험학습으로</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
     : '<p class="empty">이 기간에 결석신고서가 필요한 결석이 없어요.</p>';
   const trip = ledgerRows('trip');
-  $('#led-trip').innerHTML = trip.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>시작일</th><th>종료일</th><th>일수</th><th title="체험 시작 하루 전까지 (주말·공휴일 빼고)">신청 기한</th><th>체험활동명</th><th>장소(기관)</th><th>활동내용</th><th>완결</th><th>나이스</th><th></th></tr></thead><tbody>${trip.map(({e, no}) => `<tr>
-    <td class="n">${no}</td><td>${esc(stuNm(no))}</td><td class="n">${mdShort(e.date)}</td><td class="n">${mdShort(e.end || e.date)}</td><td class="n">${entryDays(e)}</td><td class="n">${(() => { const dl = prevSchoolDay(e.date); return `<span class="${dl < ymd(today()) && !(e.doc || {}).done ? 'neg' : ''}">${mdShort(dl)}(${WD[fromYmd(dl).getDay()]})</span>`; })()}</td>
-    <td>${f(e, 'title', '예: 가족여행')}</td><td>${f(e, 'place', '장소')}</td><td>${f(e, 'content', '활동내용')}</td><td class="ck">${ck(e)}</td><td class="ck">${ck(e, 'neis', '나이스 입력')}</td><td class="n"><button type="button" class="btn small" data-act="led-move" data-id="${e.id}" data-trip="0" title="감염병 등 체험학습이 아닌 출석인정결석이면 결석신고서 대장으로 옮겨요">결석신고서로</button></td></tr>`).join('')}</tbody></table></div>`
+  $('#led-trip').innerHTML = trip.length ? `<div class="tablewrap"><table class="led"><thead><tr><th>번호</th><th>이름</th><th>시작일</th><th>종료일</th><th>일수</th><th title="체험 시작 하루 전까지 (주말·공휴일 빼고)">신청 기한</th><th>내용</th><th>보고서 제출</th><th></th></tr></thead><tbody>${trip.map(({e, no}) => `<tr>
+    <td class="n">${no}</td><td>${esc(stuNm(no))}</td><td class="n">${mdShort(e.date)}</td><td class="n">${mdShort(e.end || e.date)}</td><td class="n">${entryDays(e)}</td><td class="n">${(() => { const dl = prevSchoolDay(e.date); return `<span class="${dl < ymd(today()) && e.date >= ymd(today()) ? 'neg' : ''}">${mdShort(dl)}(${WD[fromYmd(dl).getDay()]})</span>`; })()}</td>
+    <td>${f(e, 'title', '예: 가족여행')}</td><td class="ck">${ck(e, 'report', '보고서 제출')}</td><td class="n"><button type="button" class="btn small" data-act="led-move" data-id="${e.id}" data-trip="0" title="감염병 등 체험학습이 아닌 출석인정결석이면 결석신고서 대장으로 옮겨요">결석신고서로</button></td></tr>`).join('')}</tbody></table></div>`
     : '<p class="empty">이 기간에 체험학습(출석인정결석)이 없어요. 학급일지에 "3번 11/18~20 체험학습 가족여행"처럼 적으면 여기 모여요.</p>';
 }
 $('#p-att').addEventListener('change', async e => {
@@ -3256,12 +3257,12 @@ async function attWrite(no, k, rec, v, text, endV){
   } catch (e){ wErr(e, false); return false; }
 }
 function ledgerCsv(type){
-  const rows = type === 'abs' ? [['번호', '이름', '시작일', '종료일', '결석일수', '종류', '사유(질병명)', '증빙서류', '서류완결', '나이스입력']] : [['번호', '이름', '시작일', '종료일', '교육과정일수', '체험활동명', '장소(기관)', '활동내용', '서류완결', '나이스입력']];
+  const rows = type === 'abs' ? [['번호', '이름', '시작일', '종료일', '결석일수', '종류', '사유(질병명)', '증빙서류', '제출 완료']] : [['번호', '이름', '시작일', '종료일', '교육과정일수', '내용', '보고서 제출']];
   ledgerRows(type).forEach(({e, no}) => {
     const d = e.doc || {};
     rows.push(type === 'abs'
-      ? [no, stuNm(no), e.date, e.end || e.date, entryDays(e), e.att.reason + '결석', d.reason ?? e.text ?? '', d.proof || '', d.done ? 'O' : '', d.neis ? 'O' : '']
-      : [no, stuNm(no), e.date, e.end || e.date, entryDays(e), d.title ?? e.text ?? '', d.place || '', d.content || '', d.done ? 'O' : '', d.neis ? 'O' : '']);
+      ? [no, stuNm(no), e.date, e.end || e.date, entryDays(e), e.att.reason + '결석', d.reason ?? e.text ?? '', d.proof || '', d.neis ? 'O' : '']
+      : [no, stuNm(no), e.date, e.end || e.date, entryDays(e), d.title ?? tripTitle(e.text), d.report ? 'O' : '']);
   });
   return rows;
 }
@@ -4727,6 +4728,7 @@ const CHANGELOG = [
   ['2.21', '11월 27일', [
     '뽑기: 결과를 이름으로 보일지 번호로 보일지 골라요 ("이름으로 / 번호로").',
     '뽑기: 아래 "이미 뽑힌 학생"이 크게 보여요. 가장 최근에 뽑힌 학생이 맨 앞이에요.',
+    '출석부 대장 정리: 결석신고서 관리대장은 "완결"을 빼고 "나이스" 칸을 "제출 완료"로 바꿨어요. 교외체험학습 대장은 장소·활동내용·완결·나이스를 빼고 짧은 "내용"과 "보고서 제출" 체크만 남겼어요. 내용 칸에는 "체험학습"이라는 말을 다시 적지 않아요.',
     '학생 이름·번호처럼 짧은 칸은 가운데 정렬로 맞췄어요 (학생명부, 학급일지 학생 표, 출석부, 체크리스트, 평가 결과, 반별 명렬). 주소처럼 긴 칸은 왼쪽 그대로예요.',
     '학급일지 수업 계획 표: 과목 칸을 좁히고 주제 칸을 넓혔어요. 위쪽 칸 이름은 가운데로 맞췄어요.'
   ]],
