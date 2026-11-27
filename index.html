@@ -423,7 +423,7 @@ table.sheet{border-collapse:collapse;width:100%;font-size:13px;font-variant-nume
 .sheet th:first-child,.sheet td:first-child{border-left:0}
 .sheet thead th{background:var(--surface-2);font-weight:600;vertical-align:top}
 .sheet thead .stat{display:block;font-weight:400;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
-.sheet td.name{text-align:left}
+.sheet td.name{text-align:center}
 .sheet input{width:76px;padding:3px 6px;text-align:center}
 .sheet input.txt{width:130px;text-align:left}
 .sheet .tick{border:0;background:none;width:100%;min-height:26px;color:var(--ok);font-weight:700;font-size:15px}
@@ -694,7 +694,7 @@ table.attg{border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-
 .attg thead th{background:var(--surface-2);font-weight:600;padding:3px 2px;font-size:11px}
 .attg thead th small{display:block;color:var(--muted);font-weight:400}
 .attg thead th.today{color:var(--accent)}
-.attg td.nm{text-align:left;padding:3px 6px;position:sticky;left:0;background:var(--surface);z-index:1}
+.attg td.nm{text-align:center;padding:3px 6px;position:sticky;left:0;background:var(--surface);z-index:1}
 .attg td.nm .mono{color:var(--muted);margin-right:4px}
 .attg td button{border:0;background:none;width:100%;min-width:24px;min-height:26px;font-weight:700;font-size:11.5px;padding:0}
 .attg td button:hover{background:var(--accent-soft)}
@@ -745,6 +745,8 @@ div.bud,div.ros{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-wi
 .rc-row input[type="text"]{padding:4px 6px;font-size:13px}
 .ros-colpick{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:380px;max-width:calc(100vw - 32px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:10px 12px;display:grid;gap:4px}
 .ros td input{max-width:none}
+.ros thead th{text-align:center}
+.ev-rt th{text-align:center}
 table.ros{width:auto !important;min-width:0}
 .bud-bar .seg,.ros-cls.seg{flex-wrap:wrap}
 .seg button small{opacity:.7;font-weight:400;margin-left:2px}
@@ -1203,7 +1205,7 @@ table.pp-wk{border-collapse:collapse;width:100%;min-width:720px;table-layout:fix
 table.ev-rt{border-collapse:collapse;width:100%;font-size:13px}
 .ev-rt th,.ev-rt td{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left}
 .ev-rt th{background:var(--surface-2);font-size:12px;color:var(--muted)}
-.ev-rt td.mono{width:36px;text-align:center;color:var(--muted)} .ev-rt td.nm{width:1%;white-space:nowrap;font-weight:600}
+.ev-rt td.mono{width:36px;text-align:center;color:var(--muted)} .ev-rt td.nm{width:1%;white-space:nowrap;font-weight:600;text-align:center}
 .ev-rt th.sel,.ev-rt td.sel{width:28px}
 .ev-rt tr.picked td{background:var(--accent-soft)}
 .lvbs{display:flex;gap:4px;flex-wrap:wrap}
@@ -1314,7 +1316,7 @@ table.jc-t{border-collapse:collapse;font-size:13px}
 .jc-t th,.jc-t td{border:1px solid var(--line);padding:2px 6px;text-align:center;white-space:nowrap}
 .jc-t th{background:var(--surface-2);color:var(--muted);font-weight:600;position:sticky;top:0}
 .jc-t th small{display:block;font-weight:400;font-size:10.5px}
-.jc-t td.nm{text-align:left;font-weight:600}
+.jc-t td.nm{text-align:center;font-weight:600}
 .jc-t button.ck{width:40px;height:28px;border:0;background:transparent;font:inherit;font-weight:700;cursor:pointer}
 .jc-t button.ck.O{color:var(--ok)} .jc-t button.ck.X{color:var(--danger)} .jc-t button.ck.T{color:var(--warn)} .jc-t button.ck.W{color:var(--accent);font-size:12.5px;width:auto;min-width:48px;padding:0 6px}
 .jt-two{display:grid;gap:12px;align-items:start}
@@ -2853,7 +2855,7 @@ body[data-space="grade"][data-page="main"] .addcard .ga-kinds button, body[data-
 <div class="toast" id="toast" hidden></div>
 
 <!-- APP_VERSION 2.21 -->
-<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b7b5b577a42761a88c3141e10751bbcd5e781f3c/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
+<script src="https://cdn.jsdelivr.net/gh/alltangerines-lab/yusun1@b8b978fd32ef1672c3a3a68810598200b6d8d138/app.js" crossorigin="anonymous" onerror="window.__showErr && window.__showErr('화면 프로그램(app.js)을 받아 오지 못했어요. 잠시 뒤 새로고침해 주세요.')"></script>
 
 </body>
 </html>
