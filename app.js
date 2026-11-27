@@ -3921,7 +3921,7 @@ function makeRoster(key){
     const dis = can() ? '' : 'disabled';
     const vc = vcols(extra), ws = vc.map(c => colW(students, c));
     const head = vc.map((c, i) => c.ex < 0 ? `<th data-col="${i}" title="눌러서 열 전체 고르기">${c.n}</th>` : `<th class="ex" data-col="${i}">${esc(c.n)}${can() ? `<button type="button" class="x" data-b="delcol" data-ex="${c.ex}" aria-label="${esc(c.n)} 열 지우기">×</button>` : ''}</th>`).join('');
-    const cell = (s, f, v, cls, r, c) => `<td class="${cls || ''}" data-r="${r}" data-c="${c}"><input type="text" id="rf-${key}-${s.id}-${f}" data-id="${esc(s.id)}" data-f="${esc(f)}" data-r="${r}" data-c="${c}" value="${esc(v ?? '')}" aria-label="${esc(s.name || s.no || '')} ${esc(f)}" autocomplete="off" style="width:${ws[c]}ch;min-width:0" ${dis}></td>`;
+    const cell = (s, f, v, cls, r, c) => `<td class="${cls || ''}" data-r="${r}" data-c="${c}"><input type="text" id="rf-${key}-${s.id}-${f}" data-id="${esc(s.id)}" data-f="${esc(f)}" data-r="${r}" data-c="${c}" value="${esc(v ?? '')}" aria-label="${esc(s.name || s.no || '')} ${esc(f)}" autocomplete="off" style="width:${ws[c]}ch;min-width:0;text-align:${ws[c] <= 16 ? 'center' : 'left'}" ${dis}></td>`;
     const body = students.map((s, r) => `<tr>${vc.map((c, i) => cell(s, c.f, c.ex < 0 ? s[c.f] : (s.x || {})[c.n], c.ex < 0 ? 'f-' + c.f : '', r, i)).join('')}<td class="act">${g ? '' : `<button type="button" class="btn small" data-b="card" data-no="${esc(s.no ?? '')}" aria-label="${esc(s.name || '')} 학생 카드 보기">카드 ›</button>`}${can() ? `<button type="button" class="x" data-b="del" data-id="${esc(s.id)}" aria-label="학생 지우기">×</button>` : ''}</td></tr>`).join('');
     st.rows = students.length; st.cols = vc.length;
     $('.ros-table', root).innerHTML = students.length ? `<div class="tablewrap"><table class="ros"><thead><tr>${head}<th></th></tr></thead><tbody>${body}</tbody></table></div>`
@@ -4727,6 +4727,7 @@ const CHANGELOG = [
   ['2.21', '11월 27일', [
     '뽑기: 결과를 이름으로 보일지 번호로 보일지 골라요 ("이름으로 / 번호로").',
     '뽑기: 아래 "이미 뽑힌 학생"이 크게 보여요. 가장 최근에 뽑힌 학생이 맨 앞이에요.',
+    '학생 이름·번호처럼 짧은 칸은 가운데 정렬로 맞췄어요 (학생명부, 학급일지 학생 표, 출석부, 체크리스트, 평가 결과, 반별 명렬). 주소처럼 긴 칸은 왼쪽 그대로예요.',
     '학급일지 수업 계획 표: 과목 칸을 좁히고 주제 칸을 넓혔어요. 위쪽 칸 이름은 가운데로 맞췄어요.'
   ]],
   ['2.20', '11월 26일', [
